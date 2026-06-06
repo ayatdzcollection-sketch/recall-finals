@@ -72,7 +72,7 @@
     const hero = el("div", "hero");
     const hr = new Date().getHours();
     const greet = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
-    hero.appendChild(el("h1", null, greet + " — let's lock it in."));
+    hero.appendChild(el("h1", null, greet + ". Let's lock it in."));
     hero.appendChild(el("p", null, "Active recall &amp; spaced repetition for your five finals. Pick up where you left off."));
     const d = daysToFinals();
     const cd = el("div", "countdown");
@@ -94,7 +94,7 @@
     const actions = el("div", "actions");
     actions.appendChild(actionCard("wide", "⚡", "Smart Study", "Interleaved mix of new + due material across all subjects", () => startSmart(null)));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
-    actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due — nice", () => startReview(null)));
+    actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print a randomized mock final", () => go("#/test")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);

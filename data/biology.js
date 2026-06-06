@@ -8,7 +8,7 @@
     icon: "🧬",
     accent: "#27c89b",
     weight: 4,
-    intro: "Cell reproduction, Mendelian & molecular genetics, evolution and natural selection, and the human body systems — straight from your review answer key.",
+    intro: "Cell reproduction, Mendelian and molecular genetics, evolution and natural selection, and the human body systems, straight from your review answer key.",
     topics: [
 
       /* 1. Cell reproduction / mitosis */

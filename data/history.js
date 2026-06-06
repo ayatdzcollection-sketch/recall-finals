@@ -10,7 +10,7 @@
     icon: "🌍",
     accent: "#c98bff",
     weight: 2,
-    intro: "World History, Semester 2: Industrial Revolution → World Wars → Cold War → decolonization. The real final is **~70 multiple choice + ~30 matching** (People, Events, Vocabulary).",
+    intro: "World History, Semester 2: from the Industrial Revolution through the World Wars, the Cold War, and decolonization. The real final is **~70 multiple choice plus ~30 matching** (People, Events, Vocabulary).",
     topics: [
 
       /* 1. Industrial Revolution */

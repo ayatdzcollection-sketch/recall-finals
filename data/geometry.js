@@ -8,7 +8,7 @@
     icon: "📐",
     accent: "#ffb648",
     weight: 3,
-    intro: "Quadrilaterals, similarity, right triangles & trig, circles, and the area / surface-area / volume formulas — the five chapters on your final.",
+    intro: "Quadrilaterals, similarity, right triangles and trig, circles, and the area, surface-area, and volume formulas. These are the five chapters on your final.",
     topics: [
 
       /* 1. Polygons & quadrilaterals */

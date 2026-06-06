@@ -15,7 +15,7 @@
     icon: "📖",
     accent: "#f25f8a",
     weight: 5,
-    intro: "Literary & poetic devices, story elements, *Romeo and Juliet*, the studied poems, nonfiction & rhetoric, essay writing, and grammar — the biggest slice of your finals.",
+    intro: "Literary and poetic devices, story elements, *Romeo and Juliet*, the studied poems, nonfiction and rhetoric, essay writing, and grammar. It's the biggest slice of your finals.",
     topics: [
 
       /* ---------------- 1. Figurative language ---------------- */

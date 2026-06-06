@@ -848,7 +848,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     icon: "📖",
     accent: "#f25f8a",
     weight: 5,
-    intro: "Literary & poetic devices, story elements, *Romeo and Juliet*, the studied poems, nonfiction & rhetoric, essay writing, and grammar — the biggest slice of your finals.",
+    intro: "Literary and poetic devices, story elements, *Romeo and Juliet*, the studied poems, nonfiction and rhetoric, essay writing, and grammar. It's the biggest slice of your finals.",
     topics: [
 
       /* ---------------- 1. Figurative language ---------------- */
@@ -1263,7 +1263,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     icon: "🧬",
     accent: "#27c89b",
     weight: 4,
-    intro: "Cell reproduction, Mendelian & molecular genetics, evolution and natural selection, and the human body systems — straight from your review answer key.",
+    intro: "Cell reproduction, Mendelian and molecular genetics, evolution and natural selection, and the human body systems, straight from your review answer key.",
     topics: [
 
       /* 1. Cell reproduction / mitosis */
@@ -1940,7 +1940,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     icon: "📐",
     accent: "#ffb648",
     weight: 3,
-    intro: "Quadrilaterals, similarity, right triangles & trig, circles, and the area / surface-area / volume formulas — the five chapters on your final.",
+    intro: "Quadrilaterals, similarity, right triangles and trig, circles, and the area, surface-area, and volume formulas. These are the five chapters on your final.",
     topics: [
 
       /* 1. Polygons & quadrilaterals */
@@ -2307,7 +2307,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     icon: "🌍",
     accent: "#c98bff",
     weight: 2,
-    intro: "World History, Semester 2: Industrial Revolution → World Wars → Cold War → decolonization. The real final is **~70 multiple choice + ~30 matching** (People, Events, Vocabulary).",
+    intro: "World History, Semester 2: from the Industrial Revolution through the World Wars, the Cold War, and decolonization. The real final is **~70 multiple choice plus ~30 matching** (People, Events, Vocabulary).",
     topics: [
 
       /* 1. Industrial Revolution */
@@ -3400,7 +3400,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     const hero = el("div", "hero");
     const hr = new Date().getHours();
     const greet = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
-    hero.appendChild(el("h1", null, greet + " — let's lock it in."));
+    hero.appendChild(el("h1", null, greet + ". Let's lock it in."));
     hero.appendChild(el("p", null, "Active recall &amp; spaced repetition for your five finals. Pick up where you left off."));
     const d = daysToFinals();
     const cd = el("div", "countdown");
@@ -3422,7 +3422,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     const actions = el("div", "actions");
     actions.appendChild(actionCard("wide", "⚡", "Smart Study", "Interleaved mix of new + due material across all subjects", () => startSmart(null)));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
-    actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due — nice", () => startReview(null)));
+    actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print a randomized mock final", () => go("#/test")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
