@@ -163,7 +163,7 @@
   function footerNote() {
     const f = el("div", "empty");
     f.style.cssText = "margin-top:30px;font-size:.78rem";
-    f.innerHTML = "Progress saves automatically on this device. Share the link with a classmate — everyone gets their own progress.";
+    f.innerHTML = "Progress saves automatically on this device. Share the link with a classmate and everyone gets their own progress.";
     return f;
   }
 
