@@ -2,7 +2,7 @@
 
 An interactive, active-recall study app for the 2026 spring final exams — **ELA, Biology, French 3, Geometry, and History**. Built straight from the class study guides, with spaced repetition, interleaved practice, and printable randomized mock tests.
 
-**▶️ Live site:** _(added after deploy — see below)_
+**▶️ Live site:** https://ayatdzcollection-sketch.github.io/recall-finals/
 
 No login. No accounts. No database. Your progress is saved automatically in your own browser, so you can just open the link and start. Share it with classmates — everyone gets their own progress.
 
