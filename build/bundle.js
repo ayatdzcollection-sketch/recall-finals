@@ -7,6 +7,10 @@ const read = p => fs.readFileSync(path.join(root, p), "utf8");
 
 let html = read("index.html");
 
+// drop external-asset links that don't apply to a single self-contained file
+html = html.replace(/\s*<link rel="manifest"[^>]*>/g, "")
+           .replace(/\s*<link rel="apple-touch-icon"[^>]*>/g, "");
+
 // inline stylesheet
 html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (_, href) =>
   "<style>\n" + read(href) + "\n</style>");

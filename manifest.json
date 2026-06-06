@@ -1,0 +1,14 @@
+{
+  "name": "Recall · Finals Trainer",
+  "short_name": "Recall",
+  "description": "Active-recall, spaced-repetition study app for the spring finals.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1226",
+  "theme_color": "#0f1226",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
