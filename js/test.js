@@ -80,7 +80,7 @@
     refresh();
 
     const bar = el("div", "qbar");
-    const gen = el("button", "btn primary", "🖨️ Generate &amp; print");
+    const gen = el("button", "btn primary", "🖨️ Make printable test ↗");
     gen.onclick = function () { const model = TEST.generate(cfg); TEST.print(model); };
     const prev = el("button", "btn", "👀 Preview");
     prev.onclick = function () { const model = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, model, el); previewWrap.scrollIntoView({ behavior: "smooth" }); };
@@ -172,34 +172,28 @@
       sections.push({ kind: "writing", title: "Part · Written Response", prompt: p });
     }
 
-    return { title: subjName + " — Practice Final", subjName: subjName, sections: sections, total: qno,
+    return { title: subjName + ": Practice Final", subjName: subjName, sections: sections, total: qno,
       stamp: new Date().toLocaleDateString() };
   };
 
-  /* ---------------- print document ---------------- */
-  function buildDoc(model) {
-    const wrap = document.createElement("div");
-    wrap.className = "print-doc";
+  /* ---------------- printable document (its own page) ---------------- */
+  function buildBody(model) {
     let html = "";
-    html += "<h1>" + esc(model.title) + "</h1>";
-    html += "<div class='print-meta'><span>Name: ______________________</span><span>Date: __________</span><span>" + model.total + " questions</span></div>";
-    html += "<div class='print-instr'>Randomized practice mock · generated " + esc(model.stamp) + ". Answer key on the last page.</div>";
-
     const key = [];
     model.sections.forEach(function (sec) {
       html += "<h2>" + esc(sec.title) + "</h2>";
-      if (sec.instr) html += "<div class='print-instr'>" + sec.instr + "</div>";
+      if (sec.instr) html += "<div class='instr'>" + sec.instr + "</div>";
       if (sec.kind === "mc") {
         sec.items.forEach(function (it) {
           html += "<div class='pq'><div class='stem'>" + it.no + ". " + esc(it.stem) + "</div><div class='pchoices'>";
-          it.choices.forEach(function (c, i) { html += "<div class='pchoice'>" + LET[i] + ") " + esc(c) + "</div>"; });
+          it.choices.forEach(function (c, i) { html += "<div>" + LET[i] + ") " + esc(c) + "</div>"; });
           html += "</div></div>";
           key.push(it.no + ". " + LET[it.ans]);
         });
       } else if (sec.kind === "free") {
         sec.items.forEach(function (it) {
-          html += "<div class='pq free'><div class='stem'>" + it.no + ". " + esc(it.stem) + "</div>";
-          html += it.work ? "<div class='pwork'></div>" : "<div class='answerspace'></div>";
+          html += "<div class='pq'><div class='stem'>" + it.no + ". " + esc(it.stem) + "</div>";
+          html += it.work ? "<div class='pwork'></div>" : "";
           html += "<div>Answer: ____________________</div></div>";
           key.push(it.no + ". " + esc(it.ans));
         });
@@ -211,7 +205,7 @@
       } else if (sec.kind === "match") {
         sec.blocks.forEach(function (blk) {
           html += "<div class='pmatch'><div><ol start='" + blk.prompts[0].no + "'>";
-          blk.prompts.forEach(function (p) { html += "<li>____  " + esc(p.def) + "</li>"; });
+          blk.prompts.forEach(function (p) { html += "<li>____&nbsp;&nbsp;" + esc(p.def) + "</li>"; });
           html += "</ol></div><div class='bank'><b>Terms</b><br>";
           blk.bank.forEach(function (term, i) { html += LET[i] + ". " + esc(term) + "<br>"; });
           html += "</div></div>";
@@ -219,27 +213,69 @@
         });
       } else if (sec.kind === "writing") {
         html += "<div class='pq'><div class='stem'>" + esc(sec.prompt) + "</div>";
-        html += "<div style='height:2.6in;border:1px solid #999;margin-top:6px'></div></div>";
+        html += "<div class='wbox'></div></div>";
       }
     });
+    return { html: html, key: key };
+  }
 
-    // answer key
-    html += "<div class='page-break'></div><h1>Answer Key</h1>";
-    html += "<div class='print-instr'>" + esc(model.title) + " · " + esc(model.stamp) + "</div>";
-    html += "<div class='akey'>" + key.map(k => "<div>" + esc(k) + "</div>").join("") + "</div>";
+  const PRINT_CSS =
+    "*{box-sizing:border-box}body{font-family:Georgia,'Times New Roman',serif;color:#111;margin:0;background:#eef0f4}" +
+    ".bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:#15163a;color:#fff}" +
+    ".bar b{font-family:system-ui,sans-serif;font-size:14px;margin-right:auto}" +
+    ".bar button{font:600 14px system-ui;padding:10px 15px;border-radius:9px;border:0;cursor:pointer;background:#fff;color:#15163a}" +
+    ".bar button.p{background:#6c5ce7;color:#fff}" +
+    ".sheet{max-width:740px;margin:16px auto;background:#fff;padding:32px 40px;box-shadow:0 3px 18px rgba(0,0,0,.14)}" +
+    "h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;font-family:system-ui,sans-serif;border-bottom:1.5px solid #111;padding-bottom:3px;margin:22px 0 10px}" +
+    ".meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border:1px solid #111;padding:7px 12px;font-size:13px;font-family:system-ui,sans-serif;margin:8px 0}" +
+    ".instr{font-size:12.5px;font-style:italic;color:#333;margin-bottom:10px}" +
+    ".pq{margin:0 0 13px;break-inside:avoid}.pq .stem{font-weight:bold;margin-bottom:3px}" +
+    ".pchoices{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;padding-left:16px;font-size:14px}" +
+    ".pwork{height:1.05in}.wbox{height:2.4in;border:1px solid #999;margin-top:6px}" +
+    ".pmatch{display:grid;grid-template-columns:1fr 1fr;gap:16px;break-inside:avoid}.pmatch ol{margin:0;padding-left:22px}.pmatch li{margin:5px 0}" +
+    ".bank{border:1px solid #111;padding:8px 11px;font-size:13px;height:max-content}" +
+    ".akey-page{display:none;border-top:3px double #111;margin-top:26px;padding-top:12px}" +
+    ".akey{font-size:13px;columns:2;column-gap:26px}.akey div{margin:2px 0;break-inside:avoid}" +
+    "@media print{body{background:#fff}.bar{display:none}.sheet{box-shadow:none;margin:0;max-width:none;padding:0}.akey-page{display:block;break-before:page}@page{margin:.6in}}" +
+    "@media(max-width:560px){.sheet{padding:20px 16px;margin:0}.pchoices{grid-template-columns:1fr}.pmatch{grid-template-columns:1fr}.akey{columns:1}}";
 
-    wrap.innerHTML = html;
-    return wrap;
+  function buildPrintHTML(model) {
+    const b = buildBody(model);
+    const keyHtml = b.key.map(k => "<div>" + esc(k) + "</div>").join("");
+    return "<!doctype html><html lang='en'><head><meta charset='utf-8'>" +
+      "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
+      "<title>" + esc(model.title) + "</title><style>" + PRINT_CSS + "</style></head><body>" +
+      "<div class='bar'><b>" + esc(model.title) + "</b>" +
+      "<button class='p' onclick='window.print()'>🖨️ Print / Save as PDF</button>" +
+      "<button id='kbtn' onclick='tk()'>Show answer key</button></div>" +
+      "<div class='sheet'>" +
+      "<h1>" + esc(model.title) + "</h1>" +
+      "<div class='meta'><span>Name: __________________</span><span>Date: __________</span><span>" + model.total + " questions</span></div>" +
+      "<div class='instr'>Randomized practice mock, generated " + esc(model.stamp) + ". On a phone: tap Print / Save as PDF, then choose Save to Files or a printer. Answer key prints on its own page.</div>" +
+      b.html +
+      "<div class='akey-page' id='akey'><h2>Answer Key</h2><div class='akey'>" + keyHtml + "</div></div>" +
+      "</div>" +
+      "<script>function tk(){var k=document.getElementById('akey'),b=document.getElementById('kbtn');var on=k.style.display==='block';k.style.display=on?'none':'block';b.textContent=on?'Show answer key':'Hide answer key';if(!on)k.scrollIntoView({behavior:'smooth'});}<\/script>" +
+      "</body></html>";
   }
 
   TEST.print = function (model) {
-    let host = document.getElementById("print-host");
-    if (host) host.remove();
-    host = document.createElement("div");
-    host.id = "print-host"; host.className = "print-only";
-    host.appendChild(buildDoc(model));
-    document.body.appendChild(host);
-    window.print();
+    const html = buildPrintHTML(model);
+    let w = null;
+    try { w = window.open("", "_blank"); } catch (e) { w = null; }
+    if (w && w.document) { w.document.open(); w.document.write(html); w.document.close(); w.focus && w.focus(); return; }
+    // pop-up blocked: fall back to a downloadable/openable file
+    try {
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.target = "_blank"; a.rel = "noopener"; a.download = (model.subjName || "practice") + "-test.html";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      if (STUDY.QUIZ && STUDY.QUIZ.toast) STUDY.QUIZ.toast("Saved the printable test. Open it, then Print/Save PDF");
+    } catch (e) {
+      if (STUDY.QUIZ && STUDY.QUIZ.toast) STUDY.QUIZ.toast("Couldn't open the print view. Try Preview instead");
+    }
   };
 
   /* ---------------- on-screen preview (mobile-friendly) ---------------- */

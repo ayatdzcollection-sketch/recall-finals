@@ -1,4 +1,4 @@
-/* ELA — English Language Arts (heaviest weighting)
+/* ELA, English Language Arts (heaviest weighting)
    Question pools come from the two Blooket answer keys (window.ELA_POOL),
    tagged by topic; lessons, visuals, flashcards & a few items authored from
    the Romeo & Juliet / poetry / nonfiction study guide. */
@@ -24,10 +24,10 @@
         title: "Figurative Language",
         blurb: "Simile, metaphor, hyperbole, personification, imagery, euphemism.",
         lesson: [
-          { p: "**Figurative language** means words that say something *other than* their literal meaning to create an image or feeling. These are the most-tested ELA terms — learn to **define** them and **spot an example**." },
+          { p: "**Figurative language** means words that say something *other than* their literal meaning to create an image or feeling. These are the most-tested ELA terms, learn to **define** them and **spot an example**." },
           { defs: [
             ["Simile", "A comparison of two unlike things using **like** or **as**. *Her voice was as sweet as honey.*"],
-            ["Metaphor", "A **direct** comparison **without** like/as — it says one thing *is* another. *This class is paradise.* Types: **implied**, **direct**, and **extended** (a metaphor stretched over many lines)."],
+            ["Metaphor", "A **direct** comparison **without** like/as, it says one thing *is* another. *This class is paradise.* Types: **implied**, **direct**, and **extended** (a metaphor stretched over many lines)."],
             ["Hyperbole", "An extreme **over-exaggeration** for dramatic or comedic effect. *I've told you a million times.*"],
             ["Personification", "Giving **human qualities** to non-human things. *The wind whispered secrets.*"],
             ["Imagery", "Vivid, descriptive language that appeals to the **five senses**. *The scent of dried leaves and wood smoke tickled my nose.*"],
@@ -122,7 +122,7 @@
           head: ["Type", "Who's fooled", "Example"],
           rows: [
             ["Verbal", "The listener (it's sarcasm)", "*\"Great weather!\"* in a storm"],
-            ["Situational", "Everyone — outcome flips", "A fire station burns down"],
+            ["Situational", "Everyone, outcome flips", "A fire station burns down"],
             ["Dramatic", "The character (audience knows)", "We see the trap; the hero doesn't"],
           ],
         },
@@ -149,12 +149,12 @@
         lesson: [
           { p: "Every narrative is built from the same parts. Know the **plot diagram** and the kinds of **conflict** and **characterization**." },
           { defs: [
-            ["Exposition", "The opening — introduces characters and setting."],
+            ["Exposition", "The opening, introduces characters and setting."],
             ["Rising action", "Events that build and **introduce the conflict**."],
             ["Climax", "The **turning point / high point** of the story."],
-            ["Resolution", "The end — the conflict is settled."],
+            ["Resolution", "The end, the conflict is settled."],
             ["Theme", "The underlying **message or lesson** of the work."],
-            ["Setting", "**When and where** the story happens — time, place, and culture."],
+            ["Setting", "**When and where** the story happens, time, place, and culture."],
           ] },
           { h: "Conflict & characters" },
           { defs: [
@@ -197,7 +197,7 @@
         blurb: "Shakespeare, the chorus, and who's who in Verona.",
         lesson: [
           { p: "*Romeo and Juliet* is a tragedy by **William Shakespeare** (English playwright, ~1564–1616, the Elizabethan era). It's set in **Verona, Italy**, and follows two 'star-crossed lovers' from feuding families." },
-          { term: "The Chorus", def: "A single speaker who opens the play with a **prologue (sonnet)**, summarizes what's to come, and sets the mood — a framing narrator." },
+          { term: "The Chorus", def: "A single speaker who opens the play with a **prologue (sonnet)**, summarizes what's to come, and sets the mood, a framing narrator." },
           { h: "Who's who" },
           { defs: [
             ["Romeo", "Son of the **Montagues**; falls instantly for Juliet."],
@@ -250,11 +250,11 @@
         lesson: [
           { p: "You'll be asked to identify devices and themes in these specific poems. Here's the quick recall for each." },
           { defs: [
-            ["\"Fog\" — Carl Sandburg", "A tiny poem that uses an **extended metaphor**: the fog comes *\"on little cat feet.\"* Theme: nature is quiet, mysterious, and fleeting."],
-            ["\"I Wandered Lonely as a Cloud\" (Daffodils) — Wordsworth", "Opens with a **simile** (*lonely as a cloud*) and **personification** (daffodils *dancing*). Theme: nature's beauty brings lasting joy and comfort in memory."],
-            ["\"The Road Not Taken\" — Robert Frost", "A traveler chooses between two paths — an **extended metaphor** for life's choices. Theme: our decisions shape who we become (and we romanticize them later)."],
-            ["\"The Seven Ages of Man\" — Shakespeare", "*\"All the world's a stage\"* — an **extended metaphor** comparing life to a play with 7 stages (infant → schoolboy → lover → soldier → justice → old age → second childhood)."],
-            ["\"A Narrow Fellow in the Grass\" — Emily Dickinson", "A riddle-like poem describing a **snake** without naming it; uses **imagery** and **metaphor**. Theme: nature inspires both wonder and fear."],
+            ["\"Fog\", Carl Sandburg", "A tiny poem that uses an **extended metaphor**: the fog comes *\"on little cat feet.\"* Theme: nature is quiet, mysterious, and fleeting."],
+            ["\"I Wandered Lonely as a Cloud\" (Daffodils), Wordsworth", "Opens with a **simile** (*lonely as a cloud*) and **personification** (daffodils *dancing*). Theme: nature's beauty brings lasting joy and comfort in memory."],
+            ["\"The Road Not Taken\", Robert Frost", "A traveler chooses between two paths, an **extended metaphor** for life's choices. Theme: our decisions shape who we become (and we romanticize them later)."],
+            ["\"The Seven Ages of Man\", Shakespeare", "*\"All the world's a stage\"*, an **extended metaphor** comparing life to a play with 7 stages (infant → schoolboy → lover → soldier → justice → old age → second childhood)."],
+            ["\"A Narrow Fellow in the Grass\", Emily Dickinson", "A riddle-like poem describing a **snake** without naming it; uses **imagery** and **metaphor**. Theme: nature inspires both wonder and fear."],
           ] },
           { tip: "Three of these lean on the **extended metaphor**: Fog (fog = cat), Road (roads = life choices), Seven Ages (life = a play)." },
         ],
@@ -270,14 +270,14 @@
           ],
         },
         cards: [
-          { front: "\"Fog\" — central device & image", back: "Extended metaphor: fog arrives 'on little cat feet.' (Carl Sandburg)" },
-          { front: "\"I Wandered Lonely as a Cloud\" — opening device", back: "A simile ('lonely as a cloud') + personification of dancing daffodils. (Wordsworth)" },
-          { front: "\"The Road Not Taken\" — meaning", back: "Two paths = an extended metaphor for life's choices. (Robert Frost)" },
-          { front: "\"The Seven Ages of Man\" — famous line & device", back: "'All the world's a stage' — extended metaphor comparing life to a play. (Shakespeare)" },
-          { front: "\"A Narrow Fellow in the Grass\" — subject", back: "A snake, described with vivid imagery without being named. (Emily Dickinson)" },
+          { front: "\"Fog\": central device & image", back: "Extended metaphor: fog arrives 'on little cat feet.' (Carl Sandburg)" },
+          { front: "\"I Wandered Lonely as a Cloud\": opening device", back: "A simile ('lonely as a cloud') + personification of dancing daffodils. (Wordsworth)" },
+          { front: "\"The Road Not Taken\": meaning", back: "Two paths = an extended metaphor for life's choices. (Robert Frost)" },
+          { front: "\"The Seven Ages of Man\": famous line & device", back: "'All the world's a stage': extended metaphor comparing life to a play. (Shakespeare)" },
+          { front: "\"A Narrow Fellow in the Grass\": subject", back: "A snake, described with vivid imagery without being named. (Emily Dickinson)" },
         ],
         questions: [
-          { type: "mc", q: "In Carl Sandburg's \"Fog,\" the fog is compared to a cat ('little cat feet'). This comparison sustained through the poem is an example of:", choices: ["Onomatopoeia", "An extended metaphor", "A simile", "Alliteration"], answer: 1, explain: "The cat comparison runs through the whole short poem — an extended metaphor." },
+          { type: "mc", q: "In Carl Sandburg's \"Fog,\" the fog is compared to a cat ('little cat feet'). This comparison sustained through the poem is an example of:", choices: ["Onomatopoeia", "An extended metaphor", "A simile", "Alliteration"], answer: 1, explain: "The cat comparison runs through the whole short poem, an extended metaphor." },
           { type: "mc", q: "\"I wandered lonely as a cloud\" (Wordsworth) is an example of which device?", choices: ["Metaphor", "Simile", "Hyperbole", "Personification"], answer: 1, explain: "'as a cloud' = a simile." },
           { type: "mc", q: "In \"The Road Not Taken,\" the two roads most likely symbolize:", choices: ["A literal hiking trip", "Choices and decisions in life", "Two friends", "The seasons"], answer: 1 },
           { type: "mc", q: "\"All the world's a stage\" from \"The Seven Ages of Man\" compares life to a play. This is:", choices: ["A pun", "An extended metaphor", "Situational irony", "Assonance"], answer: 1 },
@@ -340,19 +340,19 @@
         lesson: [
           { p: "A strong literary essay has a clear structure. Each part has a job." },
           { defs: [
-            ["Thesis statement", "A **debatable claim + reasons** — goes in the **introduction**. Not a question, hook, or quote."],
+            ["Thesis statement", "A **debatable claim + reasons**, goes in the **introduction**. Not a question, hook, or quote."],
             ["Topic sentence", "Opens a body paragraph; **mirrors the thesis** and transitions into the paragraph's point."],
             ["Body paragraph", "Needs a **topic sentence, transitions, quotes + analysis**, and a concluding sentence. No first-person, no contractions."],
             ["Conclusion", "**Restates** the thesis and ends with a strong final **'so what?'** statement. Adds **no new** information or quotes."],
-            ["Point of view", "Formal essays use **third person** — avoid 'I/you'."],
+            ["Point of view", "Formal essays use **third person**, avoid 'I/you'."],
           ] },
           { h: "Integrating & citing quotes (MLA)" },
           { list: [
             "Use a **lead-in** before the quote (don't drop it in cold).",
-            "Don't put a semicolon after *'The author argues that'* — it's a dependent clause.",
-            "MLA in-text citation = **(Author LastName Page)** — no comma, no 'pg.', no year. *(Dan 2)*",
+            "Don't put a semicolon after *'The author argues that'*, it's a dependent clause.",
+            "MLA in-text citation = **(Author LastName Page)**, no comma, no 'pg.', no year. *(Dan 2)*",
             "The period goes **after** the citation, **outside** the quotation marks.",
-            "MLA format: Times New Roman 12pt, double-spaced, a Works Cited page — but **no cover page**.",
+            "MLA format: Times New Roman 12pt, double-spaced, a Works Cited page, but **no cover page**.",
           ] },
           { tip: "Quote sandwich: **lead-in → quote (citation) → analysis** ('This shows…'). Every body paragraph = TS + evidence + analysis + concluding sentence." },
         ],
@@ -371,7 +371,7 @@
           { front: "Topic sentence", back: "A sentence mirroring the thesis that transitions into the paragraph." },
           { front: "A body paragraph must include…", back: "A topic sentence, transitions, and quotes WITH analysis." },
           { front: "A conclusion should…", back: "Restate the topic/thesis and end with a strong 'so what' statement (no new info)." },
-          { front: "Correct MLA in-text citation format", back: "(Author LastName Page) — no comma, no 'pg', no year." },
+          { front: "Correct MLA in-text citation format", back: "(Author LastName Page): no comma, no 'pg', no year." },
           { front: "Which is NOT part of MLA format?", back: "A cover page (MLA uses a heading, not a title page)." },
           { front: "Quote punctuation rule", back: "The period goes after the citation, outside the quotation marks." },
         ],
@@ -410,7 +410,7 @@
           { front: "Sentence fragment", back: "An incomplete sentence lacking a subject, verb, or complete thought." },
           { front: "Run-on sentence", back: "Two independent clauses joined without proper punctuation/conjunction." },
           { front: "Comma splice", back: "Two independent clauses joined by only a comma." },
-          { front: "Comma after an introductory phrase?", back: "Yes — 'After the game, we left.'" },
+          { front: "Comma after an introductory phrase?", back: "Yes: 'After the game, we left.'" },
         ],
         questions: pool("grammar"),
       },

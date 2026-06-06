@@ -209,7 +209,7 @@
         const r = el("div", "match-row");
         r.appendChild(el("div", "ml", esc(lf)));
         const sel = el("select");
-        sel.appendChild(el("option", null, "— choose —")).value = "";
+        sel.appendChild(el("option", null, "choose…")).value = "";
         rights.forEach(function (rt) { const o = el("option", null, esc(rt)); o.value = rt; sel.appendChild(o); });
         r.appendChild(sel); grid.appendChild(r);
         selects.push(sel);
@@ -264,7 +264,7 @@
         });
         mount.appendChild(p);
       } else if (state.list.length > 2) {
-        mount.appendChild(el("div", "panel center", "🔥 Clean sweep — every answer correct!"));
+        mount.appendChild(el("div", "panel center", "🔥 Clean sweep! Every answer correct."));
       }
 
       const bar2 = el("div", "qbar");

@@ -1,4 +1,4 @@
-/* GEOMETRY — from the "25-26 Final Exam Geometry Review Packet" (Ch 7–11).
+/* GEOMETRY, from the "25-26 Final Exam Geometry Review Packet" (Ch 7–11).
    Lessons give the formula/method; questions use the packet's verified answers. */
 (function (STUDY) {
   "use strict";
@@ -275,12 +275,12 @@
         lesson: [
           { list: [
             "**Circumference:** C = π · d = 2π · r",
-            "**Arc length:** (θ / 360) · 2π · r  — a fraction of the circumference",
-            "**Sector area:** (θ / 360) · π · r²  — a fraction of the area",
+            "**Arc length:** (θ / 360) · 2π · r, a fraction of the circumference",
+            "**Sector area:** (θ / 360) · π · r², a fraction of the area",
           ] },
           { example: "Arc length, 80° central angle, r = 9 → (80/360)·2π·9 ≈ 12.57.", as: "Worked" },
           { example: "Sector area, 256°, r = 14 → (256/360)·π·14² ≈ 437.87.", as: "Worked" },
-          { tip: "Arc length and sector area are both just **(θ/360)** of the whole — of the **circumference** for arc length, of the **area** for a sector." },
+          { tip: "Arc length and sector area are both just **(θ/360)** of the whole, of the **circumference** for arc length, of the **area** for a sector." },
         ],
         visual: {
           type: "table", cap: "Circle measurement",
@@ -305,7 +305,7 @@
       {
         id: "geo-solids",
         title: "Surface Area & Volume of Solids",
-        blurb: "Prisms, cylinders, pyramids, cones, and spheres — forward and reverse.",
+        blurb: "Prisms, cylinders, pyramids, cones, and spheres, forward and reverse.",
         lesson: [
           { h: "Surface area" },
           { list: [
@@ -324,9 +324,9 @@
             "**Sphere:** V = (4/3)πr³",
           ] },
           { example: "Square pyramid, base edge 48, height 10 → V = ⅓·48²·10 = ⅓·2304·10 = 7680 in³.", as: "Worked" },
-          { p: "**Reverse problems** give the volume/SA and ask for a missing dimension — just solve the formula." },
+          { p: "**Reverse problems** give the volume/SA and ask for a missing dimension, just solve the formula." },
           { example: "Cylinder V = 2304 in³, r = 12 → h = V/(πr²) = 2304/(144π) = 16/π ≈ 5.09 in.", as: "Worked" },
-          { tip: "Cones and pyramids are the **'⅓' shapes** — they hold exactly one-third of the prism/cylinder with the same base and height." },
+          { tip: "Cones and pyramids are the **'⅓' shapes**, they hold exactly one-third of the prism/cylinder with the same base and height." },
         ],
         visual: {
           type: "table", cap: "Solid formulas",

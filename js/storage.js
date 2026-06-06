@@ -39,6 +39,20 @@
     });
   };
 
+  // append generated questions to a topic at runtime (after registration)
+  STUDY.addQuestions = function (topic, qs) {
+    const start = topic.questions.length;
+    qs.forEach(function (q, k) {
+      const qi = start + k;
+      q.id = topic.id + "#q" + qi;
+      q.topicId = topic.id;
+      q.subjectId = topic.subjectId;
+      q.gen = true;
+      topic.questions.push(q);
+      STUDY.itemIndex[q.id] = { type: "q", subject: STUDY.byId[topic.subjectId], topic: topic, ref: q };
+    });
+  };
+
   STUDY.allQuestions = function (filterFn) {
     const out = [];
     STUDY.subjects.forEach(function (s) {
@@ -90,6 +104,12 @@
     saveTimer = setTimeout(function () {
       try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
     }, 120);
+  };
+
+  // immediate write (called when the tab is hidden/closed, esp. on mobile)
+  STUDY.flush = function () {
+    clearTimeout(saveTimer);
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
   };
 
   STUDY.store = function () { return store; };

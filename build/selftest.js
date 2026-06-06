@@ -29,6 +29,7 @@ const ctx = vm.createContext(sandbox);
 const files = [
   "js/storage.js", "js/srs.js", "data/ela-pool.js",
   "data/ela.js", "data/biology.js", "data/french.js", "data/geometry.js", "data/history.js",
+  "js/quizgen.js",
   "js/quiz.js", "js/test.js", "js/app.js",
 ];
 for (const f of files) {
@@ -55,6 +56,7 @@ for (const s of STUDY.subjects) {
       if (qq.type === "mc") {
         if (!Array.isArray(qq.choices) || qq.choices.length < 2) fail(`${t.id} q${i} mc needs >=2 choices`);
         if (typeof qq.answer !== "number" || qq.answer < 0 || qq.answer >= qq.choices.length) fail(`${t.id} q${i} mc answer index out of range (${qq.answer}/${qq.choices.length})`);
+        if (new Set(qq.choices.map(c => String(c).trim())).size !== qq.choices.length) fail(`${t.id} q${i} mc has duplicate choices: ${JSON.stringify(qq.choices)}`);
       } else if (qq.type === "fill") {
         if (!Array.isArray(qq.answers) || !qq.answers.length) fail(`${t.id} q${i} fill needs answers[]`);
       } else if (qq.type === "tf") {
@@ -69,7 +71,9 @@ for (const s of STUDY.subjects) {
 
 console.log("Subjects:");
 report.forEach(r => console.log(r));
-console.log(`Totals: ${q} questions, ${cards} flashcards`);
+let genCount = 0;
+STUDY.subjects.forEach(s => s.topics.forEach(t => (t.questions || []).forEach(qq => { if (qq.gen) genCount++; })));
+console.log(`Totals: ${q} questions (${genCount} auto-generated, ${q - genCount} authored/pool), ${cards} flashcards`);
 
 // exercise engine
 try {

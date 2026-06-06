@@ -1,4 +1,4 @@
-/* FRENCH 3 — from the "Study guide Final exam French 3 25-26":
+/* FRENCH 3, from the "Study guide Final exam French 3 25-26":
    le conditionnel, le futur, la Belgique, l'environnement, écriture. */
 (function (STUDY) {
   "use strict";
@@ -15,7 +15,7 @@
       {
         id: "fr-conditionnel",
         title: "Le Conditionnel",
-        blurb: "The 'would' tense — formation, suggestions, and irregular stems.",
+        blurb: "The 'would' tense, formation, suggestions, and irregular stems.",
         lesson: [
           { p: "**Le conditionnel** = *would* do something. Use it for **polite requests**, **hypotheticals**, and **suggestions** (*Tu **devrais** faire tes devoirs* = You **should** do your homework)." },
           { h: "Formation" },
@@ -39,7 +39,7 @@
           rows: [["je", "-ais", "parlerais"], ["tu", "-ais", "parlerais"], ["il/elle", "-ait", "parlerait"], ["nous", "-ions", "parlerions"], ["vous", "-iez", "parleriez"], ["ils/elles", "-aient", "parleraient"]],
         },
         cards: [
-          { front: "What is the conditionnel used for?", back: "To say 'would' — polite requests, hypotheticals, and suggestions." },
+          { front: "What is the conditionnel used for?", back: "To say 'would': polite requests, hypotheticals, and suggestions." },
           { front: "Conditional endings", back: "-ais, -ais, -ait, -ions, -iez, -aient (the imperfect endings)." },
           { front: "Conditional stem of aller", back: "ir- (j'irais)." },
           { front: "Conditional stem of être", back: "ser- (je serais)." },
@@ -66,7 +66,7 @@
       {
         id: "fr-futur",
         title: "Le Futur Simple",
-        blurb: "The 'will' tense — same stems, different endings.",
+        blurb: "The 'will' tense, same stems, different endings.",
         lesson: [
           { p: "**Le futur simple** = *will* do something. It uses the **same stems** as the conditional but the endings come from **avoir**: **-ai, -as, -a, -ons, -ez, -ont**." },
           { example: "parler → je parler**ai**, tu parler**as**, il parler**a**, nous parler**ons**, vous parler**ez**, ils parler**ont**", as: "Régulier" },
@@ -78,8 +78,8 @@
         ],
         visual: {
           type: "compare", cap: "Futur vs. Conditionnel (same stem!)",
-          left: { h: "Futur — 'will'", items: ["Endings: -ai, -as, -a, -ons, -ez, -ont", "j'irai = I will go", "il sera = he will be"] },
-          right: { h: "Conditionnel — 'would'", items: ["Endings: -ais, -ait, -ions, -iez, -aient", "j'irais = I would go", "il serait = he would be"] },
+          left: { h: "Futur, 'will'", items: ["Endings: -ai, -as, -a, -ons, -ez, -ont", "j'irai = I will go", "il sera = he will be"] },
+          right: { h: "Conditionnel, 'would'", items: ["Endings: -ais, -ait, -ions, -iez, -aient", "j'irais = I would go", "il serait = he would be"] },
         },
         cards: [
           { front: "Futur simple endings", back: "-ai, -as, -a, -ons, -ez, -ont (from avoir)." },
@@ -103,9 +103,9 @@
         lesson: [
           { p: "La Belgique is divided by **language**. You'll label a map and answer where each language is spoken." },
           { defs: [
-            ["La Wallonie (Wallonia)", "The **southern** region — **French**-speaking."],
-            ["La Flandre (Flanders)", "The **northern** region — **Dutch (néerlandais)**-speaking."],
-            ["Bruxelles (Brussels)", "The **capital** — officially **bilingual** (French + Dutch)."],
+            ["La Wallonie (Wallonia)", "The **southern** region, **French**-speaking."],
+            ["La Flandre (Flanders)", "The **northern** region, **Dutch (néerlandais)**-speaking."],
+            ["Bruxelles (Brussels)", "The **capital**, officially **bilingual** (French + Dutch)."],
             ["German region", "A small area in the **east** also speaks German."],
           ] },
           { h: "Neighbors to label" },
@@ -120,7 +120,7 @@
         cards: [
           { front: "Which Belgian region speaks French?", back: "La Wallonie (Wallonia), in the south." },
           { front: "Which Belgian region speaks Dutch (néerlandais)?", back: "La Flandre (Flanders), in the north." },
-          { front: "What is Belgium's bilingual capital?", back: "Bruxelles (Brussels) — French + Dutch." },
+          { front: "What is Belgium's bilingual capital?", back: "Bruxelles (Brussels): French + Dutch." },
           { front: "Belgium's neighbors", back: "Netherlands, Germany, Luxembourg, France (+ the North Sea to the north)." },
         ],
         questions: [
@@ -184,11 +184,11 @@
         title: "L'Écriture (Writing the Email)",
         blurb: "Write to your Belgian host family using the conditional.",
         lesson: [
-          { p: "**The task:** write an e-mail to your host family (*la famille Vosters*) about a 2-week visit to Belgium — explain **3 things you'd like to do** and **3 things you would not** like to do, then ask **2 questions**." },
+          { p: "**The task:** write an e-mail to your host family (*la famille Vosters*) about a 2-week visit to Belgium, explain **3 things you'd like to do** and **3 things you would not** like to do, then ask **2 questions**." },
           { h: "Structure" },
           { list: [
             "**Greeting:** *Cher / Chère…* or *Bonjour la famille Vosters,*",
-            "**Body:** use the **conditionnel** — *J'**aimerais** visiter…* (I would like), *Je **voudrais**…*, *Je ne **voudrais** pas…* (I wouldn't like).",
+            "**Body:** use the **conditionnel**, *J'**aimerais** visiter…* (I would like), *Je **voudrais**…*, *Je ne **voudrais** pas…* (I wouldn't like).",
             "**Ask 2 questions:** *Est-ce que nous **pourrions**…? Qu'est-ce qu'on **ferait** le week-end?*",
             "**Closing:** *Bien à vous,* + your name.",
           ] },

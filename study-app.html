@@ -456,6 +456,20 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     });
   };
 
+  // append generated questions to a topic at runtime (after registration)
+  STUDY.addQuestions = function (topic, qs) {
+    const start = topic.questions.length;
+    qs.forEach(function (q, k) {
+      const qi = start + k;
+      q.id = topic.id + "#q" + qi;
+      q.topicId = topic.id;
+      q.subjectId = topic.subjectId;
+      q.gen = true;
+      topic.questions.push(q);
+      STUDY.itemIndex[q.id] = { type: "q", subject: STUDY.byId[topic.subjectId], topic: topic, ref: q };
+    });
+  };
+
   STUDY.allQuestions = function (filterFn) {
     const out = [];
     STUDY.subjects.forEach(function (s) {
@@ -507,6 +521,12 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     saveTimer = setTimeout(function () {
       try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
     }, 120);
+  };
+
+  // immediate write (called when the tab is hidden/closed, esp. on mobile)
+  STUDY.flush = function () {
+    clearTimeout(saveTimer);
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
   };
 
   STUDY.store = function () { return store; };
@@ -831,7 +851,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
 </script>
   <script>
-/* ELA — English Language Arts (heaviest weighting)
+/* ELA, English Language Arts (heaviest weighting)
    Question pools come from the two Blooket answer keys (window.ELA_POOL),
    tagged by topic; lessons, visuals, flashcards & a few items authored from
    the Romeo & Juliet / poetry / nonfiction study guide. */
@@ -857,10 +877,10 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         title: "Figurative Language",
         blurb: "Simile, metaphor, hyperbole, personification, imagery, euphemism.",
         lesson: [
-          { p: "**Figurative language** means words that say something *other than* their literal meaning to create an image or feeling. These are the most-tested ELA terms — learn to **define** them and **spot an example**." },
+          { p: "**Figurative language** means words that say something *other than* their literal meaning to create an image or feeling. These are the most-tested ELA terms, learn to **define** them and **spot an example**." },
           { defs: [
             ["Simile", "A comparison of two unlike things using **like** or **as**. *Her voice was as sweet as honey.*"],
-            ["Metaphor", "A **direct** comparison **without** like/as — it says one thing *is* another. *This class is paradise.* Types: **implied**, **direct**, and **extended** (a metaphor stretched over many lines)."],
+            ["Metaphor", "A **direct** comparison **without** like/as, it says one thing *is* another. *This class is paradise.* Types: **implied**, **direct**, and **extended** (a metaphor stretched over many lines)."],
             ["Hyperbole", "An extreme **over-exaggeration** for dramatic or comedic effect. *I've told you a million times.*"],
             ["Personification", "Giving **human qualities** to non-human things. *The wind whispered secrets.*"],
             ["Imagery", "Vivid, descriptive language that appeals to the **five senses**. *The scent of dried leaves and wood smoke tickled my nose.*"],
@@ -955,7 +975,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           head: ["Type", "Who's fooled", "Example"],
           rows: [
             ["Verbal", "The listener (it's sarcasm)", "*\"Great weather!\"* in a storm"],
-            ["Situational", "Everyone — outcome flips", "A fire station burns down"],
+            ["Situational", "Everyone, outcome flips", "A fire station burns down"],
             ["Dramatic", "The character (audience knows)", "We see the trap; the hero doesn't"],
           ],
         },
@@ -982,12 +1002,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { p: "Every narrative is built from the same parts. Know the **plot diagram** and the kinds of **conflict** and **characterization**." },
           { defs: [
-            ["Exposition", "The opening — introduces characters and setting."],
+            ["Exposition", "The opening, introduces characters and setting."],
             ["Rising action", "Events that build and **introduce the conflict**."],
             ["Climax", "The **turning point / high point** of the story."],
-            ["Resolution", "The end — the conflict is settled."],
+            ["Resolution", "The end, the conflict is settled."],
             ["Theme", "The underlying **message or lesson** of the work."],
-            ["Setting", "**When and where** the story happens — time, place, and culture."],
+            ["Setting", "**When and where** the story happens, time, place, and culture."],
           ] },
           { h: "Conflict & characters" },
           { defs: [
@@ -1030,7 +1050,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         blurb: "Shakespeare, the chorus, and who's who in Verona.",
         lesson: [
           { p: "*Romeo and Juliet* is a tragedy by **William Shakespeare** (English playwright, ~1564–1616, the Elizabethan era). It's set in **Verona, Italy**, and follows two 'star-crossed lovers' from feuding families." },
-          { term: "The Chorus", def: "A single speaker who opens the play with a **prologue (sonnet)**, summarizes what's to come, and sets the mood — a framing narrator." },
+          { term: "The Chorus", def: "A single speaker who opens the play with a **prologue (sonnet)**, summarizes what's to come, and sets the mood, a framing narrator." },
           { h: "Who's who" },
           { defs: [
             ["Romeo", "Son of the **Montagues**; falls instantly for Juliet."],
@@ -1083,11 +1103,11 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { p: "You'll be asked to identify devices and themes in these specific poems. Here's the quick recall for each." },
           { defs: [
-            ["\"Fog\" — Carl Sandburg", "A tiny poem that uses an **extended metaphor**: the fog comes *\"on little cat feet.\"* Theme: nature is quiet, mysterious, and fleeting."],
-            ["\"I Wandered Lonely as a Cloud\" (Daffodils) — Wordsworth", "Opens with a **simile** (*lonely as a cloud*) and **personification** (daffodils *dancing*). Theme: nature's beauty brings lasting joy and comfort in memory."],
-            ["\"The Road Not Taken\" — Robert Frost", "A traveler chooses between two paths — an **extended metaphor** for life's choices. Theme: our decisions shape who we become (and we romanticize them later)."],
-            ["\"The Seven Ages of Man\" — Shakespeare", "*\"All the world's a stage\"* — an **extended metaphor** comparing life to a play with 7 stages (infant → schoolboy → lover → soldier → justice → old age → second childhood)."],
-            ["\"A Narrow Fellow in the Grass\" — Emily Dickinson", "A riddle-like poem describing a **snake** without naming it; uses **imagery** and **metaphor**. Theme: nature inspires both wonder and fear."],
+            ["\"Fog\", Carl Sandburg", "A tiny poem that uses an **extended metaphor**: the fog comes *\"on little cat feet.\"* Theme: nature is quiet, mysterious, and fleeting."],
+            ["\"I Wandered Lonely as a Cloud\" (Daffodils), Wordsworth", "Opens with a **simile** (*lonely as a cloud*) and **personification** (daffodils *dancing*). Theme: nature's beauty brings lasting joy and comfort in memory."],
+            ["\"The Road Not Taken\", Robert Frost", "A traveler chooses between two paths, an **extended metaphor** for life's choices. Theme: our decisions shape who we become (and we romanticize them later)."],
+            ["\"The Seven Ages of Man\", Shakespeare", "*\"All the world's a stage\"*, an **extended metaphor** comparing life to a play with 7 stages (infant → schoolboy → lover → soldier → justice → old age → second childhood)."],
+            ["\"A Narrow Fellow in the Grass\", Emily Dickinson", "A riddle-like poem describing a **snake** without naming it; uses **imagery** and **metaphor**. Theme: nature inspires both wonder and fear."],
           ] },
           { tip: "Three of these lean on the **extended metaphor**: Fog (fog = cat), Road (roads = life choices), Seven Ages (life = a play)." },
         ],
@@ -1103,14 +1123,14 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           ],
         },
         cards: [
-          { front: "\"Fog\" — central device & image", back: "Extended metaphor: fog arrives 'on little cat feet.' (Carl Sandburg)" },
-          { front: "\"I Wandered Lonely as a Cloud\" — opening device", back: "A simile ('lonely as a cloud') + personification of dancing daffodils. (Wordsworth)" },
-          { front: "\"The Road Not Taken\" — meaning", back: "Two paths = an extended metaphor for life's choices. (Robert Frost)" },
-          { front: "\"The Seven Ages of Man\" — famous line & device", back: "'All the world's a stage' — extended metaphor comparing life to a play. (Shakespeare)" },
-          { front: "\"A Narrow Fellow in the Grass\" — subject", back: "A snake, described with vivid imagery without being named. (Emily Dickinson)" },
+          { front: "\"Fog\": central device & image", back: "Extended metaphor: fog arrives 'on little cat feet.' (Carl Sandburg)" },
+          { front: "\"I Wandered Lonely as a Cloud\": opening device", back: "A simile ('lonely as a cloud') + personification of dancing daffodils. (Wordsworth)" },
+          { front: "\"The Road Not Taken\": meaning", back: "Two paths = an extended metaphor for life's choices. (Robert Frost)" },
+          { front: "\"The Seven Ages of Man\": famous line & device", back: "'All the world's a stage': extended metaphor comparing life to a play. (Shakespeare)" },
+          { front: "\"A Narrow Fellow in the Grass\": subject", back: "A snake, described with vivid imagery without being named. (Emily Dickinson)" },
         ],
         questions: [
-          { type: "mc", q: "In Carl Sandburg's \"Fog,\" the fog is compared to a cat ('little cat feet'). This comparison sustained through the poem is an example of:", choices: ["Onomatopoeia", "An extended metaphor", "A simile", "Alliteration"], answer: 1, explain: "The cat comparison runs through the whole short poem — an extended metaphor." },
+          { type: "mc", q: "In Carl Sandburg's \"Fog,\" the fog is compared to a cat ('little cat feet'). This comparison sustained through the poem is an example of:", choices: ["Onomatopoeia", "An extended metaphor", "A simile", "Alliteration"], answer: 1, explain: "The cat comparison runs through the whole short poem, an extended metaphor." },
           { type: "mc", q: "\"I wandered lonely as a cloud\" (Wordsworth) is an example of which device?", choices: ["Metaphor", "Simile", "Hyperbole", "Personification"], answer: 1, explain: "'as a cloud' = a simile." },
           { type: "mc", q: "In \"The Road Not Taken,\" the two roads most likely symbolize:", choices: ["A literal hiking trip", "Choices and decisions in life", "Two friends", "The seasons"], answer: 1 },
           { type: "mc", q: "\"All the world's a stage\" from \"The Seven Ages of Man\" compares life to a play. This is:", choices: ["A pun", "An extended metaphor", "Situational irony", "Assonance"], answer: 1 },
@@ -1173,19 +1193,19 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { p: "A strong literary essay has a clear structure. Each part has a job." },
           { defs: [
-            ["Thesis statement", "A **debatable claim + reasons** — goes in the **introduction**. Not a question, hook, or quote."],
+            ["Thesis statement", "A **debatable claim + reasons**, goes in the **introduction**. Not a question, hook, or quote."],
             ["Topic sentence", "Opens a body paragraph; **mirrors the thesis** and transitions into the paragraph's point."],
             ["Body paragraph", "Needs a **topic sentence, transitions, quotes + analysis**, and a concluding sentence. No first-person, no contractions."],
             ["Conclusion", "**Restates** the thesis and ends with a strong final **'so what?'** statement. Adds **no new** information or quotes."],
-            ["Point of view", "Formal essays use **third person** — avoid 'I/you'."],
+            ["Point of view", "Formal essays use **third person**, avoid 'I/you'."],
           ] },
           { h: "Integrating & citing quotes (MLA)" },
           { list: [
             "Use a **lead-in** before the quote (don't drop it in cold).",
-            "Don't put a semicolon after *'The author argues that'* — it's a dependent clause.",
-            "MLA in-text citation = **(Author LastName Page)** — no comma, no 'pg.', no year. *(Dan 2)*",
+            "Don't put a semicolon after *'The author argues that'*, it's a dependent clause.",
+            "MLA in-text citation = **(Author LastName Page)**, no comma, no 'pg.', no year. *(Dan 2)*",
             "The period goes **after** the citation, **outside** the quotation marks.",
-            "MLA format: Times New Roman 12pt, double-spaced, a Works Cited page — but **no cover page**.",
+            "MLA format: Times New Roman 12pt, double-spaced, a Works Cited page, but **no cover page**.",
           ] },
           { tip: "Quote sandwich: **lead-in → quote (citation) → analysis** ('This shows…'). Every body paragraph = TS + evidence + analysis + concluding sentence." },
         ],
@@ -1204,7 +1224,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "Topic sentence", back: "A sentence mirroring the thesis that transitions into the paragraph." },
           { front: "A body paragraph must include…", back: "A topic sentence, transitions, and quotes WITH analysis." },
           { front: "A conclusion should…", back: "Restate the topic/thesis and end with a strong 'so what' statement (no new info)." },
-          { front: "Correct MLA in-text citation format", back: "(Author LastName Page) — no comma, no 'pg', no year." },
+          { front: "Correct MLA in-text citation format", back: "(Author LastName Page): no comma, no 'pg', no year." },
           { front: "Which is NOT part of MLA format?", back: "A cover page (MLA uses a heading, not a title page)." },
           { front: "Quote punctuation rule", back: "The period goes after the citation, outside the quotation marks." },
         ],
@@ -1243,7 +1263,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "Sentence fragment", back: "An incomplete sentence lacking a subject, verb, or complete thought." },
           { front: "Run-on sentence", back: "Two independent clauses joined without proper punctuation/conjunction." },
           { front: "Comma splice", back: "Two independent clauses joined by only a comma." },
-          { front: "Comma after an introductory phrase?", back: "Yes — 'After the game, we left.'" },
+          { front: "Comma after an introductory phrase?", back: "Yes: 'After the game, we left.'" },
         ],
         questions: pool("grammar"),
       },
@@ -1320,9 +1340,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             ["Gene", "A **segment of DNA that codes for a trait**."],
           ] },
           { h: "Cancer & the p53 gene" },
-          { p: "**p53** is a tumor-suppressor gene. Its job is to make sure a cell **doesn't divide if its DNA is damaged** — it detects mutations that could lead to uncontrolled growth and stops them. If p53 is **defective**, damaged cells keep dividing → higher cancer rates." },
-          { p: "Cancer happens when **mutations** build up in dividing cells. **Taller** people have **more cells**, and **older** people's cells have **divided for longer** — both mean more chances for a harmful mutation, so higher cancer odds." },
-          { tip: "Think of p53 as the cell's **'quality inspector'** — it halts a cell with damaged DNA before that damage can spread." },
+          { p: "**p53** is a tumor-suppressor gene. Its job is to make sure a cell **doesn't divide if its DNA is damaged**, it detects mutations that could lead to uncontrolled growth and stops them. If p53 is **defective**, damaged cells keep dividing → higher cancer rates." },
+          { p: "Cancer happens when **mutations** build up in dividing cells. **Taller** people have **more cells**, and **older** people's cells have **divided for longer**, both mean more chances for a harmful mutation, so higher cancer odds." },
+          { tip: "Think of p53 as the cell's **'quality inspector'**, it halts a cell with damaged DNA before that damage can spread." },
         ],
         visual: {
           type: "concept", cap: "Parts of a chromosome",
@@ -1337,7 +1357,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "Centromere", back: "Holds the two chromatids of a chromosome together." },
           { front: "Gene", back: "A segment of DNA that codes for a trait." },
           { front: "Chromatids", back: "The two identical copies of a chromosome." },
-          { front: "Job of the p53 gene", back: "Detects DNA damage and stops a cell from dividing — prevents cancer." },
+          { front: "Job of the p53 gene", back: "Detects DNA damage and stops a cell from dividing: prevents cancer." },
           { front: "Why do taller/older people have higher cancer rates?", back: "More cells (taller) and more cell divisions over time (older) = more chances for mutations." },
         ],
         questions: [
@@ -1355,7 +1375,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         title: "Meiosis vs. Mitosis",
         blurb: "Making gametes: 4 different haploid sex cells.",
         lesson: [
-          { p: "**Meiosis** produces **gametes** (sex cells: sperm and egg). It makes **4 different haploid** cells, each with **half** the chromosomes — so that fertilization restores the full number." },
+          { p: "**Meiosis** produces **gametes** (sex cells: sperm and egg). It makes **4 different haploid** cells, each with **half** the chromosomes, so that fertilization restores the full number." },
           { defs: [
             ["Mitosis → result", "**2 identical diploid** cells (two copies of each chromosome). Used for growth/repair of body cells."],
             ["Meiosis → result", "**4 genetically different haploid** cells (one copy of each chromosome). Used to make gametes."],
@@ -1413,13 +1433,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "Homozygous", back: "Two identical alleles (TT or tt)." },
           { front: "Heterozygous", back: "Two different alleles (Tt)." },
           { front: "Genotype vs. phenotype", back: "Genotype = the alleles (Tt); phenotype = the visible trait (tall)." },
-          { front: "Cross TT × tt — offspring?", back: "All Tt → 100% show the dominant trait (tall)." },
-          { front: "Cross Tt × Tt — phenotype ratio?", back: "75% dominant : 25% recessive (3:1). Genotypes 25% TT, 50% Tt, 25% tt." },
-          { front: "Cross Rr × rr — ratio?", back: "50% Rr : 50% rr (1:1)." },
+          { front: "Cross TT × tt: offspring?", back: "All Tt → 100% show the dominant trait (tall)." },
+          { front: "Cross Tt × Tt: phenotype ratio?", back: "75% dominant : 25% recessive (3:1). Genotypes 25% TT, 50% Tt, 25% tt." },
+          { front: "Cross Rr × rr: ratio?", back: "50% Rr : 50% rr (1:1)." },
         ],
         questions: [
           { type: "mc", q: "In a cross of two heterozygous tall plants (Tt × Tt), what percent of offspring are short (tt)?", choices: ["0%", "25%", "50%", "75%"], answer: 1, explain: "1 of 4 boxes is tt = 25%." },
-          { type: "mc", q: "A homozygous tall plant (TT) is crossed with a homozygous short plant (tt). The offspring are:", choices: ["All tall (Tt)", "All short", "Half tall, half short", "75% tall"], answer: 0, explain: "All Tt — tall is dominant." },
+          { type: "mc", q: "A homozygous tall plant (TT) is crossed with a homozygous short plant (tt). The offspring are:", choices: ["All tall (Tt)", "All short", "Half tall, half short", "75% tall"], answer: 0, explain: "All Tt, tall is dominant." },
           { type: "mc", q: "Which genotype is heterozygous?", choices: ["TT", "tt", "Tt", "ttt"], answer: 2 },
           { type: "fill", q: "The physical traits you can observe (like tall or short) are called the ____.", answers: ["phenotype"] },
           { type: "mc", q: "A red dog (Rr) is crossed with a brown dog (rr). What ratio of red:brown puppies is expected?", choices: ["3:1", "1:1", "all red", "all brown"], answer: 1, explain: "Rr × rr → 50% Rr (red) : 50% rr (brown)." },
@@ -1468,7 +1488,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { p: "**DNA** is a **double helix** made of repeating **nucleotides**. Each nucleotide has three parts: a **phosphate**, a **sugar**, and a **nitrogen base** (A, T, G, C)." },
           { p: "Bases pair up: **A–T** and **G–C** (in RNA, A pairs with **U** instead of T)." },
-          { h: "From gene to protein — the central dogma" },
+          { h: "From gene to protein, the central dogma" },
           { defs: [
             ["Transcription", "Happens in the **nucleus**: DNA's information is copied into **mRNA**."],
             ["Translation", "Happens in the **cytoplasm** at the **ribosome**: it reads the mRNA, and **tRNA** brings the matching **amino acids** to build a protein."],
@@ -1490,8 +1510,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "What is the structure of DNA?", back: "A double helix made of repeating nucleotides (bases A, T, G, C)." },
           { front: "Three parts of a nucleotide", back: "Phosphate, sugar, and a nitrogen base." },
           { front: "DNA base pairing rules", back: "A–T and G–C (A–U in RNA)." },
-          { front: "Transcription — where & what?", back: "In the nucleus; DNA is copied into mRNA." },
-          { front: "Translation — where & what?", back: "In the cytoplasm at the ribosome; mRNA is read and tRNA brings amino acids to build a protein." },
+          { front: "Transcription: where & what?", back: "In the nucleus; DNA is copied into mRNA." },
+          { front: "Translation: where & what?", back: "In the cytoplasm at the ribosome; mRNA is read and tRNA brings amino acids to build a protein." },
           { front: "Codon", back: "A set of 3 mRNA bases coding for one amino acid." },
         ],
         questions: [
@@ -1516,14 +1536,14 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             ["Adaptation", "A beneficial trait (from a mutation) that is **selected for** by natural selection."],
             ["Selection pressure", "A change in the environment that causes certain traits to be **selected over others**."],
             ["Resilience", "The ability of an ecosystem or organism to **bounce back** after a disturbance."],
-            ["Population bottleneck", "When a population crashes to very low numbers then rebounds — leaving **less genetic variation**."],
+            ["Population bottleneck", "When a population crashes to very low numbers then rebounds, leaving **less genetic variation**."],
           ] },
           { h: "The 4 components of natural selection" },
           { olist: [
-            "**Variation** — individuals in a population differ.",
-            "**Inheritance** — those variations can be passed to offspring.",
-            "**Overproduction** — more offspring are born than can survive on available resources.",
-            "**Differential survival** — variations that boost survival/reproduction get passed on more.",
+            "**Variation**, individuals in a population differ.",
+            "**Inheritance**, those variations can be passed to offspring.",
+            "**Overproduction**, more offspring are born than can survive on available resources.",
+            "**Differential survival**, variations that boost survival/reproduction get passed on more.",
           ] },
           { tip: "Memory hook **VISD / 'VISit'**: Variation, Inheritance, Selection (overproduction), Differential survival." },
         ],
@@ -1532,7 +1552,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           head: ["Organism", "Selection pressure", "Adaptation that survived"],
           rows: [
             ["Hawksbeard plant", "Habitat fragmentation", "More **non-feathery seeds** that drop straight down & root"],
-            ["Juncos (birds)", "Humans & buildings", "**Boldness** — bold birds get food in cities"],
+            ["Juncos (birds)", "Humans & buildings", "**Boldness**, bold birds get food in cities"],
             ["Rats", "Poison", "A DNA **mutation** making them poison-resistant"],
           ],
         },
@@ -1548,7 +1568,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         questions: [
           { type: "mc", q: "Which best defines evolution?", choices: ["A sudden change in one organism", "The gradual change in a species over time by natural selection", "When an animal learns a new behavior", "The death of a population"], answer: 1 },
           { type: "mc", q: "A change in the environment that causes certain traits to be favored is called a:", choices: ["mutation", "selection pressure", "bottleneck", "phenotype"], answer: 1 },
-          { type: "mc", q: "Which is NOT one of the four components of natural selection?", choices: ["Variation among individuals", "Inheritance of traits", "Every individual survives equally", "More offspring than can survive"], answer: 2, explain: "Survival is NOT equal — that's the whole point (differential survival)." },
+          { type: "mc", q: "Which is NOT one of the four components of natural selection?", choices: ["Variation among individuals", "Inheritance of traits", "Every individual survives equally", "More offspring than can survive"], answer: 2, explain: "Survival is NOT equal, that's the whole point (differential survival)." },
           { type: "mc", q: "When a population crashes to a small size and then rebounds with less genetic variation, this is a:", choices: ["population bottleneck", "adaptation", "selection pressure", "resilience"], answer: 0 },
           { type: "fill", q: "A beneficial trait that is selected for by natural selection is called an ______.", answers: ["adaptation"] },
           { type: "tf", q: "Adaptations are originally created by mutations.", answer: true },
@@ -1563,13 +1583,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { p: "Two lizard populations were split when **volcanic eruptions created impassable lava trenches** (geographic isolation). Over time they became two species:" },
           { defs: [
-            ["Lichen (Light) Anoles", "On lush **Mount Verde** — pale, mottled skin camouflages against lichen."],
-            ["Dusk Anoles", "On dark **Mount Umbra** — solid dark skin camouflages against dark volcanic bark. The dark bark was a **selective advantage** for darker lizards."],
+            ["Lichen (Light) Anoles", "On lush **Mount Verde**, pale, mottled skin camouflages against lichen."],
+            ["Dusk Anoles", "On dark **Mount Umbra**, solid dark skin camouflages against dark volcanic bark. The dark bark was a **selective advantage** for darker lizards."],
             ["Geographic isolation", "A **physical divide** that keeps two populations from reaching each other to mate."],
-            ["Reproductive barrier", "The two now have **different dewlap (throat-flap) colors**, so they won't respond to each other's mating display — keeping them separate species."],
+            ["Reproductive barrier", "The two now have **different dewlap (throat-flap) colors**, so they won't respond to each other's mating display, keeping them separate species."],
           ] },
           { p: "**Hybrids** have patchy coloring that camouflages on **neither** mountain, so predators spot them easily → they don't survive. Their DNA is **98% identical**, meaning the two species **recently diverged from a common ancestor**." },
-          { tip: "Big idea: the environment **'selected' the individuals whose traits best matched their specific habitat** — that's natural selection in action." },
+          { tip: "Big idea: the environment **'selected' the individuals whose traits best matched their specific habitat**, that's natural selection in action." },
         ],
         visual: {
           type: "compare", cap: "Two species, one ancestor",
@@ -1585,11 +1605,11 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "Geographic isolation", back: "A physical divide that prevents two populations from reaching one another to mate." },
         ],
         questions: [
-          { type: "mc", q: "What event originally isolated the two lizard populations?", choices: ["A disease outbreak", "Volcanic eruptions that created impassable lava trenches", "Humans moving them", "A change in their diet"], answer: 1 },
-          { type: "mc", q: "Two populations being separated by a physical divide so they cannot mate is called:", choices: ["a reproductive barrier", "geographic isolation", "a population bottleneck", "an adaptation"], answer: 1 },
-          { type: "mc", q: "The two species have different dewlap colors, so they won't mate with each other. This is an example of a:", choices: ["geographic isolation", "reproductive barrier", "selection pressure", "mutation"], answer: 1 },
-          { type: "mc", q: "Why are hybrid lizards unlikely to survive in the wild?", choices: ["They are born with a disease", "Their patchy coloration makes them highly visible to predators in either environment", "They cannot eat insects", "They are too large"], answer: 1 },
-          { type: "mc", q: "The two lizard species share 98% identical DNA. This most likely means they:", choices: ["are unrelated", "recently diverged from a common ancestor", "are the same species", "were created by humans"], answer: 1 },
+          { type: "mc", q: "One species lived across a whole region until a barrier split its habitat in two, and over time each side became its own species. Which event would cause that kind of split?", choices: ["A season with plenty of food", "A new river or lava flow divides the habitat", "All members living close together", "A shared mating call"], answer: 1, explain: "A physical barrier that cannot be crossed isolates the groups (geographic isolation)." },
+          { type: "mc", q: "Two populations are separated by a physical barrier and can never reach each other to mate. What is this called?", choices: ["A population bottleneck", "Geographic isolation", "An adaptation", "A mutation"], answer: 1 },
+          { type: "mc", q: "Two related lizard groups now use different throat-flap colors in their mating displays, so they no longer recognize or mate with each other. This difference acts as a:", choices: ["Selection pressure", "Reproductive barrier", "Geographic isolation", "Population bottleneck"], answer: 1, explain: "Anything that stops two groups from successfully mating is a reproductive barrier." },
+          { type: "mc", q: "On a dark mountain, dark lizards blend in; on a pale mountain, pale lizards blend in. A patchy, in-between lizard would most likely:", choices: ["Blend in better than both", "Be easily spotted by predators on either mountain", "Grow much larger", "Live longer than the others"], answer: 1, explain: "The intermediate form is camouflaged on neither habitat, so it's selected against." },
+          { type: "mc", q: "Two separate lizard species share about 98% of their DNA. This most strongly suggests they:", choices: ["Are completely unrelated", "Recently shared a common ancestor", "Are actually one species", "Were bred by humans"], answer: 1 },
         ],
       },
 
@@ -1603,16 +1623,16 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { defs: [
             ["Digestive", "Breaks down food, absorbs nutrients, removes food waste."],
             ["Circulatory (Cardiac)", "Moves blood, nutrients, hormones, and immune cells around the body."],
-            ["Respiratory", "Gas exchange — brings **oxygen in** and lets **carbon dioxide out**."],
+            ["Respiratory", "Gas exchange, brings **oxygen in** and lets **carbon dioxide out**."],
             ["Excretory", "Filters blood and makes/stores/removes **urine**."],
             ["Immune", "Fights off foreign invaders (pathogens)."],
             ["Nervous", "**Controls** all the other body systems."],
             ["Muscular", "Creates **movement** with muscles."],
             ["Skeletal", "Provides structure, stores nutrients, makes blood, protects organs."],
-            ["Integumentary", "The body's **covering** (skin) — protects, regulates temperature, gives sensory info."],
+            ["Integumentary", "The body's **covering** (skin), protects, regulates temperature, gives sensory info."],
             ["Lymphatic", "A **drainage system** for cells and tissues."],
           ] },
-          { tip: "The **nervous** system is the boss — it **controls** every other system." },
+          { tip: "The **nervous** system is the boss, it **controls** every other system." },
         ],
         visual: {
           type: "table", cap: "System → function",
@@ -1628,11 +1648,11 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           ],
         },
         cards: [
-          { front: "Respiratory system", back: "Gas exchange — brings oxygen in, removes carbon dioxide." },
+          { front: "Respiratory system", back: "Gas exchange: brings oxygen in, removes carbon dioxide." },
           { front: "Nervous system", back: "Controls all of the other body systems." },
           { front: "Skeletal system", back: "Provides structure, stores nutrients, makes blood, protects organs." },
           { front: "Excretory system", back: "Filters blood and makes, stores, and removes urine." },
-          { front: "Integumentary system", back: "The skin — protects, regulates temperature, provides sensory info." },
+          { front: "Integumentary system", back: "The skin: protects, regulates temperature, provides sensory info." },
           { front: "Circulatory system", back: "Moves blood, nutrients, hormones, and immune cells around the body." },
           { front: "Lymphatic system", back: "A drainage system for cells and tissues." },
         ],
@@ -1640,7 +1660,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { type: "mc", q: "Which system controls all of the other body systems?", choices: ["Circulatory", "Nervous", "Skeletal", "Lymphatic"], answer: 1 },
           { type: "mc", q: "The respiratory system is responsible for:", choices: ["filtering blood into urine", "gas exchange (oxygen in, carbon dioxide out)", "fighting infections", "creating movement"], answer: 1 },
           { type: "mc", q: "Which system provides structure, protects organs, and helps make blood?", choices: ["Muscular", "Skeletal", "Integumentary", "Excretory"], answer: 1 },
-          { type: "fill", q: "The ____ system is the skin — it protects the body and regulates temperature.", answers: ["integumentary"] },
+          { type: "fill", q: "The ____ system is the skin, it protects the body and regulates temperature.", answers: ["integumentary"] },
           { type: "mc", q: "Filtering blood and removing waste as urine is the job of the ____ system.", choices: ["digestive", "excretory", "respiratory", "immune"], answer: 1 },
         ],
       },
@@ -1659,7 +1679,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             "→ **pulmonary vein** → **left atrium** → mitral valve → **left ventricle**",
             "→ aortic valve → **aorta** → out to the body",
           ] },
-          { tip: "**Arteries** carry blood **A**way from the heart. The **pulmonary artery** is special — it carries *deoxygenated* blood to the lungs; the **pulmonary vein** brings *oxygenated* blood back." },
+          { tip: "**Arteries** carry blood **A**way from the heart. The **pulmonary artery** is special, it carries *deoxygenated* blood to the lungs; the **pulmonary vein** brings *oxygenated* blood back." },
           { h: "Digestive organs" },
           { defs: [
             ["Esophagus", "Moves food from the mouth to the stomach."],
@@ -1705,7 +1725,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
 </script>
   <script>
-/* FRENCH 3 — from the "Study guide Final exam French 3 25-26":
+/* FRENCH 3, from the "Study guide Final exam French 3 25-26":
    le conditionnel, le futur, la Belgique, l'environnement, écriture. */
 (function (STUDY) {
   "use strict";
@@ -1722,7 +1742,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       {
         id: "fr-conditionnel",
         title: "Le Conditionnel",
-        blurb: "The 'would' tense — formation, suggestions, and irregular stems.",
+        blurb: "The 'would' tense, formation, suggestions, and irregular stems.",
         lesson: [
           { p: "**Le conditionnel** = *would* do something. Use it for **polite requests**, **hypotheticals**, and **suggestions** (*Tu **devrais** faire tes devoirs* = You **should** do your homework)." },
           { h: "Formation" },
@@ -1746,7 +1766,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           rows: [["je", "-ais", "parlerais"], ["tu", "-ais", "parlerais"], ["il/elle", "-ait", "parlerait"], ["nous", "-ions", "parlerions"], ["vous", "-iez", "parleriez"], ["ils/elles", "-aient", "parleraient"]],
         },
         cards: [
-          { front: "What is the conditionnel used for?", back: "To say 'would' — polite requests, hypotheticals, and suggestions." },
+          { front: "What is the conditionnel used for?", back: "To say 'would': polite requests, hypotheticals, and suggestions." },
           { front: "Conditional endings", back: "-ais, -ais, -ait, -ions, -iez, -aient (the imperfect endings)." },
           { front: "Conditional stem of aller", back: "ir- (j'irais)." },
           { front: "Conditional stem of être", back: "ser- (je serais)." },
@@ -1773,7 +1793,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       {
         id: "fr-futur",
         title: "Le Futur Simple",
-        blurb: "The 'will' tense — same stems, different endings.",
+        blurb: "The 'will' tense, same stems, different endings.",
         lesson: [
           { p: "**Le futur simple** = *will* do something. It uses the **same stems** as the conditional but the endings come from **avoir**: **-ai, -as, -a, -ons, -ez, -ont**." },
           { example: "parler → je parler**ai**, tu parler**as**, il parler**a**, nous parler**ons**, vous parler**ez**, ils parler**ont**", as: "Régulier" },
@@ -1785,8 +1805,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         ],
         visual: {
           type: "compare", cap: "Futur vs. Conditionnel (same stem!)",
-          left: { h: "Futur — 'will'", items: ["Endings: -ai, -as, -a, -ons, -ez, -ont", "j'irai = I will go", "il sera = he will be"] },
-          right: { h: "Conditionnel — 'would'", items: ["Endings: -ais, -ait, -ions, -iez, -aient", "j'irais = I would go", "il serait = he would be"] },
+          left: { h: "Futur, 'will'", items: ["Endings: -ai, -as, -a, -ons, -ez, -ont", "j'irai = I will go", "il sera = he will be"] },
+          right: { h: "Conditionnel, 'would'", items: ["Endings: -ais, -ait, -ions, -iez, -aient", "j'irais = I would go", "il serait = he would be"] },
         },
         cards: [
           { front: "Futur simple endings", back: "-ai, -as, -a, -ons, -ez, -ont (from avoir)." },
@@ -1810,9 +1830,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { p: "La Belgique is divided by **language**. You'll label a map and answer where each language is spoken." },
           { defs: [
-            ["La Wallonie (Wallonia)", "The **southern** region — **French**-speaking."],
-            ["La Flandre (Flanders)", "The **northern** region — **Dutch (néerlandais)**-speaking."],
-            ["Bruxelles (Brussels)", "The **capital** — officially **bilingual** (French + Dutch)."],
+            ["La Wallonie (Wallonia)", "The **southern** region, **French**-speaking."],
+            ["La Flandre (Flanders)", "The **northern** region, **Dutch (néerlandais)**-speaking."],
+            ["Bruxelles (Brussels)", "The **capital**, officially **bilingual** (French + Dutch)."],
             ["German region", "A small area in the **east** also speaks German."],
           ] },
           { h: "Neighbors to label" },
@@ -1827,7 +1847,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         cards: [
           { front: "Which Belgian region speaks French?", back: "La Wallonie (Wallonia), in the south." },
           { front: "Which Belgian region speaks Dutch (néerlandais)?", back: "La Flandre (Flanders), in the north." },
-          { front: "What is Belgium's bilingual capital?", back: "Bruxelles (Brussels) — French + Dutch." },
+          { front: "What is Belgium's bilingual capital?", back: "Bruxelles (Brussels): French + Dutch." },
           { front: "Belgium's neighbors", back: "Netherlands, Germany, Luxembourg, France (+ the North Sea to the north)." },
         ],
         questions: [
@@ -1891,11 +1911,11 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         title: "L'Écriture (Writing the Email)",
         blurb: "Write to your Belgian host family using the conditional.",
         lesson: [
-          { p: "**The task:** write an e-mail to your host family (*la famille Vosters*) about a 2-week visit to Belgium — explain **3 things you'd like to do** and **3 things you would not** like to do, then ask **2 questions**." },
+          { p: "**The task:** write an e-mail to your host family (*la famille Vosters*) about a 2-week visit to Belgium, explain **3 things you'd like to do** and **3 things you would not** like to do, then ask **2 questions**." },
           { h: "Structure" },
           { list: [
             "**Greeting:** *Cher / Chère…* or *Bonjour la famille Vosters,*",
-            "**Body:** use the **conditionnel** — *J'**aimerais** visiter…* (I would like), *Je **voudrais**…*, *Je ne **voudrais** pas…* (I wouldn't like).",
+            "**Body:** use the **conditionnel**, *J'**aimerais** visiter…* (I would like), *Je **voudrais**…*, *Je ne **voudrais** pas…* (I wouldn't like).",
             "**Ask 2 questions:** *Est-ce que nous **pourrions**…? Qu'est-ce qu'on **ferait** le week-end?*",
             "**Closing:** *Bien à vous,* + your name.",
           ] },
@@ -1930,7 +1950,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
 </script>
   <script>
-/* GEOMETRY — from the "25-26 Final Exam Geometry Review Packet" (Ch 7–11).
+/* GEOMETRY, from the "25-26 Final Exam Geometry Review Packet" (Ch 7–11).
    Lessons give the formula/method; questions use the packet's verified answers. */
 (function (STUDY) {
   "use strict";
@@ -2207,12 +2227,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { list: [
             "**Circumference:** C = π · d = 2π · r",
-            "**Arc length:** (θ / 360) · 2π · r  — a fraction of the circumference",
-            "**Sector area:** (θ / 360) · π · r²  — a fraction of the area",
+            "**Arc length:** (θ / 360) · 2π · r, a fraction of the circumference",
+            "**Sector area:** (θ / 360) · π · r², a fraction of the area",
           ] },
           { example: "Arc length, 80° central angle, r = 9 → (80/360)·2π·9 ≈ 12.57.", as: "Worked" },
           { example: "Sector area, 256°, r = 14 → (256/360)·π·14² ≈ 437.87.", as: "Worked" },
-          { tip: "Arc length and sector area are both just **(θ/360)** of the whole — of the **circumference** for arc length, of the **area** for a sector." },
+          { tip: "Arc length and sector area are both just **(θ/360)** of the whole, of the **circumference** for arc length, of the **area** for a sector." },
         ],
         visual: {
           type: "table", cap: "Circle measurement",
@@ -2237,7 +2257,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       {
         id: "geo-solids",
         title: "Surface Area & Volume of Solids",
-        blurb: "Prisms, cylinders, pyramids, cones, and spheres — forward and reverse.",
+        blurb: "Prisms, cylinders, pyramids, cones, and spheres, forward and reverse.",
         lesson: [
           { h: "Surface area" },
           { list: [
@@ -2256,9 +2276,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             "**Sphere:** V = (4/3)πr³",
           ] },
           { example: "Square pyramid, base edge 48, height 10 → V = ⅓·48²·10 = ⅓·2304·10 = 7680 in³.", as: "Worked" },
-          { p: "**Reverse problems** give the volume/SA and ask for a missing dimension — just solve the formula." },
+          { p: "**Reverse problems** give the volume/SA and ask for a missing dimension, just solve the formula." },
           { example: "Cylinder V = 2304 in³, r = 12 → h = V/(πr²) = 2304/(144π) = 16/π ≈ 5.09 in.", as: "Worked" },
-          { tip: "Cones and pyramids are the **'⅓' shapes** — they hold exactly one-third of the prism/cylinder with the same base and height." },
+          { tip: "Cones and pyramids are the **'⅓' shapes**, they hold exactly one-third of the prism/cylinder with the same base and height." },
         ],
         visual: {
           type: "table", cap: "Solid formulas",
@@ -2319,7 +2339,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { defs: [
             ["Industrial Revolution", "The shift to factory production; **England (Great Britain)** led it thanks to resources, geography, and capital."],
             ["Urbanization", "People moving from farms to **cities** for factory jobs."],
-            ["Land Enclosure", "Consolidating small farms into large, fenced, privately-owned land — pushing peasants toward cities."],
+            ["Land Enclosure", "Consolidating small farms into large, fenced, privately-owned land, pushing peasants toward cities."],
             ["Steam Engine", "Improved by **James Watt**; the key new power source (ran trains and boats)."],
             ["Putting-Out / Cottage System", "Merchants gave raw materials to peasants who finished goods (esp. cloth) at home."],
             ["Liverpool & Manchester", "Two of the biggest industrial-era cities in England."],
@@ -2362,12 +2382,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         blurb: "Realpolitik, Bismarck & Cavour, and Japan's rapid modernization.",
         lesson: [
           { defs: [
-            ["Nationalism", "Pride/loyalty to one's nation — a force that both unified countries and fueled conflict."],
+            ["Nationalism", "Pride/loyalty to one's nation, a force that both unified countries and fueled conflict."],
             ["Realpolitik", "'Realistic politics' based on the **practical needs of the state**, not morals or ideology."],
             ["Otto von Bismarck", "Used Realpolitik to **unify Germany** (1871)."],
             ["Camillo di Cavour", "Used Realpolitik to help **unify Italy**."],
             ["Germany's Rise", "After unifying in **1871**, Germany became an industrial giant with pioneering social reforms."],
-            ["Meiji Reforms (Japan)", "Japan **rapidly modernized**, modeling its military and legal systems on the West — fast and state-directed."],
+            ["Meiji Reforms (Japan)", "Japan **rapidly modernized**, modeling its military and legal systems on the West, fast and state-directed."],
             ["Russification", "Forcing Russian language/culture on non-Russian peoples in the empire."],
           ] },
           { tip: "Bismarck (Germany) & Cavour (Italy) are the **unification duo**, both driven by **Realpolitik**." },
@@ -2400,7 +2420,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { defs: [
             ["Imperialism", "Powerful nations taking control of weaker territories for resources, markets, and status."],
-            ["Social Darwinism", "A pseudoscientific 'survival of the fittest' applied to societies — used to **justify racism and imperialism**."],
+            ["Social Darwinism", "A pseudoscientific 'survival of the fittest' applied to societies, used to **justify racism and imperialism**."],
             ["Berlin Conference", "European powers met to **carve up Africa**; borders were drawn entirely by Europeans, with no African input."],
             ["Ethiopia (and Liberia)", "Among the **few African nations to resist** colonization and stay independent."],
             ["Sepoy Rebellion", "Uprising in **India** after British rifle cartridges greased with animal fat offended Hindu & Muslim soldiers."],
@@ -2438,7 +2458,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         lesson: [
           { defs: [
             ["The Balkans ('Powder Keg')", "Region of ethnic tension and nationalism that helped ignite WWI."],
-            ["M-A-I-N causes", "**M**ilitarism, **A**lliances, **I**mperialism, **N**ationalism. (The League of Nations came *after* WWI — not a cause.)"],
+            ["M-A-I-N causes", "**M**ilitarism, **A**lliances, **I**mperialism, **N**ationalism. (The League of Nations came *after* WWI, not a cause.)"],
             ["The Spark", "Assassination of **Archduke Franz Ferdinand** of Austria-Hungary."],
             ["No Man's Land", "The deadly open ground **between opposing trenches**."],
             ["Propaganda / Total War", "Posters like 'Don't Waste Bread!' pushed civilians to ration food (vs. German U-boats)."],
@@ -2462,14 +2482,14 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "What event sparked WWI?", back: "The assassination of Archduke Franz Ferdinand." },
           { front: "The Balkans were nicknamed…", back: "The 'Powder Keg' of Europe." },
           { front: "No Man's Land", back: "The dangerous ground between opposing trench lines." },
-          { front: "Why did Russia exit WWI?", back: "The Russian Revolution — losses, shortages, and anger at the Czar." },
+          { front: "Why did Russia exit WWI?", back: "The Russian Revolution: losses, shortages, and anger at the Czar." },
           { front: "Treaty of Versailles", back: "Ended WWI; Germans viewed its terms as harsh and humiliating." },
         ],
         questions: [
           { type: "mc", q: "The acronym for the causes of WWI (M-A-I-N) stands for:", choices: ["Money, Armies, Italy, Nazis", "Militarism, Alliances, Imperialism, Nationalism", "Marx, Africa, India, Napoleon", "Migration, Arts, Industry, Navy"], answer: 1 },
           { type: "mc", q: "What event is considered the 'spark' that started WWI?", choices: ["The sinking of the Lusitania", "The assassination of Archduke Franz Ferdinand", "The Treaty of Versailles", "The Russian Revolution"], answer: 1 },
           { type: "mc", q: "Russia dropped out of WWI mainly because of:", choices: ["a victory over Germany", "the Russian Revolution and internal collapse", "the Marshall Plan", "the Berlin Airlift"], answer: 1 },
-          { type: "tf", q: "Germans generally viewed the Treaty of Versailles as fair and generous.", answer: false, explain: "They saw it as harsh and humiliating — fueling later resentment." },
+          { type: "tf", q: "Germans generally viewed the Treaty of Versailles as fair and generous.", answer: false, explain: "They saw it as harsh and humiliating, fueling later resentment." },
         ],
       },
 
@@ -2480,12 +2500,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         blurb: "Great Depression, Gandhi, fascism, and the rise of dictators.",
         lesson: [
           { defs: [
-            ["Great Depression", "Worldwide economic collapse — mass **inflation and unemployment**."],
+            ["Great Depression", "Worldwide economic collapse, mass **inflation and unemployment**."],
             ["Gandhi", "Led India's independence movement through **nonviolent resistance** and civil disobedience."],
             ["Mandate System", "League of Nations split former Ottoman lands among victors → triggered **Pan-Arabism**."],
             ["Fascism", "Absolute supremacy of the leader/state, extreme nationalism, brutal suppression of opposition."],
             ["Why dictators rose", "Depression chaos + wounded pride let **Hitler** and **Mussolini** promise stability and nationalism."],
-            ["Japanese Imperialism", "Japan expanded for resources — notably the brutal **invasion of Manchuria**."],
+            ["Japanese Imperialism", "Japan expanded for resources, notably the brutal **invasion of Manchuria**."],
           ] },
           { tip: "Economic desperation (the Depression) + national humiliation = the soil in which dictators like Hitler and Mussolini grew." },
         ],
@@ -2516,13 +2536,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         blurb: "Appeasement, Lend-Lease, two fronts, and the Final Solution.",
         lesson: [
           { defs: [
-            ["Appeasement", "Giving in to Hitler's demands to avoid war — which let him seize lands unchecked."],
+            ["Appeasement", "Giving in to Hitler's demands to avoid war, which let him seize lands unchecked."],
             ["Lend-Lease Act", "U.S. sent military supplies/aid to the Allies **without entering combat** (at first)."],
             ["Two-Front War", "Germany's central location forced it to **split its forces** and fight on several fronts."],
             ["The 'Final Solution'", "Hitler's state-sponsored plan to **systematically murder every European Jew**."],
             ["The Holocaust", "The term for this mass genocide of six million Jews (and millions of others)."],
           ] },
-          { tip: "**Appeasement** = trying to keep peace by giving in — it failed and emboldened Hitler." },
+          { tip: "**Appeasement** = trying to keep peace by giving in, it failed and emboldened Hitler." },
         ],
         visual: {
           type: "timeline", cap: "Key WWII concepts",
@@ -2560,7 +2580,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             ["Marshall Plan", "U.S. aid to rebuild Europe (Greece & Turkey aided to block Soviet influence)."],
             ["United Nations", "Post-WWII international **peacekeeping** body."],
             ["Berlin Airlift", "The **first major** U.S.–USSR confrontation of the Cold War."],
-            ["Domino Theory", "Fear that if one nation fell to communism, neighbors would too — justified the **Vietnam** intervention."],
+            ["Domino Theory", "Fear that if one nation fell to communism, neighbors would too, justified the **Vietnam** intervention."],
             ["Collapse of the USSR", "Gorbachev's **glasnost** (openness) & **perestroika** (restructuring) weakened control → collapse in **1991**."],
           ] },
           { tip: "**Glasnost** = openness, **Perestroika** = restructuring. Both unintentionally hastened the Soviet collapse (1991)." },
@@ -2612,9 +2632,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           type: "timeline", cap: "Decolonization & after",
           events: [
             { d: "1947", t: "**Partition of India** into India & Pakistan" },
-            { d: "1960", t: "**Year of Africa** — 17 nations freed" },
+            { d: "1960", t: "**Year of Africa**, 17 nations freed" },
             { d: "20th c.", t: "**Apartheid** in South Africa (Mandela resists)" },
-            { d: "1994", t: "**Rwandan Genocide** — Hutu vs. Tutsi" },
+            { d: "1994", t: "**Rwandan Genocide**, Hutu vs. Tutsi" },
           ],
         },
         cards: [
@@ -2623,7 +2643,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "Apartheid", back: "South Africa's system of racial segregation and white-minority rule." },
           { front: "Mandela & Gandhi share what method?", back: "Nonviolent protest against injustice." },
           { front: "Rwandan Genocide (1994)", back: "Hutu extremists mass-murdered the minority Tutsi." },
-          { front: "How did the Korean War end?", back: "A stalemate at the 38th parallel — a permanently divided Korea." },
+          { front: "How did the Korean War end?", back: "A stalemate at the 38th parallel: a permanently divided Korea." },
         ],
         questions: [
           { type: "mc", q: "The 1947 Partition divided British India into:", choices: ["North and South Korea", "India and Pakistan", "Israel and Palestine", "East and West Germany"], answer: 1 },
@@ -2634,6 +2654,197 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       },
     ],
   });
+})(window.STUDY);
+
+</script>
+  <!-- Question-bank expansion (card→MC + parametric generators) -->
+  <script>
+/* ============================================================
+   quizgen.js — expands the question bank at load time so practice
+   can't be pattern-memorised. Runs AFTER all data files register,
+   BEFORE quiz/test/app. Three sources:
+     1. Card → MC  (every subject): self-contained questions whose
+        distractors are real, same-subject answers of similar length
+        so the correct option never stands out.
+     2. Geometry   : randomised numeric problems (fresh each load).
+     3. French     : randomised conjugation drills (conditionnel/futur).
+   ============================================================ */
+(function (STUDY) {
+  "use strict";
+  const shuffle = STUDY.SRS.shuffle;
+  const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  function norm(s) { return String(s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
+  function wordset(s) { return new Set(norm(s).split(" ").filter(w => w.length > 3)); }
+  function sim(a, b) {
+    const A = wordset(a), B = wordset(b); if (!A.size || !B.size) return 0;
+    let i = 0; A.forEach(w => { if (B.has(w)) i++; });
+    return i / (A.size + B.size - i);
+  }
+
+  /* ---------------- 1. card → multiple choice ---------------- */
+  function stemFor(front) {
+    const f = front.trim();
+    if (/[?…:=]$/.test(f)) return f;                                   // already a prompt
+    if (/^(what|which|who|where|when|why|how|name|put|list|define|conjugate|cross|select|identify)\b/i.test(f)) return f; // instruction/question
+    return "Which best describes “" + f.replace(/[.…\s]+$/, "") + "”?"; // a term → frame it
+  }
+
+  function genFromCards() {
+    STUDY.subjects.forEach(function (s) {
+      const all = [];
+      s.topics.forEach(t => (t.cards || []).forEach(c => all.push({ c: c, t: t })));
+      if (all.length < 4) return;
+
+      s.topics.forEach(function (t) {
+        const existingStems = {};
+        (t.questions || []).forEach(q => existingStems[norm(q.q)] = 1);
+        const add = [];
+
+        (t.cards || []).forEach(function (card) {
+          const answer = card.back;
+          if (!answer || answer.length > 115) return;
+          const stem = stemFor(card.front);
+          if (existingStems[norm(stem)]) return;          // don't duplicate an authored question
+
+          // candidate distractors: other cards' answers in this subject
+          let cands = all.filter(function (x) {
+            if (x.c === card) return false;
+            const b = x.c.back;
+            if (!b || b.length > 135) return false;
+            if (norm(b) === norm(answer)) return false;
+            if (sim(b, answer) > 0.45) return false;       // not a near-duplicate meaning
+            return true;
+          });
+          if (cands.length < 3) return;
+
+          // prefer distractors from OTHER topics (less chance of a second correct answer)
+          const cross = cands.filter(x => x.t !== t);
+          if (cross.length >= 3) cands = cross;
+
+          // bias toward similar length so the answer doesn't stand out, then add variety
+          cands.sort((a, b) => Math.abs(a.c.back.length - answer.length) - Math.abs(b.c.back.length - answer.length));
+          const window = cands.slice(0, Math.min(7, cands.length));
+          const chosen = shuffle(window).slice(0, 3);
+
+          const choices = shuffle([answer, chosen[0].c.back, chosen[1].c.back, chosen[2].c.back]);
+          if (new Set(choices.map(norm)).size < 4) return; // safety: 4 distinct options
+          add.push({ type: "mc", q: stem, choices: choices, answer: choices.indexOf(answer) });
+          existingStems[norm(stem)] = 1;
+        });
+
+        if (add.length) STUDY.addQuestions(t, add);
+      });
+    });
+  }
+
+  /* ---------------- 2. geometry numeric problems ---------------- */
+  function makeNumMC(correct, distractors, fmt) {
+    const seen = {}, out = [];
+    const add = (v) => { const k = Math.round(v * 100) / 100; if (!(k in seen) && isFinite(v) && v > 0) { seen[k] = 1; out.push(v); } };
+    add(correct);
+    shuffle(distractors).forEach(add);
+    let guard = 0;
+    while (out.length < 4 && guard++ < 30) add(correct * (1 + (rint(1, 6) * (Math.random() < .5 ? -0.1 : 0.15))));
+    if (out.length < 4) return null;
+    const four = [correct].concat(out.filter(v => v !== correct).slice(0, 3));
+    const choices = shuffle(four).map(fmt);
+    return { choices: choices, answer: choices.indexOf(fmt(correct)) };
+  }
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const PI = Math.PI;
+
+  const GEO_TEMPLATES = [
+    { topic: "geo-area", make: () => { const l = rint(4, 20), w = rint(3, 18); const c = l * w; return q("A rectangle is " + l + " cm by " + w + " cm. What is its area?", c, [2 * (l + w), l + w, l * w * 2], v => v + " cm²"); } },
+    { topic: "geo-area", make: () => { const b = rint(4, 24), h = rint(3, 18); const c = 0.5 * b * h; return q("A triangle has base " + b + " and height " + h + ". What is its area?", c, [b * h, b + h, 0.5 * (b + h)], v => "" + r1(v)); } },
+    { topic: "geo-area", make: () => { const a = rint(4, 14), b = a + rint(2, 10), h = rint(3, 12); const c = 0.5 * (a + b) * h; return q("A trapezoid has parallel sides " + a + " and " + b + " with height " + h + ". Area?", c, [(a + b) * h, 0.5 * a * b, a + b + h], v => "" + r1(v)); } },
+    { topic: "geo-area", make: () => { const d1 = rint(6, 22), d2 = rint(5, 20); const c = 0.5 * d1 * d2; return q("A kite (or rhombus) has diagonals " + d1 + " and " + d2 + ". What is its area?", c, [d1 * d2, d1 + d2, 0.25 * d1 * d2], v => "" + r1(v)); } },
+    { topic: "geo-circlemeasure", make: () => { const r = rint(2, 14); const c = r2(PI * r * r); return q("A circle has radius " + r + ". What is its area? (use π ≈ 3.14)", c, [r2(2 * PI * r), r2(PI * 2 * r), r2(PI * r)], v => "" + r2(v)); } },
+    { topic: "geo-circlemeasure", make: () => { const d = rint(4, 24); const c = r2(PI * d); return q("A circle has diameter " + d + ". What is its circumference?", c, [r2(PI * d * d / 4), r2(PI * d / 2), r2(2 * PI * d)], v => "" + r2(v)); } },
+    { topic: "geo-solids", make: () => { const l = rint(3, 12), w = rint(3, 12), h = rint(3, 12); const c = l * w * h; return q("A rectangular prism is " + l + " by " + w + " by " + h + ". What is its volume?", c, [2 * (l * w + l * h + w * h), l + w + h, l * w + l * h + w * h], v => v + " units³"); } },
+    { topic: "geo-solids", make: () => { const r = rint(2, 9), h = rint(4, 14); const c = r1(PI * r * r * h); return q("A cylinder has radius " + r + " and height " + h + ". Volume? (π ≈ 3.14)", c, [r1(2 * PI * r * h), r1(PI * r * h), r1(PI * r * r)], v => "" + r1(v)); } },
+    { topic: "geo-solids", make: () => { const r = rint(2, 9), h = rint(4, 14); const c = r1(PI * r * r * h / 3); return q("A cone has radius " + r + " and height " + h + ". Volume = ⅓πr²h ≈ ?", c, [r1(PI * r * r * h), r1(PI * r * h / 3), r1(2 / 3 * PI * r * r * h)], v => "" + r1(v)); } },
+    { topic: "geo-solids", make: () => { const r = rint(2, 9); const c = r1(4 / 3 * PI * r * r * r); return q("A sphere has radius " + r + ". Volume = (4/3)πr³ ≈ ?", c, [r1(4 * PI * r * r), r1(4 / 3 * PI * r * r), r1(PI * r * r * r)], v => "" + r1(v)); } },
+    { topic: "geo-righttri", make: () => { const a = rint(3, 18), b = rint(3, 18); const c = r2(Math.hypot(a, b)); return q("A right triangle has legs " + a + " and " + b + ". What is the hypotenuse?", c, [a + b, Math.max(a, b), r2(Math.abs(a - b) + Math.min(a, b))], v => "" + r2(v)); } },
+    { topic: "geo-quads", make: () => { const n = rint(3, 10); const c = (n - 2) * 180; const names = { 3: "triangle", 4: "quadrilateral", 5: "pentagon", 6: "hexagon", 7: "heptagon", 8: "octagon", 9: "nonagon", 10: "decagon" }; return q("What is the sum of the interior angles of a " + names[n] + " (" + n + " sides)?", c, [n * 180, (n - 2) * 360, (n - 1) * 180], v => v + "°"); } },
+    { topic: "geo-quads", make: () => { let a, b; do { a = rint(25, 120); b = rint(25, 120); } while (a + b >= 175); const c = 180 - a - b; return q("Two angles of a triangle are " + a + "° and " + b + "°. What is the third angle?", c, [a + b, 360 - a - b, Math.abs(a - b)], v => v + "°"); } },
+  ];
+  function q(stem, correct, distractors, fmt) {
+    const m = makeNumMC(correct, distractors, fmt);
+    if (!m) return null;
+    return { type: "mc", q: stem, choices: m.choices, answer: m.answer };
+  }
+
+  function genGeometry(perTemplate) {
+    const byTopic = {};
+    GEO_TEMPLATES.forEach(function (tpl) {
+      for (let i = 0; i < perTemplate; i++) {
+        let item = null, tries = 0;
+        while (!item && tries++ < 5) item = tpl.make();
+        if (item) (byTopic[tpl.topic] = byTopic[tpl.topic] || []).push(item);
+      }
+    });
+    Object.keys(byTopic).forEach(function (tid) {
+      const entry = STUDY.topicIndex[tid];
+      if (entry) STUDY.addQuestions(entry.topic, byTopic[tid]);
+    });
+  }
+
+  /* ---------------- 3. french conjugation drills ---------------- */
+  const FR_VERBS = [
+    { inf: "parler", stem: "parler" }, { inf: "regarder", stem: "regarder" }, { inf: "manger", stem: "manger" },
+    { inf: "aimer", stem: "aimer" }, { inf: "travailler", stem: "travailler" }, { inf: "écouter", stem: "écouter" },
+    { inf: "finir", stem: "finir" }, { inf: "choisir", stem: "choisir" }, { inf: "vendre", stem: "vendr" },
+    { inf: "prendre", stem: "prendr" }, { inf: "attendre", stem: "attendr" },
+    { inf: "aller", stem: "ir" }, { inf: "avoir", stem: "aur" }, { inf: "être", stem: "ser" },
+    { inf: "faire", stem: "fer" }, { inf: "pouvoir", stem: "pourr" }, { inf: "devoir", stem: "devr" },
+    { inf: "voir", stem: "verr" }, { inf: "venir", stem: "viendr" }, { inf: "vouloir", stem: "voudr" },
+  ];
+  const FR_SUBJ = ["je", "tu", "il", "nous", "vous", "ils"];
+  const FR_END = {
+    cond: ["ais", "ais", "ait", "ions", "iez", "aient"],
+    fut: ["ai", "as", "a", "ons", "ez", "ont"],
+  };
+  const VOWEL = /^[aeiouéèêh]/i;
+  function frForm(stem, end, si) {
+    let form = stem + FR_END[end][si];
+    const subj = FR_SUBJ[si];
+    if (subj === "je") return (VOWEL.test(form) ? "j'" : "je ") + form;
+    return subj + " " + form;
+  }
+  function genFrench(count) {
+    const out = { "fr-conditionnel": [], "fr-futur": [] };
+    const seen = {};
+    let guard = 0;
+    while ((out["fr-conditionnel"].length + out["fr-futur"].length) < count && guard++ < count * 8) {
+      const v = pick(FR_VERBS), si = rint(0, 5), tense = Math.random() < 0.5 ? "cond" : "fut";
+      const key = v.inf + si + tense;
+      if (seen[key]) continue; seen[key] = 1;
+      const correct = frForm(v.stem, tense, si);
+      // distractors: wrong person (same tense), wrong tense (same person), wrong both
+      const si2 = (si + rint(1, 5)) % 6;
+      const other = tense === "cond" ? "fut" : "cond";
+      const ds = [frForm(v.stem, tense, si2), frForm(v.stem, other, si), frForm(v.stem, other, si2)];
+      const choices = shuffle([correct].concat(ds));
+      if (new Set(choices.map(c => c.toLowerCase())).size < 4) continue;
+      const label = tense === "cond" ? "conditionnel (would)" : "futur (will)";
+      const item = { type: "mc", q: "Conjugate « " + v.inf + " » for « " + FR_SUBJ[si] + " » in the " + label + ":", choices: choices, answer: choices.indexOf(correct) };
+      out[tense === "cond" ? "fr-conditionnel" : "fr-futur"].push(item);
+    }
+    Object.keys(out).forEach(function (tid) {
+      const entry = STUDY.topicIndex[tid];
+      if (entry && out[tid].length) STUDY.addQuestions(entry.topic, out[tid]);
+    });
+  }
+
+  /* ---------------- run ---------------- */
+  try { genFromCards(); } catch (e) { if (window.console) console.warn("card-gen", e); }
+  try { genGeometry(4); } catch (e) { if (window.console) console.warn("geo-gen", e); }
+  try { genFrench(16); } catch (e) { if (window.console) console.warn("fr-gen", e); }
+
+  STUDY.QUIZGEN = { genFromCards: genFromCards, genGeometry: genGeometry, genFrench: genFrench };
 })(window.STUDY);
 
 </script>
@@ -2850,7 +3061,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         const r = el("div", "match-row");
         r.appendChild(el("div", "ml", esc(lf)));
         const sel = el("select");
-        sel.appendChild(el("option", null, "— choose —")).value = "";
+        sel.appendChild(el("option", null, "choose…")).value = "";
         rights.forEach(function (rt) { const o = el("option", null, esc(rt)); o.value = rt; sel.appendChild(o); });
         r.appendChild(sel); grid.appendChild(r);
         selects.push(sel);
@@ -2905,7 +3116,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         });
         mount.appendChild(p);
       } else if (state.list.length > 2) {
-        mount.appendChild(el("div", "panel center", "🔥 Clean sweep — every answer correct!"));
+        mount.appendChild(el("div", "panel center", "🔥 Clean sweep! Every answer correct."));
       }
 
       const bar2 = el("div", "qbar");
@@ -3095,7 +3306,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     refresh();
 
     const bar = el("div", "qbar");
-    const gen = el("button", "btn primary", "🖨️ Generate &amp; print");
+    const gen = el("button", "btn primary", "🖨️ Make printable test ↗");
     gen.onclick = function () { const model = TEST.generate(cfg); TEST.print(model); };
     const prev = el("button", "btn", "👀 Preview");
     prev.onclick = function () { const model = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, model, el); previewWrap.scrollIntoView({ behavior: "smooth" }); };
@@ -3187,34 +3398,28 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       sections.push({ kind: "writing", title: "Part · Written Response", prompt: p });
     }
 
-    return { title: subjName + " — Practice Final", subjName: subjName, sections: sections, total: qno,
+    return { title: subjName + ": Practice Final", subjName: subjName, sections: sections, total: qno,
       stamp: new Date().toLocaleDateString() };
   };
 
-  /* ---------------- print document ---------------- */
-  function buildDoc(model) {
-    const wrap = document.createElement("div");
-    wrap.className = "print-doc";
+  /* ---------------- printable document (its own page) ---------------- */
+  function buildBody(model) {
     let html = "";
-    html += "<h1>" + esc(model.title) + "</h1>";
-    html += "<div class='print-meta'><span>Name: ______________________</span><span>Date: __________</span><span>" + model.total + " questions</span></div>";
-    html += "<div class='print-instr'>Randomized practice mock · generated " + esc(model.stamp) + ". Answer key on the last page.</div>";
-
     const key = [];
     model.sections.forEach(function (sec) {
       html += "<h2>" + esc(sec.title) + "</h2>";
-      if (sec.instr) html += "<div class='print-instr'>" + sec.instr + "</div>";
+      if (sec.instr) html += "<div class='instr'>" + sec.instr + "</div>";
       if (sec.kind === "mc") {
         sec.items.forEach(function (it) {
           html += "<div class='pq'><div class='stem'>" + it.no + ". " + esc(it.stem) + "</div><div class='pchoices'>";
-          it.choices.forEach(function (c, i) { html += "<div class='pchoice'>" + LET[i] + ") " + esc(c) + "</div>"; });
+          it.choices.forEach(function (c, i) { html += "<div>" + LET[i] + ") " + esc(c) + "</div>"; });
           html += "</div></div>";
           key.push(it.no + ". " + LET[it.ans]);
         });
       } else if (sec.kind === "free") {
         sec.items.forEach(function (it) {
-          html += "<div class='pq free'><div class='stem'>" + it.no + ". " + esc(it.stem) + "</div>";
-          html += it.work ? "<div class='pwork'></div>" : "<div class='answerspace'></div>";
+          html += "<div class='pq'><div class='stem'>" + it.no + ". " + esc(it.stem) + "</div>";
+          html += it.work ? "<div class='pwork'></div>" : "";
           html += "<div>Answer: ____________________</div></div>";
           key.push(it.no + ". " + esc(it.ans));
         });
@@ -3226,7 +3431,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       } else if (sec.kind === "match") {
         sec.blocks.forEach(function (blk) {
           html += "<div class='pmatch'><div><ol start='" + blk.prompts[0].no + "'>";
-          blk.prompts.forEach(function (p) { html += "<li>____  " + esc(p.def) + "</li>"; });
+          blk.prompts.forEach(function (p) { html += "<li>____&nbsp;&nbsp;" + esc(p.def) + "</li>"; });
           html += "</ol></div><div class='bank'><b>Terms</b><br>";
           blk.bank.forEach(function (term, i) { html += LET[i] + ". " + esc(term) + "<br>"; });
           html += "</div></div>";
@@ -3234,27 +3439,69 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         });
       } else if (sec.kind === "writing") {
         html += "<div class='pq'><div class='stem'>" + esc(sec.prompt) + "</div>";
-        html += "<div style='height:2.6in;border:1px solid #999;margin-top:6px'></div></div>";
+        html += "<div class='wbox'></div></div>";
       }
     });
+    return { html: html, key: key };
+  }
 
-    // answer key
-    html += "<div class='page-break'></div><h1>Answer Key</h1>";
-    html += "<div class='print-instr'>" + esc(model.title) + " · " + esc(model.stamp) + "</div>";
-    html += "<div class='akey'>" + key.map(k => "<div>" + esc(k) + "</div>").join("") + "</div>";
+  const PRINT_CSS =
+    "*{box-sizing:border-box}body{font-family:Georgia,'Times New Roman',serif;color:#111;margin:0;background:#eef0f4}" +
+    ".bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:#15163a;color:#fff}" +
+    ".bar b{font-family:system-ui,sans-serif;font-size:14px;margin-right:auto}" +
+    ".bar button{font:600 14px system-ui;padding:10px 15px;border-radius:9px;border:0;cursor:pointer;background:#fff;color:#15163a}" +
+    ".bar button.p{background:#6c5ce7;color:#fff}" +
+    ".sheet{max-width:740px;margin:16px auto;background:#fff;padding:32px 40px;box-shadow:0 3px 18px rgba(0,0,0,.14)}" +
+    "h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;font-family:system-ui,sans-serif;border-bottom:1.5px solid #111;padding-bottom:3px;margin:22px 0 10px}" +
+    ".meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border:1px solid #111;padding:7px 12px;font-size:13px;font-family:system-ui,sans-serif;margin:8px 0}" +
+    ".instr{font-size:12.5px;font-style:italic;color:#333;margin-bottom:10px}" +
+    ".pq{margin:0 0 13px;break-inside:avoid}.pq .stem{font-weight:bold;margin-bottom:3px}" +
+    ".pchoices{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;padding-left:16px;font-size:14px}" +
+    ".pwork{height:1.05in}.wbox{height:2.4in;border:1px solid #999;margin-top:6px}" +
+    ".pmatch{display:grid;grid-template-columns:1fr 1fr;gap:16px;break-inside:avoid}.pmatch ol{margin:0;padding-left:22px}.pmatch li{margin:5px 0}" +
+    ".bank{border:1px solid #111;padding:8px 11px;font-size:13px;height:max-content}" +
+    ".akey-page{display:none;border-top:3px double #111;margin-top:26px;padding-top:12px}" +
+    ".akey{font-size:13px;columns:2;column-gap:26px}.akey div{margin:2px 0;break-inside:avoid}" +
+    "@media print{body{background:#fff}.bar{display:none}.sheet{box-shadow:none;margin:0;max-width:none;padding:0}.akey-page{display:block;break-before:page}@page{margin:.6in}}" +
+    "@media(max-width:560px){.sheet{padding:20px 16px;margin:0}.pchoices{grid-template-columns:1fr}.pmatch{grid-template-columns:1fr}.akey{columns:1}}";
 
-    wrap.innerHTML = html;
-    return wrap;
+  function buildPrintHTML(model) {
+    const b = buildBody(model);
+    const keyHtml = b.key.map(k => "<div>" + esc(k) + "</div>").join("");
+    return "<!doctype html><html lang='en'><head><meta charset='utf-8'>" +
+      "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
+      "<title>" + esc(model.title) + "</title><style>" + PRINT_CSS + "</style></head><body>" +
+      "<div class='bar'><b>" + esc(model.title) + "</b>" +
+      "<button class='p' onclick='window.print()'>🖨️ Print / Save as PDF</button>" +
+      "<button id='kbtn' onclick='tk()'>Show answer key</button></div>" +
+      "<div class='sheet'>" +
+      "<h1>" + esc(model.title) + "</h1>" +
+      "<div class='meta'><span>Name: __________________</span><span>Date: __________</span><span>" + model.total + " questions</span></div>" +
+      "<div class='instr'>Randomized practice mock, generated " + esc(model.stamp) + ". On a phone: tap Print / Save as PDF, then choose Save to Files or a printer. Answer key prints on its own page.</div>" +
+      b.html +
+      "<div class='akey-page' id='akey'><h2>Answer Key</h2><div class='akey'>" + keyHtml + "</div></div>" +
+      "</div>" +
+      "<script>function tk(){var k=document.getElementById('akey'),b=document.getElementById('kbtn');var on=k.style.display==='block';k.style.display=on?'none':'block';b.textContent=on?'Show answer key':'Hide answer key';if(!on)k.scrollIntoView({behavior:'smooth'});}<\/script>" +
+      "</body></html>";
   }
 
   TEST.print = function (model) {
-    let host = document.getElementById("print-host");
-    if (host) host.remove();
-    host = document.createElement("div");
-    host.id = "print-host"; host.className = "print-only";
-    host.appendChild(buildDoc(model));
-    document.body.appendChild(host);
-    window.print();
+    const html = buildPrintHTML(model);
+    let w = null;
+    try { w = window.open("", "_blank"); } catch (e) { w = null; }
+    if (w && w.document) { w.document.open(); w.document.write(html); w.document.close(); w.focus && w.focus(); return; }
+    // pop-up blocked: fall back to a downloadable/openable file
+    try {
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.target = "_blank"; a.rel = "noopener"; a.download = (model.subjName || "practice") + "-test.html";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      if (STUDY.QUIZ && STUDY.QUIZ.toast) STUDY.QUIZ.toast("Saved the printable test. Open it, then Print/Save PDF");
+    } catch (e) {
+      if (STUDY.QUIZ && STUDY.QUIZ.toast) STUDY.QUIZ.toast("Couldn't open the print view. Try Preview instead");
+    }
   };
 
   /* ---------------- on-screen preview (mobile-friendly) ---------------- */
@@ -3404,7 +3651,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     hero.appendChild(el("p", null, "Active recall &amp; spaced repetition for your five finals. Pick up where you left off."));
     const d = daysToFinals();
     const cd = el("div", "countdown");
-    cd.innerHTML = "⏳ " + (d > 1 ? d + " days until finals" : d === 1 ? "Finals tomorrow" : d === 0 ? "Finals are here — you've got this" : "Finals week — good luck!");
+    cd.innerHTML = "⏳ " + (d > 1 ? d + " days until finals" : d === 1 ? "Finals tomorrow" : d === 0 ? "Finals are here. You've got this" : "Finals week. Good luck!");
     hero.appendChild(cd);
     app.appendChild(hero);
 
@@ -3578,7 +3825,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     app.appendChild(body);
 
     if (tab === "cards") {
-      if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic — head to Practice.</div>'; return; }
+      if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic yet. Head to Practice.</div>'; return; }
       QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => go("#/t/" + id + "/learn") });
     } else if (tab === "practice") {
       if (!t.questions || !t.questions.length) { body.innerHTML = '<div class="empty">No questions yet for this topic.</div>'; return; }
@@ -3694,7 +3941,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const seen = {}; const all = [];
       items.concat(wrong).forEach(function (q) { if (!seen[q.id]) { seen[q.id] = 1; all.push(q); } });
       if (!all.length) {
-        mount.innerHTML = '<div class="empty"><div class="big">✅</div>Nothing due right now. Come back later and earlier topics will resurface — that\'s the spacing working.</div>';
+        mount.innerHTML = '<div class="empty"><div class="big">✅</div>Nothing due right now. Come back later and earlier topics will resurface. That\'s the spacing working.</div>';
         const bar = el("div", "qbar"); const b = el("button", "btn primary", "Do a mixed set instead");
         b.onclick = () => startMixed(subjectId, 15); bar.appendChild(b); mount.appendChild(bar);
         return;
@@ -3738,7 +3985,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     });
 
     const weak = STUDY.weakTopics(6);
-    app.appendChild(sectionH("Weak spots", weak.length ? "lowest accuracy — revisit these" : "answer a few questions to see this"));
+    app.appendChild(sectionH("Weak spots", weak.length ? "lowest accuracy, revisit these" : "answer a few questions to see this"));
     if (weak.length) {
       weak.forEach(function (w) {
         const t = w.entry.topic, s = w.entry.subject;
@@ -3750,7 +3997,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         app.appendChild(row);
       });
     } else {
-      app.appendChild(el("div", "empty", "No data yet — your weakest topics will show up here so you know exactly what to drill."));
+      app.appendChild(el("div", "empty", "No data yet. Your weakest topics will show up here so you know exactly what to drill."));
     }
 
     const bar = el("div", "qbar");
@@ -3860,6 +4107,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));
     window.addEventListener("hashchange", route);
+    // persist immediately when the tab is backgrounded or closed (mobile-safe)
+    window.addEventListener("pagehide", STUDY.flush);
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") STUDY.flush(); });
     if (!location.hash) location.replace("#/home");
     route();
   }

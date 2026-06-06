@@ -76,7 +76,7 @@
     hero.appendChild(el("p", null, "Active recall &amp; spaced repetition for your five finals. Pick up where you left off."));
     const d = daysToFinals();
     const cd = el("div", "countdown");
-    cd.innerHTML = "⏳ " + (d > 1 ? d + " days until finals" : d === 1 ? "Finals tomorrow" : d === 0 ? "Finals are here — you've got this" : "Finals week — good luck!");
+    cd.innerHTML = "⏳ " + (d > 1 ? d + " days until finals" : d === 1 ? "Finals tomorrow" : d === 0 ? "Finals are here. You've got this" : "Finals week. Good luck!");
     hero.appendChild(cd);
     app.appendChild(hero);
 
@@ -250,7 +250,7 @@
     app.appendChild(body);
 
     if (tab === "cards") {
-      if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic — head to Practice.</div>'; return; }
+      if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic yet. Head to Practice.</div>'; return; }
       QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => go("#/t/" + id + "/learn") });
     } else if (tab === "practice") {
       if (!t.questions || !t.questions.length) { body.innerHTML = '<div class="empty">No questions yet for this topic.</div>'; return; }
@@ -366,7 +366,7 @@
       const seen = {}; const all = [];
       items.concat(wrong).forEach(function (q) { if (!seen[q.id]) { seen[q.id] = 1; all.push(q); } });
       if (!all.length) {
-        mount.innerHTML = '<div class="empty"><div class="big">✅</div>Nothing due right now. Come back later and earlier topics will resurface — that\'s the spacing working.</div>';
+        mount.innerHTML = '<div class="empty"><div class="big">✅</div>Nothing due right now. Come back later and earlier topics will resurface. That\'s the spacing working.</div>';
         const bar = el("div", "qbar"); const b = el("button", "btn primary", "Do a mixed set instead");
         b.onclick = () => startMixed(subjectId, 15); bar.appendChild(b); mount.appendChild(bar);
         return;
@@ -410,7 +410,7 @@
     });
 
     const weak = STUDY.weakTopics(6);
-    app.appendChild(sectionH("Weak spots", weak.length ? "lowest accuracy — revisit these" : "answer a few questions to see this"));
+    app.appendChild(sectionH("Weak spots", weak.length ? "lowest accuracy, revisit these" : "answer a few questions to see this"));
     if (weak.length) {
       weak.forEach(function (w) {
         const t = w.entry.topic, s = w.entry.subject;
@@ -422,7 +422,7 @@
         app.appendChild(row);
       });
     } else {
-      app.appendChild(el("div", "empty", "No data yet — your weakest topics will show up here so you know exactly what to drill."));
+      app.appendChild(el("div", "empty", "No data yet. Your weakest topics will show up here so you know exactly what to drill."));
     }
 
     const bar = el("div", "qbar");
@@ -532,6 +532,9 @@
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));
     window.addEventListener("hashchange", route);
+    // persist immediately when the tab is backgrounded or closed (mobile-safe)
+    window.addEventListener("pagehide", STUDY.flush);
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") STUDY.flush(); });
     if (!location.hash) location.replace("#/home");
     route();
   }
