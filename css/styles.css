@@ -436,6 +436,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 .mx-a{font-weight:700}
 .mx-n{margin-left:auto;font-size:.74rem;color:var(--text-dim);background:var(--surface-2);border-radius:999px;padding:1px 8px}
 
+.feed-gain{text-align:center;font-size:.86rem;color:var(--text);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:12px;padding:9px 12px;margin:10px 0}
+
 /* inline lesson sheet (pulled up from a wrong answer, over the feed) */
 .sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;transition:opacity .2s}
 .sheet-back.on{opacity:1}

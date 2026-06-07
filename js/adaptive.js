@@ -38,32 +38,49 @@
   // correct: bool, rtMs: response time, guess: user flagged "lucky guess", mode: log label
   // chosen: original index of the option picked (for misconception radar; optional)
   ADAPT.update = function (q, correct, rtMs, guess, mode, chosen) {
-    const store = STUDY.store(), now = Date.now();
-    const fast = rtMs && rtMs < (FAST[q.type] || 5000);
-    // response-time + confidence → an effective grade (drives spacing)
+    const store = STUDY.store();
+    const type = q.type || "mc";
+
+    // --- self-calibrated response time → fluency (0..1) ---
+    // "Fast" is relative to YOUR own rolling pace per question type, not a fixed
+    // threshold, so a naturally slow reader isn't punished and a speed-reader
+    // isn't over-credited. A baseline seeds near the old threshold, then adapts.
+    store.rtBase = store.rtBase || {};
+    const base = store.rtBase[type] || (FAST[type] || 5000) * 1.1;
+    let fluency = 0.5;
+    if (rtMs) {
+      fluency = clamp(1.25 - 0.75 * (rtMs / base), 0, 1);   // ~0.33×base→1, 1×→0.5, 1.67×→0
+      const floorMs = type === "fill" ? 1200 : 700;
+      if (rtMs < floorMs) fluency = Math.min(fluency, 0.35); // too quick to have read it → suspicious
+      if (rtMs >= floorMs && rtMs < 60000) store.rtBase[type] = base * 0.85 + rtMs * 0.15;
+    }
+
+    // --- Elo expectation: how likely you were EXPECTED to get this right ---
+    const skill = store.subjectSkill[q.subjectId] || 1500;
+    const pre = store.srs[q.id];
+    const diff = pre && pre.diff ? pre.diff : 1500;
+    const expct = 1 / (1 + Math.pow(10, (diff - skill) / 400));
+
+    // --- effective grade for spacing (fluency-based, with a guess flag) ---
     let grade;
     if (!correct) grade = 0;
     else if (guess) grade = 1;
-    else if (fast) grade = 3;
+    else if (fluency >= 0.62) grade = 3;
     else grade = 2;
 
-    let st = store.srs[q.id];
-    const meta = { mode: mode || "feed", rt: rtMs || 0 };
+    const meta = { mode: mode || "feed", rt: rtMs || 0, fluency: fluency, pexp: expct };
     if (typeof chosen === "number") meta.chosen = chosen;
     STUDY.recordItem(q.id, grade, q.topicId, meta);   // scheduling + honest mastery + log
-    st = store.srs[q.id];                           // now exists
+    const st = store.srs[q.id];                        // now exists
     st.rt = rtMs || st.rt || 0;
 
-    // Elo: item difficulty + your subject skill
-    const skill = store.subjectSkill[q.subjectId] || 1500;
-    const diff = st.diff || 1500;
-    const expct = 1 / (1 + Math.pow(10, (diff - skill) / 400));
+    // --- Elo: item difficulty + your subject skill ---
     const actual = grade >= 2 ? 1 : grade === 1 ? 0.5 : 0;
     st.diff = clamp(diff + 24 * (expct - actual), 600, 2400);
     store.subjectSkill[q.subjectId] = clamp(skill + 28 * (actual - expct), 600, 2400);
 
     STUDY.save();
-    return { grade: grade, fast: fast };
+    return { grade: grade, fast: fluency >= 0.62, fluency: fluency };
   };
 
   // ---- per-item "would you get this right on the exam, right now" ----

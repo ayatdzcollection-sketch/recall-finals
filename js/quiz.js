@@ -589,7 +589,7 @@
     const subjName = opts.subjectId ? ((STUDY.byId[opts.subjectId] || {}).name || "") : "";
     const ready = function () { return opts.subjectId ? ADAPT.readiness(opts.subjectId) : ADAPT.overallReadiness(); };
     const startReady = ready();
-    let answered = 0, correct = 0, sinceMilestone = 0;
+    let answered = 0, correct = 0, sinceMilestone = 0, mastered = 0;
     const windowOk = [];   // rolling accuracy for fatigue
 
     function statusBar() {
@@ -610,7 +610,9 @@
     }
 
     function proceed(q, ok, rt, guessed, chosen) {
+      const wasMastered = STUDY.itemMastery(q.id) >= 0.55;
       ADAPT.update(q, ok, rt, guessed, opts.subjectId ? "feed_subj" : "feed", chosen);
+      if (!wasMastered && STUDY.itemMastery(q.id) >= 0.55) mastered++;   // crossed into "known" this set
       answered++; sinceMilestone++; if (ok) correct++;
       windowOk.push(ok ? 1 : 0); if (windowOk.length > 8) windowOk.shift();
       ctx.recent.push(q.id); if (ctx.recent.length > 8) ctx.recent.shift();
@@ -628,6 +630,9 @@
       big.appendChild(el("div", "score", r + "%"));
       big.appendChild(el("div", "lbl", (subjName ? esc(subjName) + " ready" : "finals ready") + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
       mount.appendChild(big);
+      // make the under-the-hood progress visible (readiness is breadth-wide, so it
+      // moves slowly; this shows the depth you actually gained this set)
+      if (mastered > 0) mount.appendChild(el("div", "feed-gain", "🧠 You locked in <b>" + mastered + "</b> new item" + (mastered > 1 ? "s" : "") + " this set" + (delta <= 0 ? ". Readiness climbs as this spreads across topics." : ".")));
       if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped, a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
       else mount.appendChild(el("div", "panel center", "Nice momentum. The feed keeps adapting to exactly what you need next."));
       const bar = el("div", "qbar");

@@ -92,6 +92,7 @@
       tele: {},       // anonymous telemetry state (anon id, last ping day)
       teleQueue: [],  // outbound anonymous events awaiting upload
       miss: {},       // subjectId -> [{it, c:chosenText, a:answerText, cc:concept, t}] (misconception radar)
+      rtBase: {},     // questionType -> rolling baseline response time (self-calibrated fluency)
       settings: { theme: "dark" },
     };
   };
@@ -269,18 +270,32 @@
     if (ref.type === "fill") return 0.05;
     return 0.12;
   }
-  // Bayesian update of P(known) given one graded attempt.
-  function bktUpdate(prior, grade, g) {
+  // Bayesian update of P(known) given one graded attempt. Now weighs HOW you got
+  // it right, not just whether: fluency (how confidently/fast, self-calibrated to
+  // your own pace upstream) and pexp (how likely you were EXPECTED to get it from
+  // Elo skill-vs-difficulty). Beating a hard item fast = strong evidence; acing an
+  // easy one slowly = weak. opts: { fluency 0..1, pexp 0..1 }.
+  function bktUpdate(prior, grade, g, opts) {
+    const o = opts || {};
     const p = (prior == null) ? 0.12 : prior;              // fresh item: mostly unknown
-    const slip = grade >= 3 ? 0.05 : grade === 2 ? 0.10 : grade === 1 ? 0.12 : 0.14;
-    // effective guess prob: a flagged/Hard correct is weak; a fast correct is strong
-    let ge = grade === 1 ? Math.max(g, 0.6) : grade === 3 ? g * 0.55 : g;
-    ge = clampN(ge, 0.02, 0.85);
     const correct = grade >= 1;                            // 0 = wrong, >=1 = (some) recall
+    const weak = grade === 1;                              // Hard / flagged-guess correct
+    // fluency: provided by the feed; else inferred from the self-graded card button
+    let fl = (typeof o.fluency === "number") ? o.fluency
+      : (grade >= 3 ? 0.85 : grade === 2 ? 0.5 : grade === 1 ? 0.2 : 0.3);
+    fl = clampN(fl, 0, 1);
+    const pexp = clampN((typeof o.pexp === "number") ? o.pexp : 0.5, 0.05, 0.95);
+    // effective guess: base chance, LOWER when the item was hard for you (low pexp)
+    // and when you answered confidently; raised if you flagged it a guess.
+    let ge = g * (0.45 + 0.7 * pexp) * (1 - 0.4 * fl);
+    if (weak) ge = Math.max(ge, 0.6);
+    ge = clampN(ge, 0.02, 0.9);
+    const slip = clampN(0.16 - 0.11 * fl, 0.03, 0.18);     // confident answers slip less
     let post;
     if (correct) post = (p * (1 - slip)) / (p * (1 - slip) + (1 - p) * ge);
     else post = (p * slip) / (p * slip + (1 - p) * (1 - ge));
-    const pT = correct ? 0.08 : 0.04;                      // practice itself teaches a little
+    // learning gain: a confident correct on a hard item teaches the most
+    const pT = correct ? clampN(0.04 + 0.06 * fl + 0.06 * (1 - pexp), 0.02, 0.18) : 0.03;
     return clampN(post + (1 - post) * pT, 0, 0.999);
   }
   function captureMiss(id, grade, ref, chosen, indexed) {
@@ -310,7 +325,7 @@
 
     // honest mastery: passively update P(you really know it) + log misconceptions
     const ix0 = STUDY.itemIndex[id], ref0 = ix0 && ix0.ref;
-    st.kn = bktUpdate(st.kn, grade, guessProb(ref0));
+    st.kn = bktUpdate(st.kn, grade, guessProb(ref0), meta || {});   // fluency + difficulty aware
     if (meta && typeof meta.chosen === "number") captureMiss(id, grade, ref0, meta.chosen, ix0);
 
     // "work on" list: Again (0) and Hard (1) both flag; Good/Easy clear it
