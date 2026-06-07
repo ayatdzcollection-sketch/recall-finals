@@ -413,5 +413,61 @@
     return { topics: order, counts: counts };
   };
 
+  /* ---------- difficulty + concept (Easy/Hard practice with full lesson coverage) ---------- */
+  function correctText(q) {
+    if (q.type === "mc" && q.choices) return q.choices[q.answer] || "";
+    if (q.type === "fill") return (q.answers || [])[0] || "";
+    return "";
+  }
+  // level 1 = easy (definition recall), 2 = hard (example / discrimination / application)
+  STUDY.levelOf = function (q) {
+    if (q.lvl) return q.lvl;
+    const s = (q.q || "").toLowerCase();
+    if (/which (is|of the following is|sentence|line|statement)\b|identify the (device|type)|example of|which is not|conjugate |solve the|find the|what is the (area|volume|circumference|hypotenuse|surface|measure|sum|third|length|value)/.test(s)) return 2;
+    return 1;
+  };
+  function topicConcepts(topic) {
+    const cs = [];
+    (topic.lesson || []).forEach(function (b) {
+      if (b.term) cs.push(b.term);
+      if (b.defs) b.defs.forEach(p => cs.push(p[0]));
+    });
+    return cs;
+  }
+  // map a question to one concept token (explicit q.concept wins; else longest lesson keyword found)
+  STUDY.conceptToken = function (q, concepts) {
+    if (q.concept) return q.concept;
+    const hay = ((q.q || "") + " " + correctText(q)).toLowerCase();
+    let best = "general", bestLen = 3;
+    concepts.forEach(function (name) {
+      String(name).toLowerCase().split(/[^a-zà-ÿ]+/).forEach(function (kw) {
+        if (kw.length > 3 && kw.length > bestLen && hay.indexOf(kw) >= 0) { best = kw; bestLen = kw.length; }
+      });
+    });
+    return best;
+  };
+  // build a practice set for a topic at a level, balanced so EVERY concept is covered
+  STUDY.practiceSet = function (topicId, level) {
+    const entry = STUDY.topicIndex[topicId]; if (!entry) return [];
+    const topic = entry.topic, sh = STUDY.SRS.shuffle;
+    const concepts = topicConcepts(topic);
+    const want = level === "easy" ? 1 : level === "hard" ? 2 : 0;
+    const qs = (topic.questions || []).filter(q => q.type !== "match");
+    const groups = {};
+    qs.forEach(function (q) { const c = STUDY.conceptToken(q, concepts); (groups[c] = groups[c] || []).push(q); });
+    const CAP = 6, picked = {};
+    Object.keys(groups).forEach(function (c) {
+      let g = groups[c];
+      if (want) { const pref = g.filter(q => STUDY.levelOf(q) === want); g = pref.length ? pref : g; }  // fallback keeps coverage
+      picked[c] = sh(g).slice(0, CAP);
+    });
+    // round-robin across concepts → balanced + interleaved
+    const keys = sh(Object.keys(picked)), ptr = {}; let total = 0;
+    keys.forEach(k => { ptr[k] = 0; total += picked[k].length; });
+    const out = [];
+    while (out.length < total) { let any = false; keys.forEach(function (k) { if (ptr[k] < picked[k].length) { out.push(picked[k][ptr[k]++]); any = true; } }); if (!any) break; }
+    return out;
+  };
+
   global.STUDY = STUDY;
 })(window);
