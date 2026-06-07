@@ -1414,7 +1414,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     icon: "🧬",
     accent: "#27c89b",
     weight: 4,
-    intro: "Cell reproduction, Mendelian and molecular genetics, evolution and natural selection, and the human body systems, straight from your review answer key.",
+    intro: "Cell reproduction, genetics, DNA, evolution, and body systems. **Your teacher confirmed:** the final is **all multiple choice**, **evolution has the most questions**, and you only need the **big picture** of meiosis and the DNA processes (not the steps). Chromosome detail stays light.",
     topics: [
 
       /* 1. Cell reproduction / mitosis */
@@ -1465,13 +1465,16 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         title: "Chromosomes & Cancer",
         blurb: "Chromosome anatomy and how the p53 gene guards against cancer.",
         lesson: [
+          { note: "**Light scope (per teacher):** you don't need chromosome structure in deep detail. But the **p53 / cancer** part below was emphasized a lot." },
           { defs: [
-            ["Centromere", "The pinched region that **holds the 2 chromatids together**."],
-            ["Chromatids", "The two **identical copies** of a chromosome (joined at the centromere)."],
-            ["Gene", "A **segment of DNA that codes for a trait**."],
+            ["Chromosome", "A long piece of **DNA, coiled and condensed**. You only see chromosomes during cell division."],
+            ["Chromatin", "That **same DNA unwound** into a long, thin form (how it sits the rest of the time)."],
+            ["Centromere", "The pinched middle that **holds the 2 sister chromatids together**."],
+            ["Sister chromatids", "The two **identical copies** of a chromosome, joined at the centromere."],
+            ["Gene", "A section of DNA with the info to make **one protein** (one gene = one protein)."],
           ] },
           { h: "Cancer & the p53 gene" },
-          { p: "**p53** is a tumor-suppressor gene. Its job is to make sure a cell **doesn't divide if its DNA is damaged**, it detects mutations that could lead to uncontrolled growth and stops them. If p53 is **defective**, damaged cells keep dividing → higher cancer rates." },
+          { p: "**p53** is a gene whose job is to **check DNA after it's copied** (after replication) and **find and fix mistakes** (mutations). If p53 is **faulty/mutated** itself, it stops catching mutations. Those mutations build up — especially in the genes that **control how fast a cell divides** — so cells **divide too fast**, stop doing their job, and form **tumors**. That's cancer." },
           { p: "Cancer happens when **mutations** build up in dividing cells. **Taller** people have **more cells**, and **older** people's cells have **divided for longer**, both mean more chances for a harmful mutation, so higher cancer odds." },
           { tip: "Think of p53 as the cell's **'quality inspector'**, it halts a cell with damaged DNA before that damage can spread." },
         ],
@@ -1507,6 +1510,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         blurb: "Making gametes: 4 different haploid sex cells.",
         lesson: [
           { p: "**Meiosis** produces **gametes** (sex cells: sperm and egg). It makes **4 different haploid** cells, each with **half** the chromosomes, so that fertilization restores the full number." },
+          { tip: "**Teacher's big takeaway:** you do **not** need the steps of meiosis. Just know it makes **sex cells** with **half** the DNA, all **different** from each other — that's why siblings (even from the same parents) can look and act so differently." },
           { defs: [
             ["Mitosis → result", "**2 identical diploid** cells (two copies of each chromosome). Used for growth/repair of body cells."],
             ["Meiosis → result", "**4 genetically different haploid** cells (one copy of each chromosome). Used to make gametes."],
@@ -1554,6 +1558,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             "Dog cross **Rr × rr** (R = red, r = brown) → 50% Rr, 50% rr → **50% red, 50% brown**.",
           ] },
           { tip: "A **3:1** phenotype ratio (75%:25%) is the fingerprint of a **Tt × Tt** cross. A **1:1** ratio comes from **Tt × tt**." },
+          { note: "**Scope (per teacher):** only **basic single-trait** crosses. No dihybrid crosses, no incomplete/codominance, no sex-linked traits, no multiple alleles, no blood types. You won't fill in a Punnett square on the scantron, but you must be able to solve one to pick the right probability (e.g., *100% / 75% / 25% / 0%*)." },
         ],
         visual: {
           type: "table", cap: "Punnett square: Tt × Tt",
@@ -1618,14 +1623,19 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         blurb: "DNA structure, transcription, and translation.",
         lesson: [
           { p: "**DNA** is a **double helix** made of repeating **nucleotides**. Each nucleotide has three parts: a **phosphate**, a **sugar**, and a **nitrogen base** (A, T, G, C)." },
-          { p: "Bases pair up: **A–T** and **G–C** (in RNA, A pairs with **U** instead of T)." },
-          { h: "From gene to protein, the central dogma" },
+          { p: "Bases pair up: **A–T** and **G–C** (in RNA, A pairs with **U** instead of T). There are **5 bases total**: A, T, G, C, and **U** (which replaces T in RNA)." },
+          { h: "DNA's three processes" },
           { defs: [
+            ["Replication", "Making a **perfect copy** of DNA. It happens **before a cell divides** so each new cell gets a full set. You don't need the steps — just what it does and when. **Errors in replication = mutations**, which can create new traits (the link to evolution)."],
             ["Transcription", "Happens in the **nucleus**: DNA's information is copied into **mRNA**."],
             ["Translation", "Happens in the **cytoplasm** at the **ribosome**: it reads the mRNA, and **tRNA** brings the matching **amino acids** to build a protein."],
-            ["Codon", "A group of 3 mRNA bases that codes for one amino acid (e.g., AUG = Met/Start)."],
           ] },
-          { tip: "**Transcription** = **T**ranscribe in the nucleus (DNA→mRNA). **Translation** = **T**ranslate the message into protein at the ribosome. DNA → mRNA → protein." },
+          { h: "Codons & the codon wheel" },
+          { defs: [
+            ["Codon", "3 **mRNA** bases that code for one amino acid (e.g., **AUG = Met / Start**)."],
+            ["Anticodon", "The matching 3 bases on **tRNA**. The anticodon of the codon **AUG** is **UAC** (A↔U, U↔A, G↔C)."],
+          ] },
+          { tip: "**Teacher's exact question types:** *DNA CTC → its mRNA is GAG*; *mRNA codon AUG → anticodon UAC*; *codon AUG → amino acid Met*. Practice reading across DNA → mRNA → tRNA → amino acid. **Transcription** = nucleus (DNA→mRNA); **Translation** = ribosome (mRNA→protein)." },
         ],
         visual: {
           type: "flow", cap: "Central dogma (DNA → protein)",
@@ -1659,24 +1669,28 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       {
         id: "bio-evolution",
         title: "Evolution & Natural Selection",
-        blurb: "How populations change: variation, selection, adaptation.",
+        blurb: "How populations change: variation, selection, adaptation. (The most-tested topic.)",
         lesson: [
+          { note: "**This section has the most questions on the final.** Don't just memorize the definition — understand how natural selection *works*." },
           { defs: [
-            ["Evolution", "The **gradual change in a species over time**, driven by natural selection."],
-            ["Natural selection", "Nature 'picking' the **best-fit traits**: organisms with helpful traits survive longer, reproduce more, and pass those traits on."],
-            ["Adaptation", "A beneficial trait (from a mutation) that is **selected for** by natural selection."],
+            ["Evolution", "The **gradual change in a species over time**, most often driven by natural selection."],
+            ["Natural selection", "The environment, through **selection pressures**, 'picks' the **best traits**. Survivors reproduce and pass those traits on. Worked out by **Charles Darwin**."],
+            ["Adaptation", "The result of a **mutation**: a trait that helps an organism survive better. Can be **physical** (a shape) **or behavioral** (e.g., junco *boldness*) or **chemical** (rats *processing poison*)."],
             ["Selection pressure", "A change in the environment that causes certain traits to be **selected over others**."],
-            ["Resilience", "The ability of an ecosystem or organism to **bounce back** after a disturbance."],
-            ["Population bottleneck", "When a population crashes to very low numbers then rebounds, leaving **less genetic variation**."],
+            ["Population bottleneck", "A population crashes to a few individuals then rebounds, slashing genetic variation (the **Florida Panther**). Change **not** driven by natural selection."],
+            ["Founder effect", "A **few** individuals start a new population (e.g., an animal reaching an **island**); their offspring all descend from those few, so diversity is low. Also **not** driven by selection."],
           ] },
-          { h: "The 4 components of natural selection" },
+          { h: "The single most important idea" },
+          { p: "**Natural selection does NOT create new traits.** New traits appear **randomly through mutations**. Nature only **selects the best version of what already exists.** *Giraffes didn't grow longer necks because they needed to — some already had longer necks, those survived and reproduced, and mutations pushed them further.* Same with the **rats**: poison-resistance existed (by mutation) *before* the poison; once people added poison, the resistant ones survived and the trait spread." },
+          { tip: "**Evolution is the OUTCOME; natural selection is the MECHANISM.** Natural selection does the work; evolution is the result." },
+          { h: "The 4 requirements for natural selection" },
           { olist: [
-            "**Variation**, individuals in a population differ.",
-            "**Inheritance**, those variations can be passed to offspring.",
-            "**Overproduction**, more offspring are born than can survive on available resources.",
-            "**Differential survival**, variations that boost survival/reproduction get passed on more.",
+            "**Variation** — individuals differ (and the difference must *matter*: eye color is just blue/brown/green, so nature doesn't select for it).",
+            "**Inheritance** — those variations can be passed to offspring.",
+            "**Overproduction** — more offspring are born than can survive on the resources (the **sea-turtle** example).",
+            "**Differential survival** — the best-fit variations survive and reproduce more ('survival of the fittest').",
           ] },
-          { tip: "Memory hook **VISD / 'VISit'**: Variation, Inheritance, Selection (overproduction), Differential survival." },
+          { tip: "Know the **3 case studies** and their pressure → outcome: **hawksbeard** (habitat fragmentation → heavier seeds that drop straight down), **juncos** (cities/people → boldness), **rats** (poison → resistance). There are for-sure questions on these, plus a reading passage with questions." },
         ],
         visual: {
           type: "table", cap: "Three real case studies (selection pressure → adaptation)",
@@ -2933,6 +2947,26 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     fill("Oxygen-rich blood leaves the left ventricle through the large artery called the ______.", ["aorta"]),
   ]);
 
+  // --- teacher-confirmed Biology question types (from the review walkthrough) ---
+  A("bio-molecular", [
+    mc("A DNA strand reads C-T-C. What is its matching mRNA codon?", ["G-A-G", "G-U-G", "C-U-C", "G-T-G"], 0, "DNA→mRNA: C→G, T→A, C→G, and RNA uses U not T. C-T-C → G-A-G."),
+    mc("The mRNA codon is A-U-G. What is the tRNA anticodon?", ["U-A-C", "T-A-C", "A-U-G", "U-T-C"], 0, "Anticodon pairs with the codon: A↔U, U↔A, G↔C → U-A-C."),
+    mc("The codon A-U-G codes for which amino acid (it's also 'start')?", ["Met", "Tyr", "Stop", "Leu"], 0, "AUG = Methionine / Start."),
+    mc("What does DNA replication do, and when?", ["Builds a protein, in the ribosome", "Makes a perfect copy of DNA, before a cell divides", "Turns DNA into mRNA, in the nucleus", "Destroys old DNA, during digestion"], 1, "Replication copies DNA before division so each new cell gets a full set."),
+    mc("An error made during DNA replication is called a:", ["protein", "mutation", "ribosome", "codon"], 1, "Replication errors = mutations, which can create new traits."),
+    fill("Transcription copies DNA into ______ inside the nucleus.", ["mRNA", "messenger rna", "rna"]),
+  ]);
+  A("bio-evolution", [
+    mc("Which statement about natural selection is TRUE?", ["It creates brand-new traits when organisms need them", "It selects the best version of traits that already exist", "It only happens to plants", "It stops mutations from occurring"], 1, "Natural selection does NOT create traits — mutations do; nature selects from what exists."),
+    mc("Where do the NEW traits that natural selection acts on come from?", ["random mutations", "the organism's effort", "the environment directly", "natural selection itself"], 0),
+    mc("'Evolution is the outcome; natural selection is the ______.'", ["mistake", "mechanism", "opposite", "definition"], 1, "Natural selection is the mechanism; evolution is the result."),
+    mc("The Florida Panther losing genetic diversity after its habitat shrank to one small area is an example of a:", ["founder effect", "population bottleneck", "selection pressure", "mutation"], 1),
+    mc("A few birds reaching a new island and starting a population with low genetic diversity is the:", ["bottleneck effect", "founder effect", "survival of the fittest", "adaptation"], 1),
+    mc("Junco birds that survived best in cities were BOLDER, not faster. This shows an adaptation can be:", ["only physical", "a behavior, not just a physical trait", "created on purpose", "impossible to inherit"], 1),
+    mc("Which scientist is credited with the theory of natural selection?", ["Mendel", "Darwin", "Watson", "Pasteur"], 1),
+    mc("Why is eye color (blue vs. brown vs. green) usually NOT selected for?", ["It can't be inherited", "None of the variations give a survival advantage", "It's caused by the environment", "It only appears in adults"], 1, "For selection to act, a variation has to actually affect survival/reproduction."),
+  ]);
+
   /* ===================== HISTORY ===================== */
   A("his-industrial", [
     mc("In which country did the Industrial Revolution begin?", ["France", "Great Britain", "Germany", "the United States"], 1),
@@ -3072,28 +3106,53 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     ],
   });
 
-  /* ---------------- Duplicated chromosome ---------------- */
+  /* ---------------- Duplicated chromosome (3 core parts only) ---------------- */
   STUDY.DIAGRAMS.push({
     id: "chromosome", subjectId: "biology", topicId: "bio-chromosome", title: "Parts of a Chromosome",
     svg:
       "<svg viewBox='0 0 200 280' xmlns='http://www.w3.org/2000/svg'>" +
       "<rect width='200' height='280' rx='16' fill='#f7f8fc'/>" +
-      // left sister chromatid
       "<path d='M62 30 C44 60 44 110 60 128 C44 150 44 210 62 250 C70 256 84 256 92 250 C78 210 78 150 92 128 C78 110 78 60 92 30 C84 24 70 24 62 30 Z' fill='#9b59b6' stroke='#6c3483' stroke-width='2'/>" +
-      // right sister chromatid
       "<path d='M108 30 C122 60 122 110 108 128 C122 150 122 210 108 250 C116 256 130 256 138 250 C156 210 156 150 140 128 C156 110 156 60 138 30 C130 24 116 24 108 30 Z' fill='#9b59b6' stroke='#6c3483' stroke-width='2'/>" +
-      // centromere (constriction band)
-      "<rect x='58' y='120' width='84' height='18' rx='6' fill='#6c3483'/>" +
-      // a gene band
-      "<rect x='62' y='180' width='30' height='16' rx='4' fill='#f1c40f' stroke='#b8930a' stroke-width='1.5'/>" +
-      // telomere caps
-      "<ellipse cx='77' cy='30' rx='17' ry='8' fill='#d2b4de'/><ellipse cx='123' cy='30' rx='17' ry='8' fill='#d2b4de'/>" +
+      "<rect x='58' y='120' width='84' height='18' rx='6' fill='#6c3483'/>" +     // centromere
+      "<rect x='62' y='180' width='30' height='16' rx='4' fill='#f1c40f' stroke='#b8930a' stroke-width='1.5'/>" +  // gene band
       "</svg>",
     parts: [
-      { x: 38, y: 25, label: "telomere", aliases: ["telomeres", "tip", "end cap"], note: " The protective cap at the end of a chromosome." },
-      { x: 30, y: 60, label: "chromatid", aliases: ["sister chromatid", "chromatids"], note: " One of the two identical copies that make up a duplicated chromosome." },
+      { x: 30, y: 24, label: "chromatid", aliases: ["sister chromatid", "chromatids"], note: " One of the two identical copies that make up a duplicated chromosome." },
       { x: 50, y: 46, label: "centromere", aliases: [], note: " The pinched region that holds the two chromatids together." },
-      { x: 39, y: 67, label: "gene", aliases: [], note: " A segment of DNA that codes for a specific trait." },
+      { x: 39, y: 67, label: "gene", aliases: [], note: " A section of DNA that codes for one protein/trait." },
+    ],
+  });
+
+  /* ---------------- Digestive system ---------------- */
+  STUDY.DIAGRAMS.push({
+    id: "digestive", subjectId: "biology", topicId: "bio-heart", title: "The Digestive System",
+    svg:
+      "<svg viewBox='0 0 220 300' xmlns='http://www.w3.org/2000/svg'>" +
+      "<rect width='220' height='300' rx='16' fill='#f7f8fc'/>" +
+      // large intestine frame (colon)
+      "<path d='M58 250 L58 132 L168 132 L168 232' fill='none' stroke='#b5651d' stroke-width='17' stroke-linecap='round' stroke-linejoin='round'/>" +
+      // small intestine (coiled) inside
+      "<path d='M150 156 C92 156 92 178 148 178 C92 178 92 200 148 200 C92 200 92 222 150 222' fill='none' stroke='#f4a0a0' stroke-width='11' stroke-linecap='round'/>" +
+      // esophagus
+      "<rect x='100' y='20' width='13' height='56' rx='6' fill='#e8857a'/>" +
+      // stomach
+      "<path d='M86 74 C66 78 60 104 78 120 C96 132 120 124 120 104 C120 86 104 88 100 98' fill='#e8857a' stroke='#c25a4f' stroke-width='2'/>" +
+      // liver
+      "<path d='M126 72 C160 64 196 70 192 96 C190 112 150 118 128 110 C120 100 120 80 126 72 Z' fill='#8e4b3c' stroke='#6e3729' stroke-width='2'/>" +
+      // gallbladder
+      "<ellipse cx='150' cy='118' rx='9' ry='13' fill='#2ecc71' stroke='#1e9e57' stroke-width='1.5'/>" +
+      // pancreas
+      "<path d='M92 126 C120 120 150 126 150 134 C150 142 120 140 92 134 Z' fill='#e6c27a' stroke='#bd9540' stroke-width='1.5'/>" +
+      "</svg>",
+    parts: [
+      { x: 48, y: 12, label: "esophagus", aliases: [], note: " Moves food from the mouth to the stomach." },
+      { x: 41, y: 33, label: "stomach", aliases: [], note: " Chemically digests food with acid and enzymes." },
+      { x: 73, y: 30, label: "liver", aliases: [], note: " Produces bile to digest fat." },
+      { x: 68, y: 40, label: "gallbladder", aliases: ["gall bladder"], note: " Stores bile." },
+      { x: 55, y: 44, label: "pancreas", aliases: [], note: " Produces digestive enzymes." },
+      { x: 52, y: 62, label: "small intestine", aliases: [], note: " Breaks food down further and absorbs nutrients." },
+      { x: 76, y: 60, label: "large intestine", aliases: ["colon"], note: " Houses bacteria, finishes digestion, and absorbs water." },
     ],
   });
 })(window.STUDY);
@@ -4055,19 +4114,20 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   const rpick = (rng, a) => a[Math.floor(rng() * a.length)];
   function newSeed() { return Math.floor(Math.random() * 1e9).toString(36) + Math.floor(Math.random() * 1e9).toString(36); }
 
-  // exam blueprints (capped to whatever content is available)
+  // exam blueprints — your finals are MULTIPLE CHOICE (scantron). Writing,
+  // fill-in and listening stay in the practice modes for retention, not here.
   const BLUEPRINT = {
-    history: { mc: 40, match: 20, fill: 0, free: 0, writing: 0,
-      note: "Mirrors the real final: ~70 multiple choice + ~30 matching (People / Events / Vocabulary)." },
-    ela: { mc: 45, match: 10, fill: 0, writing: 1,
-      note: "Defines &amp; identifies literary, poetic and writing terms, plus a short writing response." },
-    biology: { mc: 34, match: 8, fill: 2,
-      note: "Multiple choice across genetics, evolution, cells &amp; body systems." },
-    french: { mc: 6, fill: 14, writing: 1,
-      note: "Conjugation (conditionnel / futur), Belgium &amp; environment vocab, and an écriture prompt." },
-    geometry: { mc: 18, free: 12,
-      note: "Multiple choice + free-response computation. Show work; radical or rounded form as noted." },
-    all: { mc: 50, match: 12, fill: 8, free: 6, writing: 1, note: "Cumulative mock across all five subjects." },
+    history: { mc: 50, match: 20,
+      note: "Scantron: multiple choice + a matching block (People / Events / Vocabulary)." },
+    ela: { mc: 48, match: 10,
+      note: "All multiple choice (scantron), with a small matching block for terms. Essay writing is for retention, not the final." },
+    biology: { mc: 40,
+      note: "All multiple choice (scantron). Focus: meiosis big-picture, p53/cancer, basic Punnett &amp; pedigrees, DNA processes, and evolution (the most questions)." },
+    french: { mc: 30,
+      note: "All multiple choice (scantron): conjugation, Belgium &amp; vocab. Listening &amp; the written e-mail live in their own practice modes." },
+    geometry: { mc: 30,
+      note: "All multiple choice (scantron) computation — area, volume, trig, circles, angles." },
+    all: { mc: 60, match: 12, note: "Cumulative scantron-style mock across all five subjects." },
   };
 
   const WRITING = {
@@ -4241,15 +4301,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       seed: cfg.seed || null, sections: sections, total: qno, stamp: new Date().toLocaleDateString() };
   };
 
-  /* flat question list for on-screen Exam Mode (mc/fill/tf), seeded or random */
+  /* flat question list for on-screen Exam Mode — MULTIPLE CHOICE only (scantron) */
   TEST.examQuestions = function (cfg) {
     const det = !!cfg.seed;
     const rng = det ? mulberry32(hashStr((cfg.seed || "") + "|exam|" + cfg.subjectId)) : Math.random;
     const P = pools(cfg.subjectId, rng, det);
     let qs = P.mc.slice();
-    P.free.concat(P.fill).forEach(function (f) {
-      qs.push(f.answers ? f : { type: "fill", q: f.q, answers: [f.ans || (f.choices ? f.choices[f.answer] : "")], subjectId: f.subjectId, topicId: f.topicId });
-    });
     qs = (det ? rshuf(rng, qs) : SRS.shuffle(qs));
     // de-dupe by stem
     const seen = {}, out = [];
@@ -5100,7 +5157,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     clear();
     app.appendChild(topbar());
     app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Practice Test" }]));
-    app.appendChild(el("div", "hero", "<h1>🖨️ Practice Test Builder</h1><p class='muted'>Generates a randomized mock that mirrors the real final's format. Print it (or save as PDF) with a separate answer key for self-grading.</p>"));
+    app.appendChild(el("div", "hero", "<h1>🖨️ Practice Test Builder</h1><p class='muted'>Generates a randomized <b>multiple-choice (scantron-style)</b> mock to match your real finals. Print it (or save as PDF) with a separate answer key, or take it on screen in Exam Mode.</p>"));
     TEST.renderSetup(app, params, { el: el, esc: esc, sectionH: sectionH });
   }
 

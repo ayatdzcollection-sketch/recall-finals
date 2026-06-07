@@ -16,19 +16,20 @@
   const rpick = (rng, a) => a[Math.floor(rng() * a.length)];
   function newSeed() { return Math.floor(Math.random() * 1e9).toString(36) + Math.floor(Math.random() * 1e9).toString(36); }
 
-  // exam blueprints (capped to whatever content is available)
+  // exam blueprints — your finals are MULTIPLE CHOICE (scantron). Writing,
+  // fill-in and listening stay in the practice modes for retention, not here.
   const BLUEPRINT = {
-    history: { mc: 40, match: 20, fill: 0, free: 0, writing: 0,
-      note: "Mirrors the real final: ~70 multiple choice + ~30 matching (People / Events / Vocabulary)." },
-    ela: { mc: 45, match: 10, fill: 0, writing: 1,
-      note: "Defines &amp; identifies literary, poetic and writing terms, plus a short writing response." },
-    biology: { mc: 34, match: 8, fill: 2,
-      note: "Multiple choice across genetics, evolution, cells &amp; body systems." },
-    french: { mc: 6, fill: 14, writing: 1,
-      note: "Conjugation (conditionnel / futur), Belgium &amp; environment vocab, and an écriture prompt." },
-    geometry: { mc: 18, free: 12,
-      note: "Multiple choice + free-response computation. Show work; radical or rounded form as noted." },
-    all: { mc: 50, match: 12, fill: 8, free: 6, writing: 1, note: "Cumulative mock across all five subjects." },
+    history: { mc: 50, match: 20,
+      note: "Scantron: multiple choice + a matching block (People / Events / Vocabulary)." },
+    ela: { mc: 48, match: 10,
+      note: "All multiple choice (scantron), with a small matching block for terms. Essay writing is for retention, not the final." },
+    biology: { mc: 40,
+      note: "All multiple choice (scantron). Focus: meiosis big-picture, p53/cancer, basic Punnett &amp; pedigrees, DNA processes, and evolution (the most questions)." },
+    french: { mc: 30,
+      note: "All multiple choice (scantron): conjugation, Belgium &amp; vocab. Listening &amp; the written e-mail live in their own practice modes." },
+    geometry: { mc: 30,
+      note: "All multiple choice (scantron) computation — area, volume, trig, circles, angles." },
+    all: { mc: 60, match: 12, note: "Cumulative scantron-style mock across all five subjects." },
   };
 
   const WRITING = {
@@ -202,15 +203,12 @@
       seed: cfg.seed || null, sections: sections, total: qno, stamp: new Date().toLocaleDateString() };
   };
 
-  /* flat question list for on-screen Exam Mode (mc/fill/tf), seeded or random */
+  /* flat question list for on-screen Exam Mode — MULTIPLE CHOICE only (scantron) */
   TEST.examQuestions = function (cfg) {
     const det = !!cfg.seed;
     const rng = det ? mulberry32(hashStr((cfg.seed || "") + "|exam|" + cfg.subjectId)) : Math.random;
     const P = pools(cfg.subjectId, rng, det);
     let qs = P.mc.slice();
-    P.free.concat(P.fill).forEach(function (f) {
-      qs.push(f.answers ? f : { type: "fill", q: f.q, answers: [f.ans || (f.choices ? f.choices[f.answer] : "")], subjectId: f.subjectId, topicId: f.topicId });
-    });
     qs = (det ? rshuf(rng, qs) : SRS.shuffle(qs));
     // de-dupe by stem
     const seen = {}, out = [];

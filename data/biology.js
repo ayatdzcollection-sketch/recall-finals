@@ -8,7 +8,7 @@
     icon: "🧬",
     accent: "#27c89b",
     weight: 4,
-    intro: "Cell reproduction, Mendelian and molecular genetics, evolution and natural selection, and the human body systems, straight from your review answer key.",
+    intro: "Cell reproduction, genetics, DNA, evolution, and body systems. **Your teacher confirmed:** the final is **all multiple choice**, **evolution has the most questions**, and you only need the **big picture** of meiosis and the DNA processes (not the steps). Chromosome detail stays light.",
     topics: [
 
       /* 1. Cell reproduction / mitosis */
@@ -59,13 +59,16 @@
         title: "Chromosomes & Cancer",
         blurb: "Chromosome anatomy and how the p53 gene guards against cancer.",
         lesson: [
+          { note: "**Light scope (per teacher):** you don't need chromosome structure in deep detail. But the **p53 / cancer** part below was emphasized a lot." },
           { defs: [
-            ["Centromere", "The pinched region that **holds the 2 chromatids together**."],
-            ["Chromatids", "The two **identical copies** of a chromosome (joined at the centromere)."],
-            ["Gene", "A **segment of DNA that codes for a trait**."],
+            ["Chromosome", "A long piece of **DNA, coiled and condensed**. You only see chromosomes during cell division."],
+            ["Chromatin", "That **same DNA unwound** into a long, thin form (how it sits the rest of the time)."],
+            ["Centromere", "The pinched middle that **holds the 2 sister chromatids together**."],
+            ["Sister chromatids", "The two **identical copies** of a chromosome, joined at the centromere."],
+            ["Gene", "A section of DNA with the info to make **one protein** (one gene = one protein)."],
           ] },
           { h: "Cancer & the p53 gene" },
-          { p: "**p53** is a tumor-suppressor gene. Its job is to make sure a cell **doesn't divide if its DNA is damaged**, it detects mutations that could lead to uncontrolled growth and stops them. If p53 is **defective**, damaged cells keep dividing → higher cancer rates." },
+          { p: "**p53** is a gene whose job is to **check DNA after it's copied** (after replication) and **find and fix mistakes** (mutations). If p53 is **faulty/mutated** itself, it stops catching mutations. Those mutations build up — especially in the genes that **control how fast a cell divides** — so cells **divide too fast**, stop doing their job, and form **tumors**. That's cancer." },
           { p: "Cancer happens when **mutations** build up in dividing cells. **Taller** people have **more cells**, and **older** people's cells have **divided for longer**, both mean more chances for a harmful mutation, so higher cancer odds." },
           { tip: "Think of p53 as the cell's **'quality inspector'**, it halts a cell with damaged DNA before that damage can spread." },
         ],
@@ -101,6 +104,7 @@
         blurb: "Making gametes: 4 different haploid sex cells.",
         lesson: [
           { p: "**Meiosis** produces **gametes** (sex cells: sperm and egg). It makes **4 different haploid** cells, each with **half** the chromosomes, so that fertilization restores the full number." },
+          { tip: "**Teacher's big takeaway:** you do **not** need the steps of meiosis. Just know it makes **sex cells** with **half** the DNA, all **different** from each other — that's why siblings (even from the same parents) can look and act so differently." },
           { defs: [
             ["Mitosis → result", "**2 identical diploid** cells (two copies of each chromosome). Used for growth/repair of body cells."],
             ["Meiosis → result", "**4 genetically different haploid** cells (one copy of each chromosome). Used to make gametes."],
@@ -148,6 +152,7 @@
             "Dog cross **Rr × rr** (R = red, r = brown) → 50% Rr, 50% rr → **50% red, 50% brown**.",
           ] },
           { tip: "A **3:1** phenotype ratio (75%:25%) is the fingerprint of a **Tt × Tt** cross. A **1:1** ratio comes from **Tt × tt**." },
+          { note: "**Scope (per teacher):** only **basic single-trait** crosses. No dihybrid crosses, no incomplete/codominance, no sex-linked traits, no multiple alleles, no blood types. You won't fill in a Punnett square on the scantron, but you must be able to solve one to pick the right probability (e.g., *100% / 75% / 25% / 0%*)." },
         ],
         visual: {
           type: "table", cap: "Punnett square: Tt × Tt",
@@ -212,14 +217,19 @@
         blurb: "DNA structure, transcription, and translation.",
         lesson: [
           { p: "**DNA** is a **double helix** made of repeating **nucleotides**. Each nucleotide has three parts: a **phosphate**, a **sugar**, and a **nitrogen base** (A, T, G, C)." },
-          { p: "Bases pair up: **A–T** and **G–C** (in RNA, A pairs with **U** instead of T)." },
-          { h: "From gene to protein, the central dogma" },
+          { p: "Bases pair up: **A–T** and **G–C** (in RNA, A pairs with **U** instead of T). There are **5 bases total**: A, T, G, C, and **U** (which replaces T in RNA)." },
+          { h: "DNA's three processes" },
           { defs: [
+            ["Replication", "Making a **perfect copy** of DNA. It happens **before a cell divides** so each new cell gets a full set. You don't need the steps — just what it does and when. **Errors in replication = mutations**, which can create new traits (the link to evolution)."],
             ["Transcription", "Happens in the **nucleus**: DNA's information is copied into **mRNA**."],
             ["Translation", "Happens in the **cytoplasm** at the **ribosome**: it reads the mRNA, and **tRNA** brings the matching **amino acids** to build a protein."],
-            ["Codon", "A group of 3 mRNA bases that codes for one amino acid (e.g., AUG = Met/Start)."],
           ] },
-          { tip: "**Transcription** = **T**ranscribe in the nucleus (DNA→mRNA). **Translation** = **T**ranslate the message into protein at the ribosome. DNA → mRNA → protein." },
+          { h: "Codons & the codon wheel" },
+          { defs: [
+            ["Codon", "3 **mRNA** bases that code for one amino acid (e.g., **AUG = Met / Start**)."],
+            ["Anticodon", "The matching 3 bases on **tRNA**. The anticodon of the codon **AUG** is **UAC** (A↔U, U↔A, G↔C)."],
+          ] },
+          { tip: "**Teacher's exact question types:** *DNA CTC → its mRNA is GAG*; *mRNA codon AUG → anticodon UAC*; *codon AUG → amino acid Met*. Practice reading across DNA → mRNA → tRNA → amino acid. **Transcription** = nucleus (DNA→mRNA); **Translation** = ribosome (mRNA→protein)." },
         ],
         visual: {
           type: "flow", cap: "Central dogma (DNA → protein)",
@@ -253,24 +263,28 @@
       {
         id: "bio-evolution",
         title: "Evolution & Natural Selection",
-        blurb: "How populations change: variation, selection, adaptation.",
+        blurb: "How populations change: variation, selection, adaptation. (The most-tested topic.)",
         lesson: [
+          { note: "**This section has the most questions on the final.** Don't just memorize the definition — understand how natural selection *works*." },
           { defs: [
-            ["Evolution", "The **gradual change in a species over time**, driven by natural selection."],
-            ["Natural selection", "Nature 'picking' the **best-fit traits**: organisms with helpful traits survive longer, reproduce more, and pass those traits on."],
-            ["Adaptation", "A beneficial trait (from a mutation) that is **selected for** by natural selection."],
+            ["Evolution", "The **gradual change in a species over time**, most often driven by natural selection."],
+            ["Natural selection", "The environment, through **selection pressures**, 'picks' the **best traits**. Survivors reproduce and pass those traits on. Worked out by **Charles Darwin**."],
+            ["Adaptation", "The result of a **mutation**: a trait that helps an organism survive better. Can be **physical** (a shape) **or behavioral** (e.g., junco *boldness*) or **chemical** (rats *processing poison*)."],
             ["Selection pressure", "A change in the environment that causes certain traits to be **selected over others**."],
-            ["Resilience", "The ability of an ecosystem or organism to **bounce back** after a disturbance."],
-            ["Population bottleneck", "When a population crashes to very low numbers then rebounds, leaving **less genetic variation**."],
+            ["Population bottleneck", "A population crashes to a few individuals then rebounds, slashing genetic variation (the **Florida Panther**). Change **not** driven by natural selection."],
+            ["Founder effect", "A **few** individuals start a new population (e.g., an animal reaching an **island**); their offspring all descend from those few, so diversity is low. Also **not** driven by selection."],
           ] },
-          { h: "The 4 components of natural selection" },
+          { h: "The single most important idea" },
+          { p: "**Natural selection does NOT create new traits.** New traits appear **randomly through mutations**. Nature only **selects the best version of what already exists.** *Giraffes didn't grow longer necks because they needed to — some already had longer necks, those survived and reproduced, and mutations pushed them further.* Same with the **rats**: poison-resistance existed (by mutation) *before* the poison; once people added poison, the resistant ones survived and the trait spread." },
+          { tip: "**Evolution is the OUTCOME; natural selection is the MECHANISM.** Natural selection does the work; evolution is the result." },
+          { h: "The 4 requirements for natural selection" },
           { olist: [
-            "**Variation**, individuals in a population differ.",
-            "**Inheritance**, those variations can be passed to offspring.",
-            "**Overproduction**, more offspring are born than can survive on available resources.",
-            "**Differential survival**, variations that boost survival/reproduction get passed on more.",
+            "**Variation** — individuals differ (and the difference must *matter*: eye color is just blue/brown/green, so nature doesn't select for it).",
+            "**Inheritance** — those variations can be passed to offspring.",
+            "**Overproduction** — more offspring are born than can survive on the resources (the **sea-turtle** example).",
+            "**Differential survival** — the best-fit variations survive and reproduce more ('survival of the fittest').",
           ] },
-          { tip: "Memory hook **VISD / 'VISit'**: Variation, Inheritance, Selection (overproduction), Differential survival." },
+          { tip: "Know the **3 case studies** and their pressure → outcome: **hawksbeard** (habitat fragmentation → heavier seeds that drop straight down), **juncos** (cities/people → boldness), **rats** (poison → resistance). There are for-sure questions on these, plus a reading passage with questions." },
         ],
         visual: {
           type: "table", cap: "Three real case studies (selection pressure → adaptation)",

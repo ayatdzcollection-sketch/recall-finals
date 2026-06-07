@@ -662,7 +662,7 @@
     clear();
     app.appendChild(topbar());
     app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Practice Test" }]));
-    app.appendChild(el("div", "hero", "<h1>🖨️ Practice Test Builder</h1><p class='muted'>Generates a randomized mock that mirrors the real final's format. Print it (or save as PDF) with a separate answer key for self-grading.</p>"));
+    app.appendChild(el("div", "hero", "<h1>🖨️ Practice Test Builder</h1><p class='muted'>Generates a randomized <b>multiple-choice (scantron-style)</b> mock to match your real finals. Print it (or save as PDF) with a separate answer key, or take it on screen in Exam Mode.</p>"));
     TEST.renderSetup(app, params, { el: el, esc: esc, sectionH: sectionH });
   }
 

@@ -102,6 +102,26 @@
     fill("Oxygen-rich blood leaves the left ventricle through the large artery called the ______.", ["aorta"]),
   ]);
 
+  // --- teacher-confirmed Biology question types (from the review walkthrough) ---
+  A("bio-molecular", [
+    mc("A DNA strand reads C-T-C. What is its matching mRNA codon?", ["G-A-G", "G-U-G", "C-U-C", "G-T-G"], 0, "DNA→mRNA: C→G, T→A, C→G, and RNA uses U not T. C-T-C → G-A-G."),
+    mc("The mRNA codon is A-U-G. What is the tRNA anticodon?", ["U-A-C", "T-A-C", "A-U-G", "U-T-C"], 0, "Anticodon pairs with the codon: A↔U, U↔A, G↔C → U-A-C."),
+    mc("The codon A-U-G codes for which amino acid (it's also 'start')?", ["Met", "Tyr", "Stop", "Leu"], 0, "AUG = Methionine / Start."),
+    mc("What does DNA replication do, and when?", ["Builds a protein, in the ribosome", "Makes a perfect copy of DNA, before a cell divides", "Turns DNA into mRNA, in the nucleus", "Destroys old DNA, during digestion"], 1, "Replication copies DNA before division so each new cell gets a full set."),
+    mc("An error made during DNA replication is called a:", ["protein", "mutation", "ribosome", "codon"], 1, "Replication errors = mutations, which can create new traits."),
+    fill("Transcription copies DNA into ______ inside the nucleus.", ["mRNA", "messenger rna", "rna"]),
+  ]);
+  A("bio-evolution", [
+    mc("Which statement about natural selection is TRUE?", ["It creates brand-new traits when organisms need them", "It selects the best version of traits that already exist", "It only happens to plants", "It stops mutations from occurring"], 1, "Natural selection does NOT create traits — mutations do; nature selects from what exists."),
+    mc("Where do the NEW traits that natural selection acts on come from?", ["random mutations", "the organism's effort", "the environment directly", "natural selection itself"], 0),
+    mc("'Evolution is the outcome; natural selection is the ______.'", ["mistake", "mechanism", "opposite", "definition"], 1, "Natural selection is the mechanism; evolution is the result."),
+    mc("The Florida Panther losing genetic diversity after its habitat shrank to one small area is an example of a:", ["founder effect", "population bottleneck", "selection pressure", "mutation"], 1),
+    mc("A few birds reaching a new island and starting a population with low genetic diversity is the:", ["bottleneck effect", "founder effect", "survival of the fittest", "adaptation"], 1),
+    mc("Junco birds that survived best in cities were BOLDER, not faster. This shows an adaptation can be:", ["only physical", "a behavior, not just a physical trait", "created on purpose", "impossible to inherit"], 1),
+    mc("Which scientist is credited with the theory of natural selection?", ["Mendel", "Darwin", "Watson", "Pasteur"], 1),
+    mc("Why is eye color (blue vs. brown vs. green) usually NOT selected for?", ["It can't be inherited", "None of the variations give a survival advantage", "It's caused by the environment", "It only appears in adults"], 1, "For selection to act, a variation has to actually affect survival/reproduction."),
+  ]);
+
   /* ===================== HISTORY ===================== */
   A("his-industrial", [
     mc("In which country did the Industrial Revolution begin?", ["France", "Great Britain", "Germany", "the United States"], 1),

@@ -72,28 +72,53 @@
     ],
   });
 
-  /* ---------------- Duplicated chromosome ---------------- */
+  /* ---------------- Duplicated chromosome (3 core parts only) ---------------- */
   STUDY.DIAGRAMS.push({
     id: "chromosome", subjectId: "biology", topicId: "bio-chromosome", title: "Parts of a Chromosome",
     svg:
       "<svg viewBox='0 0 200 280' xmlns='http://www.w3.org/2000/svg'>" +
       "<rect width='200' height='280' rx='16' fill='#f7f8fc'/>" +
-      // left sister chromatid
       "<path d='M62 30 C44 60 44 110 60 128 C44 150 44 210 62 250 C70 256 84 256 92 250 C78 210 78 150 92 128 C78 110 78 60 92 30 C84 24 70 24 62 30 Z' fill='#9b59b6' stroke='#6c3483' stroke-width='2'/>" +
-      // right sister chromatid
       "<path d='M108 30 C122 60 122 110 108 128 C122 150 122 210 108 250 C116 256 130 256 138 250 C156 210 156 150 140 128 C156 110 156 60 138 30 C130 24 116 24 108 30 Z' fill='#9b59b6' stroke='#6c3483' stroke-width='2'/>" +
-      // centromere (constriction band)
-      "<rect x='58' y='120' width='84' height='18' rx='6' fill='#6c3483'/>" +
-      // a gene band
-      "<rect x='62' y='180' width='30' height='16' rx='4' fill='#f1c40f' stroke='#b8930a' stroke-width='1.5'/>" +
-      // telomere caps
-      "<ellipse cx='77' cy='30' rx='17' ry='8' fill='#d2b4de'/><ellipse cx='123' cy='30' rx='17' ry='8' fill='#d2b4de'/>" +
+      "<rect x='58' y='120' width='84' height='18' rx='6' fill='#6c3483'/>" +     // centromere
+      "<rect x='62' y='180' width='30' height='16' rx='4' fill='#f1c40f' stroke='#b8930a' stroke-width='1.5'/>" +  // gene band
       "</svg>",
     parts: [
-      { x: 38, y: 25, label: "telomere", aliases: ["telomeres", "tip", "end cap"], note: " The protective cap at the end of a chromosome." },
-      { x: 30, y: 60, label: "chromatid", aliases: ["sister chromatid", "chromatids"], note: " One of the two identical copies that make up a duplicated chromosome." },
+      { x: 30, y: 24, label: "chromatid", aliases: ["sister chromatid", "chromatids"], note: " One of the two identical copies that make up a duplicated chromosome." },
       { x: 50, y: 46, label: "centromere", aliases: [], note: " The pinched region that holds the two chromatids together." },
-      { x: 39, y: 67, label: "gene", aliases: [], note: " A segment of DNA that codes for a specific trait." },
+      { x: 39, y: 67, label: "gene", aliases: [], note: " A section of DNA that codes for one protein/trait." },
+    ],
+  });
+
+  /* ---------------- Digestive system ---------------- */
+  STUDY.DIAGRAMS.push({
+    id: "digestive", subjectId: "biology", topicId: "bio-heart", title: "The Digestive System",
+    svg:
+      "<svg viewBox='0 0 220 300' xmlns='http://www.w3.org/2000/svg'>" +
+      "<rect width='220' height='300' rx='16' fill='#f7f8fc'/>" +
+      // large intestine frame (colon)
+      "<path d='M58 250 L58 132 L168 132 L168 232' fill='none' stroke='#b5651d' stroke-width='17' stroke-linecap='round' stroke-linejoin='round'/>" +
+      // small intestine (coiled) inside
+      "<path d='M150 156 C92 156 92 178 148 178 C92 178 92 200 148 200 C92 200 92 222 150 222' fill='none' stroke='#f4a0a0' stroke-width='11' stroke-linecap='round'/>" +
+      // esophagus
+      "<rect x='100' y='20' width='13' height='56' rx='6' fill='#e8857a'/>" +
+      // stomach
+      "<path d='M86 74 C66 78 60 104 78 120 C96 132 120 124 120 104 C120 86 104 88 100 98' fill='#e8857a' stroke='#c25a4f' stroke-width='2'/>" +
+      // liver
+      "<path d='M126 72 C160 64 196 70 192 96 C190 112 150 118 128 110 C120 100 120 80 126 72 Z' fill='#8e4b3c' stroke='#6e3729' stroke-width='2'/>" +
+      // gallbladder
+      "<ellipse cx='150' cy='118' rx='9' ry='13' fill='#2ecc71' stroke='#1e9e57' stroke-width='1.5'/>" +
+      // pancreas
+      "<path d='M92 126 C120 120 150 126 150 134 C150 142 120 140 92 134 Z' fill='#e6c27a' stroke='#bd9540' stroke-width='1.5'/>" +
+      "</svg>",
+    parts: [
+      { x: 48, y: 12, label: "esophagus", aliases: [], note: " Moves food from the mouth to the stomach." },
+      { x: 41, y: 33, label: "stomach", aliases: [], note: " Chemically digests food with acid and enzymes." },
+      { x: 73, y: 30, label: "liver", aliases: [], note: " Produces bile to digest fat." },
+      { x: 68, y: 40, label: "gallbladder", aliases: ["gall bladder"], note: " Stores bile." },
+      { x: 55, y: 44, label: "pancreas", aliases: [], note: " Produces digestive enzymes." },
+      { x: 52, y: 62, label: "small intestine", aliases: [], note: " Breaks food down further and absorbs nutrients." },
+      { x: 76, y: 60, label: "large intestine", aliases: ["colon"], note: " Houses bacteria, finishes digestion, and absorbs water." },
     ],
   });
 })(window.STUDY);
