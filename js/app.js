@@ -205,6 +205,7 @@
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
     if (s.id === "french") actions.appendChild(actionCard("", "🔊", "Listening", "Hear & recall (oral prep)", () => startListening()));
     if (s.id === "biology" && (STUDY.DIAGRAMS || []).length) actions.appendChild(actionCard("", "🗺️", "Label It", "Recall diagram parts", () => go("#/label")));
+    if (s.id === "history" && (STUDY.TIMELINE || []).length) actions.appendChild(actionCard("", "🕰️", "Timeline", "Events in order + a challenge", () => go("#/timeline")));
     app.appendChild(actions);
 
     app.appendChild(sectionH("Topics", "tap to learn, flip cards, then test yourself"));
@@ -503,6 +504,122 @@
     });
   }
 
+  // ---- HISTORY TIMELINE (read + order challenge) ----
+  function renderTimeline(mode) {
+    mode = mode || "read";
+    clear(); app.appendChild(topbar());
+    document.documentElement.style.setProperty("--accent", STUDY.byId.history.accent);
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "History", hash: "#/s/history" }, { label: "Timeline" }]));
+    app.appendChild(el("div", "hero", "<h1>🕰️ History Timeline</h1><p class='muted'>From the Industrial Revolution to the modern era. Read it through, then test the order.</p>"));
+    const seg = el("div", "seg");
+    [["read", "📖 Read"], ["challenge", "🎯 Order challenge"]].forEach(function (o) {
+      const b = el("button", mode === o[0] ? "on" : "", o[1]); b.onclick = () => renderTimeline(o[0]); seg.appendChild(b);
+    });
+    app.appendChild(seg);
+    const body = el("div"); body.style.marginTop = "16px"; app.appendChild(body);
+    const events = (STUDY.TIMELINE || []).slice().sort((a, b) => a.year - b.year);
+    if (mode === "challenge") return timelineChallenge(body, events);
+
+    const tl = el("div", "tline"); tl.style.marginTop = "4px";
+    events.forEach(function (e) {
+      const ev = el("div", "tev");
+      ev.appendChild(el("div", "td", e.year + " · " + esc(e.era)));
+      const head = el("div"); head.style.cssText = "font-weight:650;cursor:pointer";
+      head.textContent = e.label + "  ▾";
+      const detail = el("div", "tx"); detail.style.display = "none"; detail.innerHTML = mdInline(e.text);
+      head.onclick = function () { const open = detail.style.display === "block"; detail.style.display = open ? "none" : "block"; head.textContent = e.label + (open ? "  ▾" : "  ▴"); };
+      ev.appendChild(head); ev.appendChild(detail);
+      tl.appendChild(ev);
+    });
+    body.appendChild(tl);
+  }
+  function timelineChallenge(body, allEvents) {
+    const pick = SRS.shuffle(allEvents.slice()).slice(0, 6).sort((a, b) => a.year - b.year); // correct order
+    const correct = pick.map(e => e.label);
+    const shuffled = SRS.shuffle(correct.slice());   // shuffle the labels (strings)
+    const chosen = [];
+    body.appendChild(el("p", "muted", "Tap the events in order from <b>earliest to latest</b>."));
+    const slots = el("div"); slots.style.cssText = "display:flex;flex-direction:column;gap:7px;margin:10px 0";
+    const pool = el("div", "row wrap"); pool.style.gap = "8px";
+    body.appendChild(slots); body.appendChild(el("hr", "div")); body.appendChild(pool);
+
+    function paint() {
+      slots.innerHTML = ""; pool.innerHTML = "";
+      chosen.forEach(function (lab, i) {
+        const row = el("div", "match-row");
+        const n = el("div", "n"); n.textContent = i + 1; n.style.flex = "none";
+        const c = el("div", "ml"); c.textContent = lab;
+        row.appendChild(n); row.appendChild(c); slots.appendChild(row);
+      });
+      shuffled.forEach(function (lab) {
+        if (chosen.indexOf(lab) >= 0) return;
+        const b = el("button", "btn sm", lab); b.onclick = function () { chosen.push(lab); if (chosen.length === pick.length) grade(); else paint(); };
+        pool.appendChild(b);
+      });
+    }
+    function grade() {
+      slots.innerHTML = ""; pool.innerHTML = "";
+      let right = 0;
+      chosen.forEach(function (lab, i) {
+        const ok = lab === correct[i]; if (ok) right++;
+        const row = el("div", "match-row");
+        const n = el("div", "n"); n.textContent = (i + 1); n.style.cssText = "flex:none";
+        const c = el("div", "ml"); c.style.borderColor = ok ? "var(--good)" : "var(--bad)";
+        c.innerHTML = (ok ? "✓ " : "✗ ") + esc(lab) + (ok ? "" : " <span class='muted'>→ should be: " + esc(correct[i]) + "</span>");
+        row.appendChild(n); row.appendChild(c); slots.appendChild(row);
+      });
+      STUDY.touchStreak();
+      const fb = el("div", "explain " + (right === pick.length ? "ok" : "no"));
+      fb.innerHTML = "<span class='v'>" + right + " / " + pick.length + " in the right place</span>" + (right === pick.length ? "Perfect chronological order!" : "Correct order: " + correct.map(esc).join(" → "));
+      slots.appendChild(fb);
+      const bar = el("div", "qbar"); const again = el("button", "btn primary", "New round"); again.onclick = () => renderTimeline("challenge"); bar.appendChild(again); slots.appendChild(bar);
+    }
+    paint();
+  }
+
+  // ---- activity heatmap + mastery sparkline (for the dashboard) ----
+  function heatmap() {
+    const box = el("div", "panel");
+    box.appendChild(el("div", "vcap", "Study activity (last 12 weeks)"));
+    const st = STUDY.store();
+    const grid = el("div", "heat");
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = new Date(today.getTime() - 12 * 7 * 86400000);
+    start.setDate(start.getDate() - start.getDay()); // back to Sunday
+    let max = 1; Object.keys(st.activity).forEach(k => { max = Math.max(max, st.activity[k]); });
+    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+      const key = STUDY.dayKey(d.getTime());
+      const n = st.activity[key] || 0;
+      const lvl = n === 0 ? 0 : n >= max * 0.66 ? 4 : n >= max * 0.33 ? 3 : n >= 2 ? 2 : 1;
+      const cell = el("div", "hcell l" + lvl); cell.title = key + ": " + n + (n === 1 ? " answer" : " answers");
+      grid.appendChild(cell);
+    }
+    box.appendChild(grid);
+    const legend = el("div", "row"); legend.style.cssText = "justify-content:flex-end;gap:5px;font-size:.7rem;color:var(--text-faint);margin-top:8px";
+    legend.appendChild(el("span", null, "less"));
+    [0, 1, 2, 3, 4].forEach(l => legend.appendChild(el("div", "hcell l" + l)));
+    legend.appendChild(el("span", null, "more"));
+    box.appendChild(legend);
+    return box;
+  }
+  function masterySpark() {
+    const st = STUDY.store();
+    const keys = Object.keys(st.masteryHist).sort();
+    if (keys.length < 2) return null;
+    const pts = keys.slice(-21).map(k => st.masteryHist[k]);
+    const box = el("div", "panel");
+    box.appendChild(el("div", "vcap", "Overall mastery over time"));
+    const W = 300, H = 70, max = 100;
+    const step = pts.length > 1 ? W / (pts.length - 1) : W;
+    const path = pts.map((v, i) => (i ? "L" : "M") + (i * step).toFixed(1) + " " + (H - v / max * (H - 8) - 4).toFixed(1)).join(" ");
+    box.insertAdjacentHTML("beforeend",
+      "<svg viewBox='0 0 " + W + " " + H + "' style='width:100%;height:auto'>" +
+      "<path d='" + path + "' fill='none' stroke='var(--accent)' stroke-width='2.5' stroke-linejoin='round'/>" +
+      "<circle cx='" + ((pts.length - 1) * step).toFixed(1) + "' cy='" + (H - pts[pts.length - 1] / max * (H - 8) - 4).toFixed(1) + "' r='4' fill='var(--accent)'/>" +
+      "</svg><div class='row' style='justify-content:space-between;font-size:.72rem;color:var(--text-faint)'><span>" + pts[0] + "%</span><span>now " + pts[pts.length - 1] + "%</span></div>");
+    return box;
+  }
+
   // ---- STARRED: bookmarked items ----
   function renderStarred() {
     clear(); app.appendChild(topbar());
@@ -615,6 +732,9 @@
     chips.appendChild(statChip("🎯", overallMastery() + "%", "overall"));
     chips.appendChild(statChip("🔁", STUDY.overallDue(), "due now"));
     app.appendChild(chips);
+
+    app.appendChild(heatmap());
+    const spark = masterySpark(); if (spark) app.appendChild(spark);
 
     app.appendChild(sectionH("By subject"));
     STUDY.subjects.forEach(function (s) {
@@ -758,6 +878,7 @@
     if (parts[0] === "exam") return startExam(params);
     if (parts[0] === "cram") return parts[1] ? startCram(parts[1]) : renderCramChooser();
     if (parts[0] === "label") return parts[1] ? startDiagram(parts[1]) : renderLabelChooser();
+    if (parts[0] === "timeline") return renderTimeline();
     if (parts[0] === "starred") return renderStarred();
     if (parts[0] === "import") return renderImport();
     if (parts[0] === "search") return renderSearch(params);

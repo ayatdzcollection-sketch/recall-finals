@@ -425,7 +425,8 @@
           const line = el("div");
           line.style.cssText = "padding:6px 0;border-top:1px solid var(--line);font-size:.9rem";
           let ans = r.q.type === "mc" ? r.q.choices[r.q.answer] : (r.q.answers ? r.q.answers[0] : (r.q.answer === true ? "True" : r.q.answer === false ? "False" : ""));
-          line.innerHTML = "<b>" + esc(r.q.q) + "</b><br><span class='muted'>" + esc(ans || "") + "</span>";
+          const why = explainFor(r.q);
+          line.innerHTML = "<b>" + esc(r.q.q) + "</b><br><span class='muted'>✓ " + esc(ans || "") + "</span>" + (why ? "<br><span class='why' style='font-size:.85rem'>" + esc(why) + "</span>" : "");
           p.appendChild(line);
         });
         mount.appendChild(p);

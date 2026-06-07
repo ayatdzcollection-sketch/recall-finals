@@ -85,6 +85,7 @@
       starred: {},    // itemId -> ts (bookmarks)
       streak: { count: 0, last: 0, best: 0 },
       activity: {},   // 'yyyy-mm-dd' -> count
+      masteryHist: {},// 'yyyy-mm-dd' -> overall mastery % (snapshot)
       settings: { theme: "dark" },
     };
   };
@@ -98,7 +99,7 @@
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "starred", "activity"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -162,6 +163,10 @@
     }
     store.streak.last = now;
     store.streak.best = Math.max(store.streak.best || 0, store.streak.count);
+    // snapshot overall mastery for today (for the progress graph)
+    let mSum = 0, n = 0;
+    STUDY.subjects.forEach(function (s) { mSum += STUDY.subjectProgress(s.id).mastery; n++; });
+    if (n) store.masteryHist[today] = Math.round(mSum / n * 100);
     STUDY.save();
   };
 

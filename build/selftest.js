@@ -28,7 +28,7 @@ const ctx = vm.createContext(sandbox);
 
 const files = [
   "js/storage.js", "js/srs.js", "data/ela-pool.js",
-  "data/ela.js", "data/biology.js", "data/french.js", "data/french-listen.js", "data/geometry.js", "data/history.js",
+  "data/ela.js", "data/biology.js", "data/french.js", "data/french-listen.js", "data/geometry.js", "data/history.js", "data/history-timeline.js",
   "data/extra.js", "data/diagrams.js",
   "js/quizgen.js",
   "js/quiz.js", "js/test.js", "js/app.js",
