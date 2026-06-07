@@ -9,6 +9,13 @@
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const LET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+  // --- seeded RNG so a seed reproduces an identical test on any device ---
+  function hashStr(s) { s = String(s); let h = 1779033703 ^ s.length; for (let i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); } return h >>> 0; }
+  function mulberry32(a) { return function () { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const rshuf = (rng, a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
+  const rpick = (rng, a) => a[Math.floor(rng() * a.length)];
+  function newSeed() { return Math.floor(Math.random() * 1e9).toString(36) + Math.floor(Math.random() * 1e9).toString(36); }
+
   // exam blueprints (capped to whatever content is available)
   const BLUEPRINT = {
     history: { mc: 40, match: 20, fill: 0, free: 0, writing: 0,
@@ -37,7 +44,8 @@
   /* ---------------- setup UI ---------------- */
   TEST.renderSetup = function (app, params, h) {
     const el = h.el, sectionH = h.sectionH;
-    const cfg = { subjectId: params.s || "all", length: "standard" };
+    const cfg = { subjectId: params.s || "all", length: params.len || "standard", seed: params.seed || null };
+    const toast = (STUDY.QUIZ && STUDY.QUIZ.toast) || function () {};
 
     const card = el("div", "card");
 
@@ -79,101 +87,143 @@
     }
     refresh();
 
-    const bar = el("div", "qbar");
-    const gen = el("button", "btn primary", "🖨️ Make printable test ↗");
-    gen.onclick = function () { const model = TEST.generate(cfg); TEST.print(model); };
-    const prev = el("button", "btn", "👀 Preview");
-    prev.onclick = function () { const model = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, model, el); previewWrap.scrollIntoView({ behavior: "smooth" }); };
-    bar.appendChild(prev); bar.appendChild(gen);
-    app.appendChild(bar);
+    // action buttons
+    const actions = el("div", "actions"); actions.style.marginTop = "6px";
+    actions.appendChild(mkAction("📝", "Take it on screen", "Timed & auto-graded", function () {
+      STUDY.go("#/exam?s=" + cfg.subjectId + "&len=" + cfg.length + (cfg.seed ? "&seed=" + encodeURIComponent(cfg.seed) : ""));
+    }));
+    actions.appendChild(mkAction("🖨️", "Make printable test", "Print or Save as PDF ↗", function () { TEST.print(TEST.generate(cfg)); }));
+    actions.appendChild(mkAction("👀", "Preview on screen", "Read it, reveal answers", function () { const m = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, m, el); previewWrap.scrollIntoView({ behavior: "smooth" }); }));
+    actions.appendChild(mkAction("🔗", "Share this test", "Same test for a classmate", function () {
+      const seed = cfg.seed || newSeed(); cfg.seed = seed;
+      const url = TEST.shareURL(cfg);
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast("Share link copied!"), () => prompt("Copy this link:", url));
+      else prompt("Copy this share link:", url);
+    }));
+    app.appendChild(actions);
+
+    function mkAction(icon, title, desc, onclick) {
+      const a = el("button", "action"); a.appendChild(el("div", "ic", icon)); a.appendChild(el("div", "t", title)); a.appendChild(el("div", "d", desc)); a.onclick = onclick; return a;
+    }
+
+    // opened via a shared link → show the exact test immediately
+    if (cfg.seed) {
+      const banner = el("div", "tip"); banner.innerHTML = "<span class='i'>🔗</span><div>Shared test — this is the same randomized test for everyone with this link.</div>";
+      previewWrap.appendChild(banner);
+      const m = TEST.generate(cfg);
+      TEST.renderPreview(previewWrap, m, el);
+    }
   };
 
-  /* ---------------- generation ---------------- */
-  function pools(subjectId) {
+  /* ---------------- generation ----------------
+     When cfg.seed is set the test is built deterministically (same on any
+     device) from STATIC content only — authored/pool questions plus
+     seed-generated parametric Geometry/French — so share links reproduce
+     it exactly. Without a seed it draws from the full live pool. */
+  function pools(subjectId, rng, deterministic) {
     const subjects = subjectId === "all" ? STUDY.subjects : [STUDY.byId[subjectId]];
     const mc = [], fill = [], free = [], cards = [], match = [];
+    function bucket(q, sid) {
+      if (q.type === "mc" || q.type === "tf") mc.push(q);
+      else if (q.type === "fill") ((sid || q.subjectId) === "geometry" ? free : fill).push(q);
+      else if (q.type === "free") free.push(q);
+      else if (q.type === "match") match.push(q);
+    }
     subjects.forEach(function (s) {
       (s.topics || []).forEach(function (t) {
-        (t.questions || []).forEach(function (q) {
-          if (q.type === "mc") mc.push(q);
-          else if (q.type === "tf") mc.push(q);
-          else if (q.type === "fill") (s.id === "geometry" ? free : fill).push(q);
-          else if (q.type === "free") free.push(q);
-          else if (q.type === "match") match.push(q);
-        });
+        (t.questions || []).forEach(function (q) { if (deterministic && q.gen) return; bucket(q, s.id); });
         (t.cards || []).forEach(function (c) { if (c.front && c.back && c.back.length < 90) cards.push(c); });
       });
     });
+    if (deterministic && STUDY.QUIZGEN) {                 // add reproducible parametric items
+      const want = subjectId === "all" ? ["geometry", "french"] : [subjectId];
+      if (want.indexOf("geometry") >= 0) STUDY.QUIZGEN.geometryItems(rng, 3).forEach(q => { q.subjectId = "geometry"; q.topicId = q.topic; mc.push(q); });
+      if (want.indexOf("french") >= 0) STUDY.QUIZGEN.frenchItems(rng, 10).forEach(q => { q.subjectId = "french"; q.topicId = q.topic; mc.push(q); });
+    }
     return { mc, fill, free, cards, match, subjects };
   }
 
   TEST.generate = function (cfg) {
+    const det = !!cfg.seed;
+    const rng = det ? mulberry32(hashStr(cfg.seed + "|" + cfg.subjectId + "|" + cfg.length)) : Math.random;
+    const sh = (a) => det ? rshuf(rng, a) : SRS.shuffle(a);
     const bp = Object.assign({}, BLUEPRINT[cfg.subjectId] || BLUEPRINT.all);
     const scale = cfg.length === "short" ? 0.4 : cfg.length === "standard" ? 0.75 : 1;
-    const P = pools(cfg.subjectId);
+    const P = pools(cfg.subjectId, rng, det);
     const subjName = cfg.subjectId === "all" ? "Cumulative" : STUDY.byId[cfg.subjectId].name;
 
     const sections = [];
     let qno = 0;
 
-    // Part I — multiple choice
     const mcCount = Math.min(P.mc.length, Math.round((bp.mc || 0) * scale) || 0);
     if (mcCount > 0) {
-      const items = SRS.shuffle(P.mc).slice(0, mcCount).map(function (q) {
-        if (q.type === "tf") {
-          return { no: ++qno, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
-        }
-        const order = SRS.shuffle(q.choices.map((_, i) => i));
+      const items = sh(P.mc).slice(0, mcCount).map(function (q) {
+        if (q.type === "tf") return { no: ++qno, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
+        const order = sh(q.choices.map((_, i) => i));
         return { no: ++qno, stem: q.q, choices: order.map(i => q.choices[i]), ans: order.indexOf(q.answer) };
       });
       sections.push({ kind: "mc", title: "Part I · Multiple Choice", instr: "Circle the letter of the best answer.", items: items });
     }
 
-    // Geometry / free response
     const freeCount = Math.min(P.free.length, Math.round((bp.free || 0) * scale) || 0);
     if (freeCount > 0) {
-      const items = SRS.shuffle(P.free).slice(0, freeCount).map(function (q) {
+      const items = sh(P.free).slice(0, freeCount).map(function (q) {
         const ans = q.answers ? q.answers[0] : (q.choices ? q.choices[q.answer] : "");
         return { no: ++qno, stem: q.q, ans: ans, work: cfg.subjectId === "geometry" || q.subjectId === "geometry" };
       });
       sections.push({ kind: "free", title: "Part II · Free Response (show your work)", instr: "Write your answer in the blank. Use radical or rounded form where the problem says to.", items: items });
     }
 
-    // Fill in / short answer
     const fillCount = Math.min(P.fill.length, Math.round((bp.fill || 0) * scale) || 0);
     if (fillCount > 0) {
-      const items = SRS.shuffle(P.fill).slice(0, fillCount).map(function (q) {
-        return { no: ++qno, stem: q.q, ans: (q.answers || [])[0] || "" };
-      });
+      const items = sh(P.fill).slice(0, fillCount).map(function (q) { return { no: ++qno, stem: q.q, ans: (q.answers || [])[0] || "" }; });
       sections.push({ kind: "fill", title: "Part · Fill in the Blank", instr: "Write the correct word or phrase.", items: items });
     }
 
-    // Matching (built from term/definition cards) — blocks of ~6
     const matchTotal = Math.min(P.cards.length, Math.round((bp.match || 0) * scale) || 0);
     if (matchTotal >= 3) {
-      const chosen = SRS.shuffle(P.cards).slice(0, matchTotal);
+      const chosen = sh(P.cards).slice(0, matchTotal);
       const blocks = [];
-      const BLK = 6;
-      for (let i = 0; i < chosen.length; i += BLK) {
-        const grp = chosen.slice(i, i + BLK);
-        const bank = SRS.shuffle(grp.map(c => c.front)); // term bank
-        const prompts = grp.map(function (c) {
-          return { no: ++qno, def: c.back, ansLetter: LET[bank.indexOf(c.front)] };
-        });
+      for (let i = 0; i < chosen.length; i += 6) {
+        const grp = chosen.slice(i, i + 6);
+        const bank = sh(grp.map(c => c.front));
+        const prompts = grp.map(c => ({ no: ++qno, def: c.back, ansLetter: LET[bank.indexOf(c.front)] }));
         blocks.push({ prompts: prompts, bank: bank });
       }
       sections.push({ kind: "match", title: "Part · Matching", instr: "Write the letter of the term that matches each description.", blocks: blocks });
     }
 
-    // Writing
     if (bp.writing && WRITING[cfg.subjectId === "all" ? "all" : cfg.subjectId]) {
       const prompts = WRITING[cfg.subjectId === "all" ? "all" : cfg.subjectId];
-      const p = prompts[Math.floor(Math.random() * prompts.length)];
-      sections.push({ kind: "writing", title: "Part · Written Response", prompt: p });
+      sections.push({ kind: "writing", title: "Part · Written Response", prompt: det ? prompts[Math.floor(rng() * prompts.length)] : rpick(Math.random, prompts) });
     }
 
-    return { title: subjName + ": Practice Final", subjName: subjName, sections: sections, total: qno,
-      stamp: new Date().toLocaleDateString() };
+    return { title: subjName + ": Practice Final", subjName: subjName, subjectId: cfg.subjectId, length: cfg.length,
+      seed: cfg.seed || null, sections: sections, total: qno, stamp: new Date().toLocaleDateString() };
+  };
+
+  /* flat question list for on-screen Exam Mode (mc/fill/tf), seeded or random */
+  TEST.examQuestions = function (cfg) {
+    const det = !!cfg.seed;
+    const rng = det ? mulberry32(hashStr((cfg.seed || "") + "|exam|" + cfg.subjectId)) : Math.random;
+    const P = pools(cfg.subjectId, rng, det);
+    let qs = P.mc.slice();
+    P.free.concat(P.fill).forEach(function (f) {
+      qs.push(f.answers ? f : { type: "fill", q: f.q, answers: [f.ans || (f.choices ? f.choices[f.answer] : "")], subjectId: f.subjectId, topicId: f.topicId });
+    });
+    qs = (det ? rshuf(rng, qs) : SRS.shuffle(qs));
+    // de-dupe by stem
+    const seen = {}, out = [];
+    qs.forEach(q => { const k = (q.q || "").toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(q); } });
+    const n = cfg.count || (cfg.length === "short" ? 15 : cfg.length === "full" ? 40 : 25);
+    return out.slice(0, Math.min(out.length, n));
+  };
+
+  TEST.newSeed = newSeed;
+  TEST.shareURL = function (cfg) {
+    const seed = cfg.seed || newSeed();
+    const base = location.href.split("#")[0];
+    return base + "#/test?s=" + encodeURIComponent(cfg.subjectId) + "&len=" + encodeURIComponent(cfg.length || "standard") + "&seed=" + encodeURIComponent(seed);
   };
 
   /* ---------------- printable document (its own page) ---------------- */

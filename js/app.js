@@ -93,9 +93,10 @@
     // primary actions
     const actions = el("div", "actions");
     actions.appendChild(actionCard("wide", "⚡", "Smart Study", "Interleaved mix of new + due material across all subjects", () => startSmart(null)));
+    actions.appendChild(actionCard("", "🔥", "Cram Mode", "Blitz a subject before the exam", () => go("#/cram")));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
     actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
-    actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print a randomized mock final", () => go("#/test")));
+    actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
@@ -192,9 +193,12 @@
     app.appendChild(chips);
 
     const actions = el("div", "actions");
-    actions.appendChild(actionCard("wide", "⚡", "Study " + s.name, "Interleaved mix of this subject's material", () => startSmart(s.id)));
-    actions.appendChild(actionCard("", "🔀", "Mixed Practice", "Random questions from this subject", () => startMixed(s.id, 15)));
-    actions.appendChild(actionCard("", "🖨️", "Print Test", "Randomized " + esc(s.name) + " mock", () => go("#/test?s=" + s.id)));
+    actions.appendChild(actionCard("wide", "🔥", "Cram " + s.name, "Fast last-minute drilling of your weak + unseen items", () => startCram(s.id)));
+    actions.appendChild(actionCard("", "⚡", "Smart Study", "Interleaved smart mix", () => startSmart(s.id)));
+    actions.appendChild(actionCard("", "🔀", "Mixed Practice", "Random questions", () => startMixed(s.id, 15)));
+    actions.appendChild(actionCard("", "📝", "Exam Mode", "Timed & auto-graded", () => go("#/exam?s=" + s.id)));
+    actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
+    if (s.id === "french") actions.appendChild(actionCard("", "🔊", "Listening", "Hear & recall (oral prep)", () => startListening()));
     app.appendChild(actions);
 
     app.appendChild(sectionH("Topics", "tap to learn, flip cards, then test yourself"));
@@ -209,10 +213,20 @@
       tt.appendChild(el("p", null, esc(t.blurb || "")));
       const bar = el("div", "bar"); bar.appendChild(el("i")).style.width = Math.round(tp.mastery * 100) + "%";
       tt.appendChild(bar);
+      // completion roadmap: Learn / Cards / Practice
+      const d = STUDY.topicDone(t.id);
+      const dots = el("div", "tdots");
+      [["learn", "Learn"], ["cards", "Cards"], ["practice", "Practice"]].forEach(function (p) {
+        if (p[0] === "cards" && !(t.cards && t.cards.length)) return;
+        const on = !!d[p[0]];
+        dots.appendChild(el("div", "tdot" + (on ? " on" : ""), (on ? "✓ " : "") + p[1]));
+      });
+      tt.appendChild(dots);
       row.appendChild(tt);
       let state = "○";
-      if (tp.due) state = "🔁";
-      else if (tp.mastery >= 0.85) state = "✅";
+      if (d.practice && tp.mastery >= 0.8) state = "✅";
+      else if (tp.due) state = "🔁";
+      else if (d.practice) state = "✓";
       else if (tp.seen) state = "•";
       row.appendChild(el("div", "state", state));
       app.appendChild(row);
@@ -251,11 +265,13 @@
 
     if (tab === "cards") {
       if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic yet. Head to Practice.</div>'; return; }
-      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => go("#/t/" + id + "/learn") });
+      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => { STUDY.markDone(id, "cards"); go("#/t/" + id + "/learn"); } });
     } else if (tab === "practice") {
       if (!t.questions || !t.questions.length) { body.innerHTML = '<div class="empty">No questions yet for this topic.</div>'; return; }
+      // practice draws from the FULL pool for this topic (authored + variety + generated)
       QUIZ.run(body, SRS.shuffle(t.questions.slice()), {
         showTags: false, doneLabel: "Back to topic",
+        onResults: (state) => STUDY.markDone(id, "practice", state.correct / Math.max(1, state.list.length)),
         onDone: () => go("#/t/" + id + "/learn"),
       });
     } else {
@@ -372,6 +388,89 @@
         return;
       }
       QUIZ.run(mount, SRS.interleave(all), { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+    });
+  }
+
+  // ---- CRAM: criterion-based massed retrieval, weak/unseen prioritised ----
+  function cramList(subjectId, cap) {
+    const now = Date.now();
+    const pool = STUDY.allQuestions(function (q, t, s) {
+      return (subjectId ? s.id === subjectId : true) && (q.type === "mc" || q.type === "fill" || q.type === "tf");
+    });
+    const wrong = [], unseen = [], weak = [], rest = [];
+    pool.forEach(function (q) {
+      const st = STUDY.itemState(q.id);
+      if (STUDY.store().wrong[q.id]) wrong.push(q);
+      else if (!st) unseen.push(q);
+      else if (st.box <= 2) weak.push(q);
+      else rest.push(q);
+    });
+    const ordered = SRS.shuffle(wrong).concat(SRS.shuffle(unseen)).concat(SRS.shuffle(weak)).concat(SRS.shuffle(rest));
+    const seen = {}, out = [];
+    for (let i = 0; i < ordered.length && out.length < cap; i++) { if (!seen[ordered[i].id]) { seen[ordered[i].id] = 1; out.push(ordered[i]); } }
+    return out;
+  }
+  function startCram(subjectId) {
+    const s = STUDY.byId[subjectId];
+    if (!s) return renderCramChooser();
+    sessionScreen("🔥 Cram · " + s.name, function (mount) {
+      const intro = el("div", "card");
+      intro.innerHTML = "<b>Cram Mode</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>Fast, repeated retrieval with instant feedback. Items you miss come back almost immediately; each card is <b>locked in</b> only after you get it right twice in a row. Keep going until everything's locked. This is the most effective way to drill the night before.</p>";
+      mount.appendChild(intro);
+      const list = cramList(subjectId, 40);
+      const startBtn = el("button", "btn primary full", "Start cramming " + list.length + " items →");
+      startBtn.onclick = function () { QUIZ.runCram(mount, list, { doneLabel: "Back to " + s.name, onDone: () => go("#/s/" + subjectId) }); };
+      mount.appendChild(startBtn);
+    });
+  }
+  function renderCramChooser() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Cram Mode" }]));
+    app.appendChild(el("div", "hero", "<h1>🔥 Cram Mode</h1><p class='muted'>Last-minute drilling, maximised for fast memorisation. Pick a subject to blitz.</p>"));
+    STUDY.subjects.forEach(function (s) {
+      const row = el("div", "topic"); row.style.setProperty("--sub", s.accent);
+      row.onclick = () => go("#/cram/" + s.id);
+      row.appendChild(el("div", "n", s.icon));
+      const tt = el("div", "tt"); tt.appendChild(el("h4", null, "Cram " + esc(s.name))); tt.appendChild(el("p", null, "Drill the weak + unseen items first"));
+      row.appendChild(tt); row.appendChild(el("div", "state", "🔥"));
+      app.appendChild(row);
+    });
+  }
+
+  // ---- EXAM: on-screen, timed, auto-graded ----
+  function startExam(params) {
+    const cfg = { subjectId: params.s || "all", length: params.len || "standard", seed: params.seed || null };
+    const qs = TEST.examQuestions(cfg);
+    const name = cfg.subjectId === "all" ? "Cumulative" : (STUDY.byId[cfg.subjectId] || {}).name || "";
+    sessionScreen("📝 Exam · " + name, function (mount) {
+      if (!qs.length) { mount.innerHTML = '<div class="empty">No questions available for this exam.</div>'; return; }
+      const secs = qs.length * 45;
+      const intro = el("div", "card");
+      intro.innerHTML = "<b>📝 Exam Mode — " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Your score and a full review come at the finish.</p>";
+      mount.appendChild(intro);
+      const start = el("button", "btn primary full", "Start the exam →");
+      start.onclick = function () {
+        QUIZ.run(mount, qs, {
+          instant: false, timeLimit: secs, showTags: false,
+          doneLabel: "Done", onDone: () => go("#/test?s=" + cfg.subjectId),
+        });
+      };
+      mount.appendChild(start);
+    });
+  }
+
+  // ---- LISTENING: French audio drill ----
+  function startListening() {
+    sessionScreen("🔊 French Listening", function (mount) {
+      if (!QUIZ.canSpeak) { mount.innerHTML = '<div class="empty">Your browser doesn\'t support speech. Try Chrome or Safari.</div>'; return; }
+      const cards = [];
+      STUDY.byId.french.topics.forEach(t => (t.cards || []).forEach(c => cards.push(c)));
+      const intro = el("div", "card");
+      intro.innerHTML = "<b>🔊 Listening practice</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>Each card reads the French aloud. Try to recall the meaning before you flip. Tap 🔊 to hear it again — great prep for the oral and listening sections.</p>";
+      mount.appendChild(intro);
+      const b = el("button", "btn primary full", "Start listening →");
+      b.onclick = () => QUIZ.runCards(mount, cards, { audio: true, doneLabel: "Back to French", onDone: () => go("#/s/french") });
+      mount.appendChild(b);
     });
   }
 
@@ -521,6 +620,8 @@
     if (parts[0] === "t") return renderTopic(parts[1], parts[2] || "learn");
     if (parts[0] === "dash") return renderDashboard();
     if (parts[0] === "test") return renderTestSetup(params);
+    if (parts[0] === "exam") return startExam(params);
+    if (parts[0] === "cram") return parts[1] ? startCram(parts[1]) : renderCramChooser();
     if (parts[0] === "settings") return renderSettings();
     return renderHome();
   }
@@ -534,7 +635,12 @@
     window.addEventListener("hashchange", route);
     // persist immediately when the tab is backgrounded or closed (mobile-safe)
     window.addEventListener("pagehide", STUDY.flush);
+    window.addEventListener("beforeunload", STUDY.flush);
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") STUDY.flush(); });
+    // service worker → full offline on the hosted site (skip on file://)
+    if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+      window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+    }
     if (!location.hash) location.replace("#/home");
     route();
   }

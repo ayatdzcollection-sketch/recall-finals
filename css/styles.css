@@ -335,6 +335,33 @@ table.vt tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   box-shadow:var(--shadow);font-size:.9rem;font-weight:600;transition:.25s;z-index:80;max-width:90vw}
 .toast.show{opacity:1;translate:-50% 0}
 
+/* speaker (TTS) button */
+.spk{appearance:none;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--text);
+  width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:.85rem;display:inline-grid;place-items:center;flex:none;vertical-align:middle}
+.spk:hover{border-color:var(--accent);background:var(--accent-soft)}
+.spk.big{width:38px;height:38px;font-size:1rem}
+.choice.selected{border-color:var(--accent);background:var(--accent-soft)}
+.choice.selected .key{background:var(--accent);color:#fff;border-color:transparent}
+
+/* exam timer */
+.exam-timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:.95rem;padding:5px 11px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--line-strong);white-space:nowrap}
+.exam-timer.warn{color:var(--warn);border-color:rgba(255,182,72,.4);background:rgba(255,182,72,.12)}
+.exam-timer.danger{color:var(--bad);border-color:rgba(255,107,129,.4);background:var(--bad-soft)}
+
+/* cram */
+.cram-stat{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.cram-locks{flex:1;height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.cram-locks > i{display:block;height:100%;background:linear-gradient(90deg,var(--good),#5fe0bf);transition:width .4s}
+.cram-num{font-size:.82rem;font-weight:700;color:var(--text-dim);white-space:nowrap}
+.cram-badge{display:inline-flex;gap:5px;align-items:center;font-size:.75rem;font-weight:700;color:var(--good);
+  background:var(--good-soft);border:1px solid color-mix(in srgb,var(--good) 30%,transparent);padding:3px 9px;border-radius:999px}
+
+/* topic completion dots in the roadmap */
+.tdots{display:flex;gap:5px;margin-top:7px}
+.tdot{font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid var(--line-strong);color:var(--text-faint);background:var(--surface-2)}
+.tdot.on{color:var(--good);border-color:transparent;background:var(--good-soft)}
+
 /* small helpers */
 .kbd{font-family:var(--mono);font-size:.78rem;background:var(--surface-2);border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:6px;padding:1px 6px}
 .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--text-dim)}

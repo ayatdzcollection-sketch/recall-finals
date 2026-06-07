@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#0f1226">
 <meta name="description" content="Recall — an active-recall, spaced-repetition trainer for the spring final exams (ELA, Biology, French 3, Geometry, History).">
 <title>Recall · Finals Trainer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Recall">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -31,6 +36,8 @@
   <script src="data/french.js"></script>
   <script src="data/geometry.js"></script>
   <script src="data/history.js"></script>
+  <!-- Authored variety questions layered onto existing topics -->
+  <script src="data/extra.js"></script>
   <!-- Question-bank expansion (card→MC + parametric generators) -->
   <script src="js/quizgen.js"></script>
   <!-- UI -->

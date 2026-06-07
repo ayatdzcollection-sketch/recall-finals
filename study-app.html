@@ -7,6 +7,10 @@
 <meta name="theme-color" content="#0f1226">
 <meta name="description" content="Recall — an active-recall, spaced-repetition trainer for the spring final exams (ELA, Biology, French 3, Geometry, History).">
 <title>Recall · Finals Trainer</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Recall">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -350,6 +354,33 @@ table.vt tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   box-shadow:var(--shadow);font-size:.9rem;font-weight:600;transition:.25s;z-index:80;max-width:90vw}
 .toast.show{opacity:1;translate:-50% 0}
 
+/* speaker (TTS) button */
+.spk{appearance:none;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--text);
+  width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:.85rem;display:inline-grid;place-items:center;flex:none;vertical-align:middle}
+.spk:hover{border-color:var(--accent);background:var(--accent-soft)}
+.spk.big{width:38px;height:38px;font-size:1rem}
+.choice.selected{border-color:var(--accent);background:var(--accent-soft)}
+.choice.selected .key{background:var(--accent);color:#fff;border-color:transparent}
+
+/* exam timer */
+.exam-timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:.95rem;padding:5px 11px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--line-strong);white-space:nowrap}
+.exam-timer.warn{color:var(--warn);border-color:rgba(255,182,72,.4);background:rgba(255,182,72,.12)}
+.exam-timer.danger{color:var(--bad);border-color:rgba(255,107,129,.4);background:var(--bad-soft)}
+
+/* cram */
+.cram-stat{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.cram-locks{flex:1;height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.cram-locks > i{display:block;height:100%;background:linear-gradient(90deg,var(--good),#5fe0bf);transition:width .4s}
+.cram-num{font-size:.82rem;font-weight:700;color:var(--text-dim);white-space:nowrap}
+.cram-badge{display:inline-flex;gap:5px;align-items:center;font-size:.75rem;font-weight:700;color:var(--good);
+  background:var(--good-soft);border:1px solid color-mix(in srgb,var(--good) 30%,transparent);padding:3px 9px;border-radius:999px}
+
+/* topic completion dots in the roadmap */
+.tdots{display:flex;gap:5px;margin-top:7px}
+.tdot{font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid var(--line-strong);color:var(--text-faint);background:var(--surface-2)}
+.tdot.on{color:var(--good);border-color:transparent;background:var(--good-soft)}
+
 /* small helpers */
 .kbd{font-family:var(--mono);font-size:.78rem;background:var(--surface-2);border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:6px;padding:1px 6px}
 .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--text-dim)}
@@ -456,18 +487,26 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     });
   };
 
-  // append generated questions to a topic at runtime (after registration)
-  STUDY.addQuestions = function (topic, qs) {
+  // append questions to a topic at runtime (after registration).
+  // isGen=true  -> auto-generated (card→MC, parametric)
+  // isGen=false -> authored "extra" variety questions
+  STUDY.addQuestions = function (topic, qs, isGen) {
     const start = topic.questions.length;
     qs.forEach(function (q, k) {
       const qi = start + k;
       q.id = topic.id + "#q" + qi;
       q.topicId = topic.id;
       q.subjectId = topic.subjectId;
-      q.gen = true;
+      q.gen = (isGen !== false);
       topic.questions.push(q);
       STUDY.itemIndex[q.id] = { type: "q", subject: STUDY.byId[topic.subjectId], topic: topic, ref: q };
     });
+  };
+
+  // add authored variety questions onto an existing topic by id (used by data/extra.js)
+  STUDY.addAuthored = function (topicId, qs) {
+    const entry = STUDY.topicIndex[topicId];
+    if (entry) STUDY.addQuestions(entry.topic, qs, false);
   };
 
   STUDY.allQuestions = function (filterFn) {
@@ -490,6 +529,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       stats: {},      // topicId -> {attempts, correct, seen, cards}
       wrong: {},      // itemId -> true (needs review)
       seen: {},       // topicId -> last visited ts
+      done: {},       // topicId -> {learn, cards, practice, practiceBest}
       streak: { count: 0, last: 0, best: 0 },
       activity: {},   // 'yyyy-mm-dd' -> count
       settings: { theme: "dark" },
@@ -505,7 +545,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "activity"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "activity"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -515,19 +555,12 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     return store;
   };
 
-  let saveTimer = null;
+  // Write synchronously on every change so progress survives an immediate
+  // tab close / refresh. localStorage is fast and the payload is tiny.
   STUDY.save = function () {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
-    }, 120);
-  };
-
-  // immediate write (called when the tab is hidden/closed, esp. on mobile)
-  STUDY.flush = function () {
-    clearTimeout(saveTimer);
     try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
   };
+  STUDY.flush = STUDY.save;
 
   STUDY.store = function () { return store; };
 
@@ -613,8 +646,19 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 
   STUDY.markSeen = function (topicId) {
     store.seen[topicId] = Date.now();
+    const d = store.done[topicId] || (store.done[topicId] = {});
+    d.learn = true;
     STUDY.save();
   };
+
+  // which: 'learn' | 'cards' | 'practice'; extra optional (e.g. practice score 0..1)
+  STUDY.markDone = function (topicId, which, score) {
+    const d = store.done[topicId] || (store.done[topicId] = {});
+    d[which] = true;
+    if (which === "practice" && typeof score === "number") d.practiceBest = Math.max(d.practiceBest || 0, score);
+    STUDY.save();
+  };
+  STUDY.topicDone = function (topicId) { return store.done[topicId] || {}; };
 
   /* ---------- progress queries ---------- */
   // mastery of an item: based on box (0..5). returns 0..1
@@ -2657,145 +2701,315 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 })(window.STUDY);
 
 </script>
+  <!-- Authored variety questions layered onto existing topics -->
+  <script>
+/* data/extra.js — authored VARIETY questions added on top of the originals.
+   These reword concepts and add application/example items so the practice
+   pool isn't just the memorised guide/Blooket wording. Nothing is removed;
+   these are mixed in everywhere (topic practice, mixed, smart, cram, tests). */
+(function (STUDY) {
+  "use strict";
+  const A = STUDY.addAuthored;
+  const mc = (q, choices, answer, explain) => ({ type: "mc", q: q, choices: choices, answer: answer, explain: explain });
+  const fill = (q, answers, explain) => ({ type: "fill", q: q, answers: answers, explain: explain });
+  const tf = (q, answer, explain) => ({ type: "tf", q: q, answer: answer, explain: explain });
+
+  /* ===================== ELA ===================== */
+  A("ela-figurative", [
+    mc("Identify the device: “The classroom was a zoo during the party.”", ["Simile", "Metaphor", "Hyperbole", "Personification"], 1, "A direct comparison with no 'like/as' = metaphor."),
+    mc("Identify the device: “I'm so hungry I could eat a horse.”", ["Personification", "Simile", "Hyperbole", "Imagery"], 2, "An obvious exaggeration = hyperbole."),
+    mc("Identify the device: “The autumn leaves waved hello as I walked by.”", ["Personification", "Hyperbole", "Simile", "Metaphor"], 0, "Leaves given the human act of waving hello."),
+    mc("Which sentence contains a SIMILE?", ["Her temper was a volcano.", "The fog crept in silently.", "He was as stubborn as a mule.", "Time is money."], 2, "'as ... as' signals a simile."),
+    mc("Which sentence is the best example of IMAGERY?", ["She was nice.", "The deal was fair.", "Warm cinnamon and woodsmoke drifted from the kitchen.", "He left early."], 2, "It appeals to the senses (smell)."),
+    fill("A comparison that uses the word 'like' or 'as' is called a ______.", ["simile"]),
+  ]);
+  A("ela-sound", [
+    mc("Identify the device: “The wild winds whipped wickedly.”", ["Assonance", "Alliteration", "Onomatopoeia", "Hyperbole"], 1, "Repeated 'w' sounds at the start of words."),
+    mc("Which line uses ONOMATOPOEIA?", ["The night was calm and still.", "The bacon sizzled and popped in the pan.", "Her eyes sparkled.", "The road went on forever."], 1, "'sizzled' and 'popped' imitate sounds."),
+    mc("A poem's lines are arranged in groups separated by blank lines. Each group is a:", ["meter", "rhyme scheme", "stanza", "couplet"], 2),
+    fill("The repetition of vowel sounds in nearby words (e.g., 'the rain in Spain') is called ______.", ["assonance"]),
+  ]);
+  A("ela-devices", [
+    mc("A character says “Oh, wonderful” after spilling coffee on his shirt. This is:", ["Dramatic irony", "Situational irony", "Verbal irony", "An allusion"], 2, "Saying the opposite of what's meant = verbal irony."),
+    mc("The audience sees the villain hiding, but the hero walks in unaware. This is:", ["Verbal irony", "Situational irony", "Dramatic irony", "Foreshadowing"], 2),
+    mc("A fire station burns down. This is:", ["Verbal irony", "Situational irony", "Dramatic irony", "A pun"], 1, "The opposite of what's expected = situational irony."),
+    mc("“Home” feels warm and safe while “house” feels neutral. This difference in feeling is the word's:", ["denotation", "connotation", "syntax", "etymology"], 1),
+    mc("The overall feeling or atmosphere a work creates in the reader is its:", ["tone", "theme", "mood", "plot"], 2, "Mood = the reader's feeling; tone = the author's attitude."),
+    mc("A storm cloud used to represent coming trouble is an example of:", ["symbolism", "alliteration", "a simile", "denotation"], 0),
+  ]);
+  A("ela-story", [
+    mc("In a plot diagram, the conflict is first introduced during the:", ["exposition", "rising action", "climax", "resolution"], 1),
+    mc("A sailor fights to survive a violent storm at sea. This is:", ["internal conflict", "external conflict", "the resolution", "an allusion"], 1),
+    mc("A soldier wrestles with guilt over a choice he made. This is:", ["external conflict", "internal conflict", "the climax", "foreshadowing"], 1),
+    mc("The narrator states, “Mr. Diaz was a cruel, dishonest man.” This is:", ["indirect characterization", "direct characterization", "an allusion", "imagery"], 1, "The narrator tells us directly."),
+    mc("We learn a character is kind because she quietly pays for a stranger's meal. This is:", ["direct characterization", "indirect characterization", "exposition", "mood"], 1, "Shown through action = indirect."),
+    mc("The highest point of tension, where the story turns, is the:", ["exposition", "rising action", "climax", "resolution"], 2),
+  ]);
+  A("ela-nonfiction", [
+    mc("“Buy now and protect your children's future!” appeals mainly to:", ["ethos", "logos", "pathos", "syntax"], 2, "It targets emotion (fear/love)."),
+    mc("“In 12 clinical trials, the drug cut symptoms by 40%.” appeals mainly to:", ["pathos", "logos", "ethos", "mood"], 1, "Facts and statistics = logos."),
+    mc("“As a board-certified cardiologist, I recommend this.” appeals mainly to:", ["pathos", "logos", "ethos", "imagery"], 2, "Credibility/authority = ethos."),
+    mc("A true account of a person's life written BY that same person is a(n):", ["biography", "autobiography", "memoir", "essay"], 1),
+    mc("Which statement is a FACT (not an opinion)?", ["Summer is the best season.", "Water freezes at 0°C at sea level.", "That movie was boring.", "Everyone should travel more."], 1),
+    fill("A persuasive appeal based on the speaker's credibility or character is called ______.", ["ethos"]),
+  ]);
+  A("ela-writing", [
+    mc("Which belongs in the INTRODUCTION rather than a body paragraph?", ["A supporting quote", "The thesis statement", "Quote analysis", "A concluding sentence"], 1),
+    mc("Which is the correct MLA in-text citation for a quote on page 12 by author Harper Lee?", ["(Lee, pg. 12)", "(Harper Lee 12)", "(Lee 12)", "(Lee, 2020, 12)"], 2, "MLA = (LastName Page), no comma, no 'pg.'"),
+    mc("Which is NOT part of correct MLA formatting?", ["Double spacing", "Times New Roman 12pt", "A separate cover page", "A Works Cited page"], 2),
+    tf("A conclusion should introduce brand-new evidence and quotes.", false, "Conclusions restate and give a final 'so what,' not new info."),
+  ]);
+  A("ela-grammar", [
+    mc("Which sentence is a COMMA SPLICE?", ["I was tired, so I went to bed.", "I was tired, I went to bed.", "Because I was tired, I went to bed.", "I was tired and went to bed."], 1, "Two complete sentences joined by only a comma."),
+    mc("Which is a complete, correct sentence (not a fragment or run-on)?", ["Running through the rain.", "She missed the bus she walked instead.", "After the long game.", "We won the game, and everyone celebrated."], 3),
+    mc("Which sentence is a RUN-ON?", ["The dog barked loudly.", "The sun set we kept hiking.", "When the sun set, we kept hiking.", "The sun set, so we kept hiking."], 1),
+  ]);
+  A("ela-rj", [
+    mc("Romeo and Juliet is best classified as a:", ["comedy", "tragedy", "history", "sonnet sequence"], 1),
+    mc("Which two families feud in the play?", ["Montagues and Capulets", "Tudors and Stuarts", "Hatfields and McCoys", "Capulets and Escalus"], 0),
+  ]);
+  A("ela-poems", [
+    mc("In “The Road Not Taken,” the diverging roads are a metaphor for:", ["a literal forest walk", "life's choices and their consequences", "the four seasons", "two friends arguing"], 1),
+    mc("“All the world's a stage” (The Seven Ages of Man) compares life to:", ["a journey", "a play/performance", "a river", "a battle"], 1),
+  ]);
+
+  /* ===================== BIOLOGY ===================== */
+  A("bio-mitosis", [
+    mc("Which stage comes immediately AFTER metaphase?", ["prophase", "anaphase", "telophase", "interphase"], 1),
+    mc("During which stage do chromosomes line up along the middle of the cell?", ["prophase", "metaphase", "anaphase", "telophase"], 1),
+    fill("Most of a cell's life is spent growing and copying DNA in a stage called ______.", ["interphase"]),
+  ]);
+  A("bio-meiosis", [
+    mc("A skin cell divides to heal a cut. Which process is this?", ["meiosis", "mitosis", "fertilization", "translation"], 1),
+    mc("Which process produces sperm and egg cells?", ["mitosis", "meiosis", "cytokinesis", "transcription"], 1),
+    tf("Meiosis produces four cells that are genetically identical to the parent.", false, "They are genetically DIFFERENT and haploid."),
+  ]);
+  A("bio-mendel", [
+    mc("In a cross of Tt × Tt, what FRACTION of offspring show the recessive trait?", ["1/2", "1/4", "3/4", "0"], 1),
+    mc("Which cross produces a 1:1 ratio of dominant to recessive offspring?", ["TT × tt", "Tt × Tt", "Tt × tt", "TT × TT"], 2),
+    fill("An organism with two different alleles (e.g., Tt) is called ______.", ["heterozygous"]),
+  ]);
+  A("bio-molecular", [
+    mc("In DNA, which base pairs with cytosine (C)?", ["adenine", "thymine", "guanine", "uracil"], 2),
+    mc("Translation (building the protein) takes place at the:", ["nucleus", "ribosome", "centromere", "cell membrane"], 1),
+    fill("The flow of genetic information is DNA → ______ → protein.", ["mRNA", "rna", "messenger rna"]),
+  ]);
+  A("bio-evolution", [
+    mc("Some bacteria survive an antibiotic and pass on resistance to offspring. This is the best example of:", ["natural selection", "a population bottleneck", "translation", "mitosis"], 0),
+    mc("Which is REQUIRED for natural selection to occur?", ["all individuals being identical", "variation among individuals", "no offspring", "a stable environment forever"], 1),
+  ]);
+  A("bio-systems", [
+    mc("Which body system exchanges oxygen and carbon dioxide?", ["digestive", "respiratory", "excretory", "muscular"], 1),
+    mc("Which system sends signals that control all the other systems?", ["circulatory", "nervous", "skeletal", "lymphatic"], 1),
+  ]);
+  A("bio-heart", [
+    mc("Which side of the heart pumps blood TO the lungs?", ["left side", "right side", "the aorta", "the atria only"], 1),
+    fill("Oxygen-rich blood leaves the left ventricle through the large artery called the ______.", ["aorta"]),
+  ]);
+
+  /* ===================== HISTORY ===================== */
+  A("his-industrial", [
+    mc("In which country did the Industrial Revolution begin?", ["France", "Great Britain", "Germany", "the United States"], 1),
+    mc("Which invention became the most important new power source of the Industrial Revolution?", ["the light bulb", "the steam engine", "the telephone", "the cotton gin"], 1),
+    mc("Labor unions of the era mainly fought for:", ["lower taxes", "better wages, safety, and an end to child labor", "free trade", "new colonies"], 1),
+  ]);
+  A("his-nationalism", [
+    mc("Who unified Germany through 'blood and iron' Realpolitik?", ["Cavour", "Otto von Bismarck", "Garibaldi", "Napoleon III"], 1),
+    mc("Which African nation successfully resisted European colonization?", ["Nigeria", "Ethiopia", "Kenya", "the Congo"], 1),
+  ]);
+  A("his-imperialism", [
+    mc("The Berlin Conference divided up which continent among European powers?", ["Asia", "Africa", "South America", "Australia"], 1),
+    mc("Social Darwinism was a pseudoscience used mainly to justify:", ["free public schools", "imperialism and racism", "labor unions", "democracy"], 1),
+  ]);
+  A("his-wwi", [
+    mc("The MAIN long-term causes of WWI are remembered as M-A-I-N:", ["Money, Art, Industry, News", "Militarism, Alliances, Imperialism, Nationalism", "Marx, Africa, India, Napoleon", "Monarchy, Army, Italy, Navy"], 1),
+    mc("The spark that directly triggered WWI was the assassination of:", ["Czar Nicholas II", "Archduke Franz Ferdinand", "Kaiser Wilhelm", "Otto von Bismarck"], 1),
+    fill("The barren, dangerous ground between opposing trenches was called 'No ______ Land.'", ["man's", "mans", "man"]),
+  ]);
+  A("his-interwar", [
+    mc("Who led India's independence movement using nonviolent resistance?", ["Nehru", "Mohandas Gandhi", "Nelson Mandela", "Mao Zedong"], 1),
+    mc("The Great Depression caused widespread:", ["full employment", "unemployment and economic collapse", "colonial expansion", "lower prices and prosperity"], 1),
+  ]);
+  A("his-wwii", [
+    mc("Giving in to Hitler's territorial demands to avoid war was the policy of:", ["containment", "appeasement", "isolationism", "Realpolitik"], 1),
+    mc("The 'Final Solution' refers to:", ["the Marshall Plan", "the Nazi plan to murder Europe's Jews (the Holocaust)", "Japan's surrender", "the Treaty of Versailles"], 1),
+  ]);
+  A("his-coldwar", [
+    mc("The 'Iron Curtain' described the division of:", ["Korea", "Europe into communist East and capitalist West", "Africa", "Germany only"], 1),
+    mc("The Marshall Plan was a U.S. program to:", ["arm the Soviet Union", "rebuild war-torn Western Europe", "colonize Asia", "start the UN"], 1),
+    mc("The Domino Theory was used to justify U.S. intervention in:", ["Cuba", "Vietnam", "Egypt", "Spain"], 1),
+  ]);
+  A("his-decolonization", [
+    mc("The 1947 partition divided British India into India and:", ["Bangladesh", "Pakistan", "Sri Lanka", "Nepal"], 1),
+    mc("Apartheid was South Africa's system of:", ["free elections", "racial segregation and white-minority rule", "communism", "religious tolerance"], 1),
+    mc("The 1994 genocide of the Tutsi minority took place in:", ["Rwanda", "Nigeria", "South Africa", "Kenya"], 0),
+  ]);
+
+  /* ===================== FRENCH ===================== */
+  A("fr-belgique", [
+    mc("Which language is spoken in Wallonia (southern Belgium)?", ["Dutch", "German", "French", "English"], 2),
+    mc("Brussels, the capital of Belgium, is officially:", ["French-only", "Dutch-only", "bilingual (French + Dutch)", "German-only"], 2),
+  ]);
+  A("fr-environnement", [
+    mc("« la canicule » means:", ["drought", "a heat wave", "a flood", "recycling"], 1),
+    mc("« la sécheresse » means:", ["a wildfire", "a heat wave", "drought", "pollution"], 2),
+  ]);
+
+  /* ===================== GEOMETRY (concept, non-numeric) ===================== */
+  A("geo-quads", [
+    mc("In a parallelogram, opposite sides are always:", ["perpendicular", "congruent (equal)", "different lengths", "curved"], 1),
+    mc("Which statement is NOT always true for a parallelogram?", ["Opposite sides are congruent", "Opposite angles are congruent", "All four sides are congruent", "Diagonals bisect each other"], 2, "All sides congruent is only true for a rhombus/square."),
+  ]);
+  A("geo-circles", [
+    mc("A tangent line meets the radius at the point of tangency at what angle?", ["45°", "60°", "90°", "180°"], 2),
+    mc("An inscribed angle is always ___ the central angle that intercepts the same arc.", ["equal to", "half of", "twice", "unrelated to"], 1),
+  ]);
+  A("geo-righttri", [
+    mc("In a right triangle, which equation is the Pythagorean Theorem?", ["a + b = c", "a² + b² = c²", "a² − b² = c²", "½ab = c"], 1),
+  ]);
+})(window.STUDY);
+
+</script>
   <!-- Question-bank expansion (card→MC + parametric generators) -->
   <script>
 /* ============================================================
    quizgen.js — expands the question bank at load time so practice
-   can't be pattern-memorised. Runs AFTER all data files register,
-   BEFORE quiz/test/app. Three sources:
-     1. Card → MC  (every subject): self-contained questions whose
-        distractors are real, same-subject answers of similar length
-        so the correct option never stands out.
-     2. Geometry   : randomised numeric problems (fresh each load).
-     3. French     : randomised conjugation drills (conditionnel/futur).
+   can't be pattern-memorised. Runs AFTER all data files (and
+   data/extra.js) register, BEFORE quiz/test/app.
+     1. Card → MC (every subject): self-contained questions whose
+        distractors are real, same-subject answers of similar length.
+     2. Geometry: ~20 randomised numeric problem types.
+     3. French: randomised conjugation drills (conditionnel/futur).
+   Geometry & French builders take an RNG so a seed can reproduce an
+   identical test on another device (see test.js share links).
    ============================================================ */
 (function (STUDY) {
   "use strict";
-  const shuffle = STUDY.SRS.shuffle;
-  const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle0 = STUDY.SRS.shuffle;                 // Math.random based
+  // rng-parameterised helpers (rng() -> [0,1))
+  const ri = (rng, a, b) => a + Math.floor(rng() * (b - a + 1));
+  const rp = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+  function rsh(rng, a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const PI = Math.PI;
 
   function norm(s) { return String(s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
   function wordset(s) { return new Set(norm(s).split(" ").filter(w => w.length > 3)); }
-  function sim(a, b) {
-    const A = wordset(a), B = wordset(b); if (!A.size || !B.size) return 0;
-    let i = 0; A.forEach(w => { if (B.has(w)) i++; });
-    return i / (A.size + B.size - i);
-  }
+  function sim(a, b) { const A = wordset(a), B = wordset(b); if (!A.size || !B.size) return 0; let i = 0; A.forEach(w => { if (B.has(w)) i++; }); return i / (A.size + B.size - i); }
 
   /* ---------------- 1. card → multiple choice ---------------- */
   function stemFor(front) {
     const f = front.trim();
-    if (/[?…:=]$/.test(f)) return f;                                   // already a prompt
-    if (/^(what|which|who|where|when|why|how|name|put|list|define|conjugate|cross|select|identify)\b/i.test(f)) return f; // instruction/question
-    return "Which best describes “" + f.replace(/[.…\s]+$/, "") + "”?"; // a term → frame it
+    if (/[?…:=]$/.test(f)) return f;
+    if (/^(what|which|who|where|when|why|how|name|put|list|define|conjugate|cross|select|identify)\b/i.test(f)) return f;
+    return "Which best describes “" + f.replace(/[.…\s]+$/, "") + "”?";
   }
-
   function genFromCards() {
     STUDY.subjects.forEach(function (s) {
       const all = [];
       s.topics.forEach(t => (t.cards || []).forEach(c => all.push({ c: c, t: t })));
       if (all.length < 4) return;
-
       s.topics.forEach(function (t) {
-        const existingStems = {};
-        (t.questions || []).forEach(q => existingStems[norm(q.q)] = 1);
+        const existing = {};
+        (t.questions || []).forEach(q => existing[norm(q.q)] = 1);
         const add = [];
-
         (t.cards || []).forEach(function (card) {
           const answer = card.back;
           if (!answer || answer.length > 115) return;
           const stem = stemFor(card.front);
-          if (existingStems[norm(stem)]) return;          // don't duplicate an authored question
-
-          // candidate distractors: other cards' answers in this subject
+          if (existing[norm(stem)]) return;
           let cands = all.filter(function (x) {
             if (x.c === card) return false;
             const b = x.c.back;
             if (!b || b.length > 135) return false;
             if (norm(b) === norm(answer)) return false;
-            if (sim(b, answer) > 0.45) return false;       // not a near-duplicate meaning
+            if (sim(b, answer) > 0.45) return false;
             return true;
           });
           if (cands.length < 3) return;
-
-          // prefer distractors from OTHER topics (less chance of a second correct answer)
           const cross = cands.filter(x => x.t !== t);
           if (cross.length >= 3) cands = cross;
-
-          // bias toward similar length so the answer doesn't stand out, then add variety
           cands.sort((a, b) => Math.abs(a.c.back.length - answer.length) - Math.abs(b.c.back.length - answer.length));
-          const window = cands.slice(0, Math.min(7, cands.length));
-          const chosen = shuffle(window).slice(0, 3);
-
-          const choices = shuffle([answer, chosen[0].c.back, chosen[1].c.back, chosen[2].c.back]);
-          if (new Set(choices.map(norm)).size < 4) return; // safety: 4 distinct options
+          const chosen = shuffle0(cands.slice(0, Math.min(7, cands.length))).slice(0, 3);
+          const choices = shuffle0([answer, chosen[0].c.back, chosen[1].c.back, chosen[2].c.back]);
+          if (new Set(choices.map(norm)).size < 4) return;
           add.push({ type: "mc", q: stem, choices: choices, answer: choices.indexOf(answer) });
-          existingStems[norm(stem)] = 1;
+          existing[norm(stem)] = 1;
         });
-
         if (add.length) STUDY.addQuestions(t, add);
       });
     });
   }
 
   /* ---------------- 2. geometry numeric problems ---------------- */
-  function makeNumMC(correct, distractors, fmt) {
-    const seen = {}, out = [];
-    const add = (v) => { const k = Math.round(v * 100) / 100; if (!(k in seen) && isFinite(v) && v > 0) { seen[k] = 1; out.push(v); } };
+  function numMC(rng, stem, correct, distractors, fmt) {
+    const seen = {}, vals = [];
+    const add = (v) => { if (!isFinite(v) || v <= 0) return; const k = Math.round(v * 100) / 100; if (k in seen) return; seen[k] = 1; vals.push(v); };
     add(correct);
-    shuffle(distractors).forEach(add);
-    let guard = 0;
-    while (out.length < 4 && guard++ < 30) add(correct * (1 + (rint(1, 6) * (Math.random() < .5 ? -0.1 : 0.15))));
-    if (out.length < 4) return null;
-    const four = [correct].concat(out.filter(v => v !== correct).slice(0, 3));
-    const choices = shuffle(four).map(fmt);
-    return { choices: choices, answer: choices.indexOf(fmt(correct)) };
+    rsh(rng, distractors).forEach(add);
+    let g = 0;
+    while (vals.length < 4 && g++ < 40) add(correct * (1 + ri(rng, 1, 6) * (rng() < .5 ? -0.12 : 0.17)));
+    if (vals.length < 4) return null;
+    const four = [correct].concat(vals.filter(v => v !== correct).slice(0, 3));
+    const choices = rsh(rng, four).map(fmt);
+    if (new Set(choices).size < 4) return null;
+    return { type: "mc", q: stem, choices: choices, answer: choices.indexOf(fmt(correct)) };
   }
-  const r2 = (x) => Math.round(x * 100) / 100;
-  const r1 = (x) => Math.round(x * 10) / 10;
-  const PI = Math.PI;
 
-  const GEO_TEMPLATES = [
-    { topic: "geo-area", make: () => { const l = rint(4, 20), w = rint(3, 18); const c = l * w; return q("A rectangle is " + l + " cm by " + w + " cm. What is its area?", c, [2 * (l + w), l + w, l * w * 2], v => v + " cm²"); } },
-    { topic: "geo-area", make: () => { const b = rint(4, 24), h = rint(3, 18); const c = 0.5 * b * h; return q("A triangle has base " + b + " and height " + h + ". What is its area?", c, [b * h, b + h, 0.5 * (b + h)], v => "" + r1(v)); } },
-    { topic: "geo-area", make: () => { const a = rint(4, 14), b = a + rint(2, 10), h = rint(3, 12); const c = 0.5 * (a + b) * h; return q("A trapezoid has parallel sides " + a + " and " + b + " with height " + h + ". Area?", c, [(a + b) * h, 0.5 * a * b, a + b + h], v => "" + r1(v)); } },
-    { topic: "geo-area", make: () => { const d1 = rint(6, 22), d2 = rint(5, 20); const c = 0.5 * d1 * d2; return q("A kite (or rhombus) has diagonals " + d1 + " and " + d2 + ". What is its area?", c, [d1 * d2, d1 + d2, 0.25 * d1 * d2], v => "" + r1(v)); } },
-    { topic: "geo-circlemeasure", make: () => { const r = rint(2, 14); const c = r2(PI * r * r); return q("A circle has radius " + r + ". What is its area? (use π ≈ 3.14)", c, [r2(2 * PI * r), r2(PI * 2 * r), r2(PI * r)], v => "" + r2(v)); } },
-    { topic: "geo-circlemeasure", make: () => { const d = rint(4, 24); const c = r2(PI * d); return q("A circle has diameter " + d + ". What is its circumference?", c, [r2(PI * d * d / 4), r2(PI * d / 2), r2(2 * PI * d)], v => "" + r2(v)); } },
-    { topic: "geo-solids", make: () => { const l = rint(3, 12), w = rint(3, 12), h = rint(3, 12); const c = l * w * h; return q("A rectangular prism is " + l + " by " + w + " by " + h + ". What is its volume?", c, [2 * (l * w + l * h + w * h), l + w + h, l * w + l * h + w * h], v => v + " units³"); } },
-    { topic: "geo-solids", make: () => { const r = rint(2, 9), h = rint(4, 14); const c = r1(PI * r * r * h); return q("A cylinder has radius " + r + " and height " + h + ". Volume? (π ≈ 3.14)", c, [r1(2 * PI * r * h), r1(PI * r * h), r1(PI * r * r)], v => "" + r1(v)); } },
-    { topic: "geo-solids", make: () => { const r = rint(2, 9), h = rint(4, 14); const c = r1(PI * r * r * h / 3); return q("A cone has radius " + r + " and height " + h + ". Volume = ⅓πr²h ≈ ?", c, [r1(PI * r * r * h), r1(PI * r * h / 3), r1(2 / 3 * PI * r * r * h)], v => "" + r1(v)); } },
-    { topic: "geo-solids", make: () => { const r = rint(2, 9); const c = r1(4 / 3 * PI * r * r * r); return q("A sphere has radius " + r + ". Volume = (4/3)πr³ ≈ ?", c, [r1(4 * PI * r * r), r1(4 / 3 * PI * r * r), r1(PI * r * r * r)], v => "" + r1(v)); } },
-    { topic: "geo-righttri", make: () => { const a = rint(3, 18), b = rint(3, 18); const c = r2(Math.hypot(a, b)); return q("A right triangle has legs " + a + " and " + b + ". What is the hypotenuse?", c, [a + b, Math.max(a, b), r2(Math.abs(a - b) + Math.min(a, b))], v => "" + r2(v)); } },
-    { topic: "geo-quads", make: () => { const n = rint(3, 10); const c = (n - 2) * 180; const names = { 3: "triangle", 4: "quadrilateral", 5: "pentagon", 6: "hexagon", 7: "heptagon", 8: "octagon", 9: "nonagon", 10: "decagon" }; return q("What is the sum of the interior angles of a " + names[n] + " (" + n + " sides)?", c, [n * 180, (n - 2) * 360, (n - 1) * 180], v => v + "°"); } },
-    { topic: "geo-quads", make: () => { let a, b; do { a = rint(25, 120); b = rint(25, 120); } while (a + b >= 175); const c = 180 - a - b; return q("Two angles of a triangle are " + a + "° and " + b + "°. What is the third angle?", c, [a + b, 360 - a - b, Math.abs(a - b)], v => v + "°"); } },
+  const GEO = [
+    ["geo-area", r => { const l = ri(r, 4, 20), w = ri(r, 3, 18); return numMC(r, "A rectangle is " + l + " cm by " + w + " cm. What is its area?", l * w, [2 * (l + w), l + w, 2 * l * w], v => v + " cm²"); }],
+    ["geo-area", r => { const b = ri(r, 4, 24), h = ri(r, 3, 18); return numMC(r, "A triangle has base " + b + " and height " + h + ". What is its area?", 0.5 * b * h, [b * h, b + h, 0.5 * (b + h)], v => "" + r1(v)); }],
+    ["geo-area", r => { const b = ri(r, 4, 20), h = ri(r, 3, 16); return numMC(r, "A parallelogram has base " + b + " and height " + h + ". What is its area?", b * h, [0.5 * b * h, 2 * (b + h), b + h], v => "" + v); }],
+    ["geo-area", r => { const a = ri(r, 4, 14), b = a + ri(r, 2, 10), h = ri(r, 3, 12); return numMC(r, "A trapezoid has parallel sides " + a + " and " + b + " with height " + h + ". Area?", 0.5 * (a + b) * h, [(a + b) * h, 0.5 * a * b, a + b + h], v => "" + r1(v)); }],
+    ["geo-area", r => { const d1 = ri(r, 6, 22), d2 = ri(r, 5, 20); return numMC(r, "A kite (or rhombus) has diagonals " + d1 + " and " + d2 + ". What is its area?", 0.5 * d1 * d2, [d1 * d2, d1 + d2, 0.25 * d1 * d2], v => "" + r1(v)); }],
+    ["geo-circlemeasure", r => { const rd = ri(r, 2, 14); return numMC(r, "A circle has radius " + rd + ". What is its area? (π ≈ 3.14)", r2(PI * rd * rd), [r2(2 * PI * rd), r2(PI * rd), r2(4 * PI * rd)], v => "" + r2(v)); }],
+    ["geo-circlemeasure", r => { const d = ri(r, 4, 24); return numMC(r, "A circle has diameter " + d + ". What is its circumference? (π ≈ 3.14)", r2(PI * d), [r2(PI * d * d / 4), r2(PI * d / 2), r2(2 * PI * d)], v => "" + r2(v)); }],
+    ["geo-circlemeasure", r => { const rd = ri(r, 3, 14), ang = rp(r, [60, 90, 120, 150, 180, 240]); return numMC(r, "An arc has central angle " + ang + "° in a circle of radius " + rd + ". Arc length? (π ≈ 3.14)", r2(ang / 360 * 2 * PI * rd), [r2(ang / 360 * PI * rd * rd), r2(2 * PI * rd), r2(ang / 180 * PI * rd)], v => "" + r2(v)); }],
+    ["geo-circlemeasure", r => { const rd = ri(r, 3, 14), ang = rp(r, [60, 90, 120, 150, 240, 270]); return numMC(r, "A sector has central angle " + ang + "° in a circle of radius " + rd + ". Sector area? (π ≈ 3.14)", r2(ang / 360 * PI * rd * rd), [r2(ang / 360 * 2 * PI * rd), r2(PI * rd * rd), r2(ang / 180 * PI * rd * rd)], v => "" + r2(v)); }],
+    ["geo-solids", r => { const l = ri(r, 3, 12), w = ri(r, 3, 12), h = ri(r, 3, 12); return numMC(r, "A rectangular prism is " + l + " by " + w + " by " + h + ". What is its volume?", l * w * h, [2 * (l * w + l * h + w * h), l + w + h, l * w + l * h + w * h], v => v + " units³"); }],
+    ["geo-solids", r => { const s = ri(r, 2, 11); return numMC(r, "A cube has edge length " + s + ". What is its volume?", s * s * s, [6 * s * s, s * s, 3 * s], v => v + " units³"); }],
+    ["geo-solids", r => { const rd = ri(r, 2, 9), h = ri(r, 4, 14); return numMC(r, "A cylinder has radius " + rd + " and height " + h + ". Volume? (π ≈ 3.14)", r1(PI * rd * rd * h), [r1(2 * PI * rd * h), r1(PI * rd * h), r1(PI * rd * rd)], v => "" + r1(v)); }],
+    ["geo-solids", r => { const rd = ri(r, 2, 9), h = ri(r, 4, 14); return numMC(r, "A cone has radius " + rd + " and height " + h + ". Volume = ⅓πr²h ≈ ? (π ≈ 3.14)", r1(PI * rd * rd * h / 3), [r1(PI * rd * rd * h), r1(PI * rd * h / 3), r1(2 / 3 * PI * rd * rd * h)], v => "" + r1(v)); }],
+    ["geo-solids", r => { const rd = ri(r, 2, 9); return numMC(r, "A sphere has radius " + rd + ". Volume = (4/3)πr³ ≈ ? (π ≈ 3.14)", r1(4 / 3 * PI * rd * rd * rd), [r1(4 * PI * rd * rd), r1(4 / 3 * PI * rd * rd), r1(PI * rd * rd * rd)], v => "" + r1(v)); }],
+    ["geo-solids", r => { const s = ri(r, 3, 12), h = ri(r, 4, 14); return numMC(r, "A square pyramid has base edge " + s + " and height " + h + ". Volume = ⅓·B·h ≈ ?", r1(s * s * h / 3), [r1(s * s * h), r1(s * h / 3), r1(2 * s * s * h / 3)], v => "" + r1(v)); }],
+    ["geo-solids", r => { const l = ri(r, 3, 10), w = ri(r, 3, 10), h = ri(r, 3, 10); return numMC(r, "A rectangular prism is " + l + " by " + w + " by " + h + ". What is its surface area?", 2 * (l * w + l * h + w * h), [l * w * h, l + w + h, l * w + l * h + w * h], v => v + " units²"); }],
+    ["geo-solids", r => { const rd = ri(r, 2, 9); return numMC(r, "A sphere has radius " + rd + ". Surface area = 4πr² ≈ ? (π ≈ 3.14)", r2(4 * PI * rd * rd), [r2(4 / 3 * PI * rd * rd * rd), r2(PI * rd * rd), r2(2 * PI * rd * rd)], v => "" + r2(v)); }],
+    ["geo-righttri", r => { const a = ri(r, 3, 18), b = ri(r, 3, 18); return numMC(r, "A right triangle has legs " + a + " and " + b + ". What is the hypotenuse? (round to 0.01)", r2(Math.hypot(a, b)), [a + b, Math.max(a, b), r2(Math.sqrt(Math.abs(a * a - b * b)) || a)], v => "" + r2(v)); }],
+    ["geo-righttri", r => { const leg = ri(r, 3, 16), hyp = leg + ri(r, 2, 12); const o = r2(Math.sqrt(hyp * hyp - leg * leg)); return o > 0 ? numMC(r, "A right triangle has one leg " + leg + " and hypotenuse " + hyp + ". Find the other leg. (round to 0.01)", o, [r2(hyp - leg), r2(Math.hypot(leg, hyp)), leg], v => "" + r2(v)) : null; }],
+    ["geo-righttri", r => { const leg = ri(r, 3, 14); return numMC(r, "A 45-45-90 triangle has legs of " + leg + ". What is the hypotenuse? (leg·√2, round to 0.01)", r2(leg * Math.SQRT2), [2 * leg, r2(leg * Math.sqrt(3)), r2(leg / Math.SQRT2)], v => "" + r2(v)); }],
+    ["geo-trig", r => { const a = ri(r, 3, 18), b = ri(r, 3, 18); const hyp = Math.hypot(a, b); return numMC(r, "In a right triangle the side opposite ∠A is " + a + " and the hypotenuse is " + r2(hyp) + ". What is sin A? (round to 0.01)", r2(a / hyp), [r2(b / hyp), r2(a / b), r2(hyp / a)], v => "" + r2(v)); }],
+    ["geo-trig", r => { const opp = ri(r, 2, 14), adj = ri(r, 2, 14); return numMC(r, "A right triangle has the side opposite ∠A = " + opp + " and adjacent = " + adj + ". Find m∠A using tan⁻¹. (round to 0.1°)", r1(Math.atan(opp / adj) * 180 / PI), [r1(90 - Math.atan(opp / adj) * 180 / PI), r1(Math.atan(adj / opp) * 180 / PI), r1(opp / adj)], v => v + "°"); }],
+    ["geo-quads", r => { const n = ri(r, 3, 10), names = { 3: "triangle", 4: "quadrilateral", 5: "pentagon", 6: "hexagon", 7: "heptagon", 8: "octagon", 9: "nonagon", 10: "decagon" }; return numMC(r, "What is the sum of the interior angles of a " + names[n] + " (" + n + " sides)?", (n - 2) * 180, [n * 180, (n - 2) * 360, (n - 1) * 180], v => v + "°"); }],
+    ["geo-quads", r => { const n = rp(r, [5, 6, 8, 9, 10, 12]); return numMC(r, "What is the measure of ONE interior angle of a regular " + n + "-gon?", r2((n - 2) * 180 / n), [r2(360 / n), r2((n - 2) * 180), r2(180 / n)], v => v + "°"); }],
+    ["geo-quads", r => { const n = rp(r, [3, 4, 5, 6, 8, 9, 10, 12]); return numMC(r, "What is the measure of ONE exterior angle of a regular " + n + "-gon?", r2(360 / n), [r2((n - 2) * 180 / n), r2(180 / n), r2((n - 2) * 180)], v => v + "°"); }],
+    ["geo-quads", r => { let a, b; do { a = ri(r, 25, 120); b = ri(r, 25, 120); } while (a + b >= 175); return numMC(r, "Two angles of a triangle are " + a + "° and " + b + "°. What is the third angle?", 180 - a - b, [a + b, 360 - a - b, Math.abs(a - b)], v => v + "°"); }],
+    ["geo-quads", r => { const a = ri(r, 4, 20), b = a + ri(r, 2, 16); return numMC(r, "A trapezoid has parallel bases " + a + " and " + b + ". What is the length of its midsegment? (½ of the sum)", (a + b) / 2, [a + b, b - a, (b - a) / 2], v => "" + r1(v)); }],
+    ["geo-similarity", r => { const p = ri(r, 2, 6), qq = p + ri(r, 1, 6), k = ri(r, 2, 5); const D = qq * k; return numMC(r, "Solve the proportion for x:  " + p + "/" + qq + " = x/" + D, p * k, [r2(qq * k / p), D - p, p + qq], v => "" + v); }],
   ];
-  function q(stem, correct, distractors, fmt) {
-    const m = makeNumMC(correct, distractors, fmt);
-    if (!m) return null;
-    return { type: "mc", q: stem, choices: m.choices, answer: m.answer };
-  }
 
-  function genGeometry(perTemplate) {
-    const byTopic = {};
-    GEO_TEMPLATES.forEach(function (tpl) {
-      for (let i = 0; i < perTemplate; i++) {
-        let item = null, tries = 0;
-        while (!item && tries++ < 5) item = tpl.make();
-        if (item) (byTopic[tpl.topic] = byTopic[tpl.topic] || []).push(item);
+  function geometryItems(rng, per) {
+    const out = [];
+    GEO.forEach(function (pair) {
+      for (let i = 0; i < per; i++) {
+        let it = null, tr = 0;
+        while (!it && tr++ < 6) it = pair[1](rng);
+        if (it) { it.topic = pair[0]; out.push(it); }
       }
     });
-    Object.keys(byTopic).forEach(function (tid) {
-      const entry = STUDY.topicIndex[tid];
-      if (entry) STUDY.addQuestions(entry.topic, byTopic[tid]);
-    });
+    return out;
+  }
+  function genGeometry(rng, per) {
+    const byTopic = {};
+    geometryItems(rng, per).forEach(it => { const tp = it.topic; delete it.topic; (byTopic[tp] = byTopic[tp] || []).push(it); });
+    Object.keys(byTopic).forEach(function (tid) { const e = STUDY.topicIndex[tid]; if (e) STUDY.addQuestions(e.topic, byTopic[tid]); });
   }
 
   /* ---------------- 3. french conjugation drills ---------------- */
   const FR_VERBS = [
     { inf: "parler", stem: "parler" }, { inf: "regarder", stem: "regarder" }, { inf: "manger", stem: "manger" },
     { inf: "aimer", stem: "aimer" }, { inf: "travailler", stem: "travailler" }, { inf: "écouter", stem: "écouter" },
+    { inf: "donner", stem: "donner" }, { inf: "jouer", stem: "jouer" },
     { inf: "finir", stem: "finir" }, { inf: "choisir", stem: "choisir" }, { inf: "vendre", stem: "vendr" },
     { inf: "prendre", stem: "prendr" }, { inf: "attendre", stem: "attendr" },
     { inf: "aller", stem: "ir" }, { inf: "avoir", stem: "aur" }, { inf: "être", stem: "ser" },
@@ -2803,48 +3017,43 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     { inf: "voir", stem: "verr" }, { inf: "venir", stem: "viendr" }, { inf: "vouloir", stem: "voudr" },
   ];
   const FR_SUBJ = ["je", "tu", "il", "nous", "vous", "ils"];
-  const FR_END = {
-    cond: ["ais", "ais", "ait", "ions", "iez", "aient"],
-    fut: ["ai", "as", "a", "ons", "ez", "ont"],
-  };
+  const FR_END = { cond: ["ais", "ais", "ait", "ions", "iez", "aient"], fut: ["ai", "as", "a", "ons", "ez", "ont"] };
   const VOWEL = /^[aeiouéèêh]/i;
   function frForm(stem, end, si) {
-    let form = stem + FR_END[end][si];
-    const subj = FR_SUBJ[si];
-    if (subj === "je") return (VOWEL.test(form) ? "j'" : "je ") + form;
-    return subj + " " + form;
+    const form = stem + FR_END[end][si];
+    if (FR_SUBJ[si] === "je") return (VOWEL.test(form) ? "j'" : "je ") + form;
+    return FR_SUBJ[si] + " " + form;
   }
-  function genFrench(count) {
-    const out = { "fr-conditionnel": [], "fr-futur": [] };
-    const seen = {};
+  function frenchItems(rng, count) {
+    const out = [], seen = {};
     let guard = 0;
-    while ((out["fr-conditionnel"].length + out["fr-futur"].length) < count && guard++ < count * 8) {
-      const v = pick(FR_VERBS), si = rint(0, 5), tense = Math.random() < 0.5 ? "cond" : "fut";
-      const key = v.inf + si + tense;
-      if (seen[key]) continue; seen[key] = 1;
+    while (out.length < count && guard++ < count * 10) {
+      const v = rp(rng, FR_VERBS), si = ri(rng, 0, 5), tense = rng() < 0.5 ? "cond" : "fut";
+      const key = v.inf + si + tense; if (seen[key]) continue; seen[key] = 1;
       const correct = frForm(v.stem, tense, si);
-      // distractors: wrong person (same tense), wrong tense (same person), wrong both
-      const si2 = (si + rint(1, 5)) % 6;
-      const other = tense === "cond" ? "fut" : "cond";
+      const si2 = (si + ri(rng, 1, 5)) % 6, other = tense === "cond" ? "fut" : "cond";
       const ds = [frForm(v.stem, tense, si2), frForm(v.stem, other, si), frForm(v.stem, other, si2)];
-      const choices = shuffle([correct].concat(ds));
+      const choices = rsh(rng, [correct].concat(ds));
       if (new Set(choices.map(c => c.toLowerCase())).size < 4) continue;
       const label = tense === "cond" ? "conditionnel (would)" : "futur (will)";
-      const item = { type: "mc", q: "Conjugate « " + v.inf + " » for « " + FR_SUBJ[si] + " » in the " + label + ":", choices: choices, answer: choices.indexOf(correct) };
-      out[tense === "cond" ? "fr-conditionnel" : "fr-futur"].push(item);
+      out.push({ topic: tense === "cond" ? "fr-conditionnel" : "fr-futur", type: "mc",
+        q: "Conjugate « " + v.inf + " » for « " + FR_SUBJ[si] + " » in the " + label + ":", choices: choices, answer: choices.indexOf(correct) });
     }
-    Object.keys(out).forEach(function (tid) {
-      const entry = STUDY.topicIndex[tid];
-      if (entry && out[tid].length) STUDY.addQuestions(entry.topic, out[tid]);
-    });
+    return out;
+  }
+  function genFrench(rng, count) {
+    const byTopic = {};
+    frenchItems(rng, count).forEach(it => { const tp = it.topic; delete it.topic; (byTopic[tp] = byTopic[tp] || []).push(it); });
+    Object.keys(byTopic).forEach(function (tid) { const e = STUDY.topicIndex[tid]; if (e) STUDY.addQuestions(e.topic, byTopic[tid]); });
   }
 
-  /* ---------------- run ---------------- */
+  /* ---------------- run at load (Math.random) ---------------- */
   try { genFromCards(); } catch (e) { if (window.console) console.warn("card-gen", e); }
-  try { genGeometry(4); } catch (e) { if (window.console) console.warn("geo-gen", e); }
-  try { genFrench(16); } catch (e) { if (window.console) console.warn("fr-gen", e); }
+  try { genGeometry(Math.random, 4); } catch (e) { if (window.console) console.warn("geo-gen", e); }
+  try { genFrench(Math.random, 18); } catch (e) { if (window.console) console.warn("fr-gen", e); }
 
-  STUDY.QUIZGEN = { genFromCards: genFromCards, genGeometry: genGeometry, genFrench: genFrench };
+  // exposed for seeded test/exam generation (test.js)
+  STUDY.QUIZGEN = { genFromCards: genFromCards, geometryItems: geometryItems, frenchItems: frenchItems };
 })(window.STUDY);
 
 </script>
@@ -2882,6 +3091,31 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   }
   QUIZ.toast = toast;
 
+  /* ---------------- text-to-speech (French listening / oral practice) ---------------- */
+  QUIZ.canSpeak = (typeof window !== "undefined" && "speechSynthesis" in window);
+  QUIZ.speak = function (text, lang) {
+    if (!QUIZ.canSpeak) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(text).replace(/[*_`«»]/g, "").trim());
+      u.lang = lang || "fr-FR"; u.rate = 0.92;
+      const want = (lang || "fr").slice(0, 2).toLowerCase();
+      const v = (window.speechSynthesis.getVoices() || []).find(x => x.lang && x.lang.toLowerCase().slice(0, 2) === want);
+      if (v) u.voice = v;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  };
+  QUIZ.speakerBtn = function (text, lang, cls) {
+    const b = el("button", "spk" + (cls ? " " + cls : ""), "🔊");
+    b.type = "button"; b.title = "Hear it";
+    b.onclick = function (e) { e.stopPropagation(); e.preventDefault(); QUIZ.speak(text, lang); };
+    return b;
+  };
+  // some browsers load voices async
+  if (QUIZ.canSpeak && typeof window.speechSynthesis.getVoices === "function") {
+    try { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = function () { window.speechSynthesis.getVoices(); }; } catch (e) {}
+  }
+
   /* ---------------- main quiz runner ---------------- */
   QUIZ.run = function (mount, questions, opts) {
     opts = opts || {};
@@ -2891,6 +3125,24 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       return;
     }
     const state = { i: 0, correct: 0, answered: 0, results: [], list: questions };
+    const instant = opts.instant !== false;       // exam mode passes instant:false
+    let remain = opts.timeLimit || 0, ticker = null, timerEl = null;
+
+    function startTimer() {
+      if (!opts.timeLimit || ticker) return;
+      ticker = setInterval(function () {
+        remain--;
+        paintTimer();
+        if (remain <= 0) { stopTimer(); results(true); }
+      }, 1000);
+    }
+    function stopTimer() { if (ticker) { clearInterval(ticker); ticker = null; } }
+    function paintTimer() {
+      if (!timerEl) return;
+      const m = Math.floor(remain / 60), s = remain % 60;
+      timerEl.textContent = "⏱ " + m + ":" + String(s).padStart(2, "0");
+      timerEl.className = "exam-timer" + (remain <= 30 ? " danger" : remain <= 90 ? " warn" : "");
+    }
 
     function render() {
       const q = state.list[state.i];
@@ -2900,8 +3152,10 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const pr = el("div", "q-progress");
       pr.appendChild(el("i")).style.width = ((state.i) / state.list.length * 100) + "%";
       top.appendChild(pr);
+      if (opts.timeLimit) { timerEl = el("div", "exam-timer"); paintTimer(); top.appendChild(timerEl); }
       top.appendChild(el("div", "q-count", (state.i + 1) + " / " + state.list.length));
       mount.appendChild(top);
+      startTimer();
 
       const subj = STUDY.byId[q.subjectId];
       const topic = STUDY.topicIndex[q.topicId] ? STUDY.topicIndex[q.topicId].topic : null;
@@ -2915,13 +3169,17 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       return renderMC(q);
     }
 
-    function feedbackBlock(ok, correctText, explain) {
+    function feedbackBlock(ok, correctText, explain, q) {
       const fb = el("div", "explain " + (ok ? "ok" : "no"));
       fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ Not quite"));
       let body = "";
       if (!ok && correctText) body += "<b>Answer:</b> " + esc(correctText) + "<br>";
       if (explain) body += esc(explain);
       if (body) fb.insertAdjacentHTML("beforeend", body);
+      if (q && q.subjectId === "french" && correctText && QUIZ.canSpeak) {
+        const sp = QUIZ.speakerBtn(correctText, "fr-FR"); sp.style.marginTop = "8px";
+        fb.appendChild(document.createElement("br")); fb.appendChild(sp);
+      }
       return fb;
     }
 
@@ -2971,17 +3229,24 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
       function choose(origIdx, node) {
         const ok = origIdx === q.answer;
+        btns.forEach(function (b) { b.disabled = true; });
+        document.onkeydown = null;
+        if (!instant) {                    // exam mode: just mark the pick, no reveal
+          node.classList.add("selected");
+          commit(q, ok ? 2 : 0, ok);
+          if (state.i + 1 < state.list.length) { setTimeout(function () { state.i++; render(); window.scrollTo(0, 0); }, 180); }
+          else nextBar();
+          return;
+        }
         btns.forEach(function (b) {
-          b.disabled = true;
           const oi = +b.dataset.orig;
           if (oi === q.answer) b.classList.add("correct");
           else if (b === node) b.classList.add("wrong");
           else b.classList.add("dim");
         });
-        mount.appendChild(feedbackBlock(ok, q.choices[q.answer], q.explain));
+        mount.appendChild(feedbackBlock(ok, q.choices[q.answer], q.explain, q));
         commit(q, ok ? 2 : 0, ok);
         nextBar();
-        document.onkeydown = null;
       }
 
       // keyboard a-d / 1-4
@@ -3005,8 +3270,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         c.onclick = function () {
           const ok = pair[1] === q.answer;
           Array.from(wrap.children).forEach(function (b) { b.disabled = true; });
+          if (!instant) {
+            c.classList.add("selected"); commit(q, ok ? 2 : 0, ok);
+            if (state.i + 1 < state.list.length) setTimeout(function () { state.i++; render(); window.scrollTo(0, 0); }, 180); else nextBar();
+            return;
+          }
           c.classList.add(ok ? "correct" : "wrong");
-          mount.appendChild(feedbackBlock(ok, q.answer ? "True" : "False", q.explain));
+          mount.appendChild(feedbackBlock(ok, q.answer ? "True" : "False", q.explain, q));
           commit(q, ok ? 2 : 0, ok); nextBar();
         };
         wrap.appendChild(c);
@@ -3034,8 +3304,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         const accepted = (q.answers || []).map(norm);
         const ok = accepted.some(function (a) { return a === val || (a.length > 4 && (val.includes(a) || a.includes(val))); });
         done = true; inp.disabled = true; go.disabled = true;
+        if (!instant) {
+          inp.classList.add("selected"); commit(q, ok ? 2 : 0, ok);
+          if (state.i + 1 < state.list.length) setTimeout(function () { state.i++; render(); window.scrollTo(0, 0); }, 160); else nextBar();
+          return;
+        }
         inp.classList.add(ok ? "correct" : "wrong");
-        mount.appendChild(feedbackBlock(ok, (q.answers || [])[0], q.explain));
+        mount.appendChild(feedbackBlock(ok, (q.answers || [])[0], q.explain, q));
         commit(q, ok ? 2 : 0, ok);
         // let the user override self-grade (lenient subject matter)
         const extra = el("div", "row");
@@ -3088,9 +3363,11 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     }
 
     /* ----- results ----- */
-    function results() {
+    function results(timedOut) {
+      stopTimer();
       document.onkeydown = null;
       mount.innerHTML = "";
+      if (timedOut) mount.appendChild(el("div", "q-kicker", "⏱ Time's up"));
       const pct = Math.round(state.correct / state.list.length * 100);
       const big = el("div", "result-big");
       big.appendChild(el("div", "score", pct + "%"));
@@ -3154,18 +3431,28 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const topic = STUDY.topicIndex[c.topicId] ? STUDY.topicIndex[c.topicId].topic : null;
       if (subj) mount.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
 
+      const lang = c.subjectId === "french" ? "fr-FR" : "en-US";
+      function addSpeaker(face, text) {
+        if (!QUIZ.canSpeak) return;
+        const sp = QUIZ.speakerBtn(text, lang);
+        sp.style.cssText = "position:absolute;top:10px;right:12px";
+        face.appendChild(sp);
+      }
       const flash = el("div", "flash");
       const inner = el("div", "inner");
       const front = el("div", "face");
       front.appendChild(el("div", "lbl", "Prompt"));
       front.appendChild(el("div", "ct", esc(c.front)));
       if (c.hint) front.appendChild(el("div", "hint", "Hint: " + esc(c.hint)));
+      addSpeaker(front, c.front);
       const back = el("div", "face back");
       back.appendChild(el("div", "lbl", "Answer"));
       back.appendChild(el("div", "ct", esc(c.back)));
+      addSpeaker(back, c.back);
       inner.appendChild(front); inner.appendChild(back);
       flash.appendChild(inner);
       mount.appendChild(flash);
+      if (opts.audio && c.subjectId === "french") QUIZ.speak(c.front, "fr-FR");
       mount.appendChild(el("div", "flash-hint", "Tap the card (or press Space) to flip"));
 
       let flipped = false;
@@ -3218,6 +3505,130 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     return Math.round(ms / 86400000) + "d";
   }
 
+  /* ---------------- CRAM mode ----------------
+     Research-backed last-minute drilling: massed RETRIEVAL practice with
+     immediate feedback, items interleaved, missed items requeued to come
+     back SOON, and each item "locked in" only after 2 correct in a row
+     (a criterion / Leitner-drop). You keep cycling until everything is
+     locked, so weak items get the most reps. */
+  QUIZ.runCram = function (mount, items, opts) {
+    opts = opts || {};
+    const pool = (items || []).filter(q => q.type === "mc" || q.type === "fill" || q.type === "tf");
+    if (!pool.length) { mount.innerHTML = '<div class="empty">Nothing to cram here yet.</div>'; return; }
+    const DROP = opts.dropAfter || 2;
+    const total = pool.length;
+    const cc = {}, locked = {};
+    let queue = SRS.interleave(pool.slice());
+    let lockedCount = 0, answered = 0, correct = 0;
+
+    function nextItem() { while (queue.length && locked[queue[0].id]) queue.shift(); return queue[0] || null; }
+    function requeue(q, dist) { queue.shift(); queue.splice(Math.min(queue.length, dist), 0, q); }
+
+    function after(q, ok) {
+      answered++; if (ok) correct++;
+      STUDY.recordItem(q.id, ok ? 2 : 0, q.topicId);
+      if (ok) {
+        cc[q.id] = (cc[q.id] || 0) + 1;
+        if (cc[q.id] >= DROP) { locked[q.id] = true; lockedCount++; queue.shift(); toast("🔒 Locked in"); }
+        else requeue(q, 5 + Math.floor(Math.random() * 3));
+      } else { cc[q.id] = 0; requeue(q, 2 + Math.floor(Math.random() * 2)); }
+      if (lockedCount >= total) finish(); else { render(); window.scrollTo(0, 0); }
+    }
+
+    function render() {
+      const q = nextItem();
+      if (!q) return finish();
+      mount.innerHTML = "";
+      const stat = el("div", "cram-stat");
+      const bar = el("div", "cram-locks"); bar.appendChild(el("i")).style.width = (lockedCount / total * 100) + "%";
+      stat.appendChild(bar);
+      stat.appendChild(el("div", "cram-num", "🔒 " + lockedCount + " / " + total));
+      mount.appendChild(stat);
+      const subj = STUDY.byId[q.subjectId], topic = STUDY.topicIndex[q.topicId] ? STUDY.topicIndex[q.topicId].topic : null;
+      if (subj) mount.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
+      const cn = (cc[q.id] || 0);
+      if (cn > 0) mount.appendChild(el("div", "cram-badge", "✓ once — get it again to lock it"));
+      renderItem(q);
+    }
+
+    function feedback(ok, correctText, explain, q) {
+      const fb = el("div", "explain " + (ok ? "ok" : "no"));
+      fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ Not quite"));
+      let body = "";
+      if (!ok && correctText) body += "<b>Answer:</b> " + esc(correctText) + "<br>";
+      if (explain) body += esc(explain);
+      if (body) fb.insertAdjacentHTML("beforeend", body);
+      if (q && q.subjectId === "french" && correctText && QUIZ.canSpeak) { fb.appendChild(document.createElement("br")); fb.appendChild(QUIZ.speakerBtn(correctText, "fr-FR")); }
+      return fb;
+    }
+    function nextBtn(q, ok) {
+      const bar = el("div", "qbar");
+      const b = el("button", "btn primary", "Next →");
+      b.onclick = function () { document.onkeydown = null; after(q, ok); };
+      bar.appendChild(b); mount.appendChild(bar); b.focus();
+    }
+
+    function renderItem(q) {
+      mount.appendChild(el("h2", "q-stem", esc(q.q)));
+      if (q.type === "mc") {
+        const order = SRS.shuffle(q.choices.map((_, i) => i));
+        const wrap = el("div", "choices"); const btns = [];
+        order.forEach(function (oi, n) {
+          const c = el("button", "choice");
+          c.appendChild(el("span", "key", String.fromCharCode(65 + n)));
+          c.appendChild(el("span", "ct", esc(q.choices[oi])));
+          c.onclick = function () {
+            const ok = oi === q.answer;
+            btns.forEach(function (b, k) { b.disabled = true; if (order[k] === q.answer) b.classList.add("correct"); else if (b === c) b.classList.add("wrong"); else b.classList.add("dim"); });
+            mount.appendChild(feedback(ok, q.choices[q.answer], q.explain, q));
+            nextBtn(q, ok); document.onkeydown = null;
+          };
+          wrap.appendChild(c); btns.push(c);
+        });
+        mount.appendChild(wrap);
+        document.onkeydown = function (e) { const k = e.key.toLowerCase(); let idx = -1; if (k >= "1" && k <= "9") idx = +k - 1; else if (k >= "a" && k <= "z") idx = k.charCodeAt(0) - 97; if (idx >= 0 && idx < btns.length && !btns[idx].disabled) { e.preventDefault(); btns[idx].click(); } };
+      } else if (q.type === "tf") {
+        const wrap = el("div", "choices");
+        [["True", true], ["False", false]].forEach(function (pair) {
+          const c = el("button", "choice"); c.appendChild(el("span", "ct", pair[0]));
+          c.onclick = function () { const ok = pair[1] === q.answer; Array.from(wrap.children).forEach(b => b.disabled = true); c.classList.add(ok ? "correct" : "wrong"); mount.appendChild(feedback(ok, q.answer ? "True" : "False", q.explain, q)); nextBtn(q, ok); };
+          wrap.appendChild(c);
+        });
+        mount.appendChild(wrap);
+      } else { // fill
+        const row = el("div", "fill-in"); const inp = el("input"); inp.type = "text"; inp.autocomplete = "off"; inp.spellcheck = false; inp.placeholder = "Type your answer…";
+        const go = el("button", "btn primary", "Check"); row.appendChild(inp); row.appendChild(go); mount.appendChild(row); inp.focus();
+        let done = false;
+        function check() {
+          if (done) return; const val = norm(inp.value); if (!val) return inp.focus();
+          const ok = (q.answers || []).map(norm).some(a => a === val || (a.length > 4 && (val.includes(a) || a.includes(val))));
+          done = true; inp.disabled = true; go.disabled = true; inp.classList.add(ok ? "correct" : "wrong");
+          mount.appendChild(feedback(ok, (q.answers || [])[0], q.explain, q));
+          const extra = el("div", "row");
+          if (!ok) { const m = el("button", "btn sm good", "I was right →"); m.onclick = function () { m.remove(); after(q, true); }; extra.appendChild(m); }
+          const bar = el("div", "qbar"); if (extra.children.length) bar.appendChild(extra);
+          const b = el("button", "btn primary", "Next →"); b.onclick = function () { after(q, ok); }; bar.appendChild(b); mount.appendChild(bar); b.focus();
+        }
+        go.onclick = check; inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); if (!done) check(); } };
+      }
+    }
+
+    function finish() {
+      document.onkeydown = null;
+      mount.innerHTML = "";
+      mount.appendChild(el("div", "result-big", "<div class='score'>🔒</div><div class='lbl'>All " + total + " items locked in!</div>"));
+      mount.appendChild(el("div", "panel center", "You answered " + answered + " times to lock " + total + " items (" + Math.round(correct / Math.max(1, answered) * 100) + "% first-try accuracy). That's the cram working: the ones you missed got the most reps."));
+      const bar = el("div", "qbar");
+      const again = el("button", "btn", "Cram again");
+      again.onclick = function () { QUIZ.runCram(mount, items, opts); };
+      const done = el("button", "btn primary", opts.doneLabel || "Done");
+      done.onclick = function () { if (opts.onDone) opts.onDone(); };
+      bar.appendChild(again); bar.appendChild(done); mount.appendChild(bar);
+    }
+
+    render();
+  };
+
   QUIZ.norm = norm;
   STUDY.QUIZ = QUIZ;
 })(window.STUDY);
@@ -3234,6 +3645,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   const SRS = STUDY.SRS;
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const LET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  // --- seeded RNG so a seed reproduces an identical test on any device ---
+  function hashStr(s) { s = String(s); let h = 1779033703 ^ s.length; for (let i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); } return h >>> 0; }
+  function mulberry32(a) { return function () { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const rshuf = (rng, a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
+  const rpick = (rng, a) => a[Math.floor(rng() * a.length)];
+  function newSeed() { return Math.floor(Math.random() * 1e9).toString(36) + Math.floor(Math.random() * 1e9).toString(36); }
 
   // exam blueprints (capped to whatever content is available)
   const BLUEPRINT = {
@@ -3263,7 +3681,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   /* ---------------- setup UI ---------------- */
   TEST.renderSetup = function (app, params, h) {
     const el = h.el, sectionH = h.sectionH;
-    const cfg = { subjectId: params.s || "all", length: "standard" };
+    const cfg = { subjectId: params.s || "all", length: params.len || "standard", seed: params.seed || null };
+    const toast = (STUDY.QUIZ && STUDY.QUIZ.toast) || function () {};
 
     const card = el("div", "card");
 
@@ -3305,101 +3724,143 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     }
     refresh();
 
-    const bar = el("div", "qbar");
-    const gen = el("button", "btn primary", "🖨️ Make printable test ↗");
-    gen.onclick = function () { const model = TEST.generate(cfg); TEST.print(model); };
-    const prev = el("button", "btn", "👀 Preview");
-    prev.onclick = function () { const model = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, model, el); previewWrap.scrollIntoView({ behavior: "smooth" }); };
-    bar.appendChild(prev); bar.appendChild(gen);
-    app.appendChild(bar);
+    // action buttons
+    const actions = el("div", "actions"); actions.style.marginTop = "6px";
+    actions.appendChild(mkAction("📝", "Take it on screen", "Timed & auto-graded", function () {
+      STUDY.go("#/exam?s=" + cfg.subjectId + "&len=" + cfg.length + (cfg.seed ? "&seed=" + encodeURIComponent(cfg.seed) : ""));
+    }));
+    actions.appendChild(mkAction("🖨️", "Make printable test", "Print or Save as PDF ↗", function () { TEST.print(TEST.generate(cfg)); }));
+    actions.appendChild(mkAction("👀", "Preview on screen", "Read it, reveal answers", function () { const m = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, m, el); previewWrap.scrollIntoView({ behavior: "smooth" }); }));
+    actions.appendChild(mkAction("🔗", "Share this test", "Same test for a classmate", function () {
+      const seed = cfg.seed || newSeed(); cfg.seed = seed;
+      const url = TEST.shareURL(cfg);
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast("Share link copied!"), () => prompt("Copy this link:", url));
+      else prompt("Copy this share link:", url);
+    }));
+    app.appendChild(actions);
+
+    function mkAction(icon, title, desc, onclick) {
+      const a = el("button", "action"); a.appendChild(el("div", "ic", icon)); a.appendChild(el("div", "t", title)); a.appendChild(el("div", "d", desc)); a.onclick = onclick; return a;
+    }
+
+    // opened via a shared link → show the exact test immediately
+    if (cfg.seed) {
+      const banner = el("div", "tip"); banner.innerHTML = "<span class='i'>🔗</span><div>Shared test — this is the same randomized test for everyone with this link.</div>";
+      previewWrap.appendChild(banner);
+      const m = TEST.generate(cfg);
+      TEST.renderPreview(previewWrap, m, el);
+    }
   };
 
-  /* ---------------- generation ---------------- */
-  function pools(subjectId) {
+  /* ---------------- generation ----------------
+     When cfg.seed is set the test is built deterministically (same on any
+     device) from STATIC content only — authored/pool questions plus
+     seed-generated parametric Geometry/French — so share links reproduce
+     it exactly. Without a seed it draws from the full live pool. */
+  function pools(subjectId, rng, deterministic) {
     const subjects = subjectId === "all" ? STUDY.subjects : [STUDY.byId[subjectId]];
     const mc = [], fill = [], free = [], cards = [], match = [];
+    function bucket(q, sid) {
+      if (q.type === "mc" || q.type === "tf") mc.push(q);
+      else if (q.type === "fill") ((sid || q.subjectId) === "geometry" ? free : fill).push(q);
+      else if (q.type === "free") free.push(q);
+      else if (q.type === "match") match.push(q);
+    }
     subjects.forEach(function (s) {
       (s.topics || []).forEach(function (t) {
-        (t.questions || []).forEach(function (q) {
-          if (q.type === "mc") mc.push(q);
-          else if (q.type === "tf") mc.push(q);
-          else if (q.type === "fill") (s.id === "geometry" ? free : fill).push(q);
-          else if (q.type === "free") free.push(q);
-          else if (q.type === "match") match.push(q);
-        });
+        (t.questions || []).forEach(function (q) { if (deterministic && q.gen) return; bucket(q, s.id); });
         (t.cards || []).forEach(function (c) { if (c.front && c.back && c.back.length < 90) cards.push(c); });
       });
     });
+    if (deterministic && STUDY.QUIZGEN) {                 // add reproducible parametric items
+      const want = subjectId === "all" ? ["geometry", "french"] : [subjectId];
+      if (want.indexOf("geometry") >= 0) STUDY.QUIZGEN.geometryItems(rng, 3).forEach(q => { q.subjectId = "geometry"; q.topicId = q.topic; mc.push(q); });
+      if (want.indexOf("french") >= 0) STUDY.QUIZGEN.frenchItems(rng, 10).forEach(q => { q.subjectId = "french"; q.topicId = q.topic; mc.push(q); });
+    }
     return { mc, fill, free, cards, match, subjects };
   }
 
   TEST.generate = function (cfg) {
+    const det = !!cfg.seed;
+    const rng = det ? mulberry32(hashStr(cfg.seed + "|" + cfg.subjectId + "|" + cfg.length)) : Math.random;
+    const sh = (a) => det ? rshuf(rng, a) : SRS.shuffle(a);
     const bp = Object.assign({}, BLUEPRINT[cfg.subjectId] || BLUEPRINT.all);
     const scale = cfg.length === "short" ? 0.4 : cfg.length === "standard" ? 0.75 : 1;
-    const P = pools(cfg.subjectId);
+    const P = pools(cfg.subjectId, rng, det);
     const subjName = cfg.subjectId === "all" ? "Cumulative" : STUDY.byId[cfg.subjectId].name;
 
     const sections = [];
     let qno = 0;
 
-    // Part I — multiple choice
     const mcCount = Math.min(P.mc.length, Math.round((bp.mc || 0) * scale) || 0);
     if (mcCount > 0) {
-      const items = SRS.shuffle(P.mc).slice(0, mcCount).map(function (q) {
-        if (q.type === "tf") {
-          return { no: ++qno, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
-        }
-        const order = SRS.shuffle(q.choices.map((_, i) => i));
+      const items = sh(P.mc).slice(0, mcCount).map(function (q) {
+        if (q.type === "tf") return { no: ++qno, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
+        const order = sh(q.choices.map((_, i) => i));
         return { no: ++qno, stem: q.q, choices: order.map(i => q.choices[i]), ans: order.indexOf(q.answer) };
       });
       sections.push({ kind: "mc", title: "Part I · Multiple Choice", instr: "Circle the letter of the best answer.", items: items });
     }
 
-    // Geometry / free response
     const freeCount = Math.min(P.free.length, Math.round((bp.free || 0) * scale) || 0);
     if (freeCount > 0) {
-      const items = SRS.shuffle(P.free).slice(0, freeCount).map(function (q) {
+      const items = sh(P.free).slice(0, freeCount).map(function (q) {
         const ans = q.answers ? q.answers[0] : (q.choices ? q.choices[q.answer] : "");
         return { no: ++qno, stem: q.q, ans: ans, work: cfg.subjectId === "geometry" || q.subjectId === "geometry" };
       });
       sections.push({ kind: "free", title: "Part II · Free Response (show your work)", instr: "Write your answer in the blank. Use radical or rounded form where the problem says to.", items: items });
     }
 
-    // Fill in / short answer
     const fillCount = Math.min(P.fill.length, Math.round((bp.fill || 0) * scale) || 0);
     if (fillCount > 0) {
-      const items = SRS.shuffle(P.fill).slice(0, fillCount).map(function (q) {
-        return { no: ++qno, stem: q.q, ans: (q.answers || [])[0] || "" };
-      });
+      const items = sh(P.fill).slice(0, fillCount).map(function (q) { return { no: ++qno, stem: q.q, ans: (q.answers || [])[0] || "" }; });
       sections.push({ kind: "fill", title: "Part · Fill in the Blank", instr: "Write the correct word or phrase.", items: items });
     }
 
-    // Matching (built from term/definition cards) — blocks of ~6
     const matchTotal = Math.min(P.cards.length, Math.round((bp.match || 0) * scale) || 0);
     if (matchTotal >= 3) {
-      const chosen = SRS.shuffle(P.cards).slice(0, matchTotal);
+      const chosen = sh(P.cards).slice(0, matchTotal);
       const blocks = [];
-      const BLK = 6;
-      for (let i = 0; i < chosen.length; i += BLK) {
-        const grp = chosen.slice(i, i + BLK);
-        const bank = SRS.shuffle(grp.map(c => c.front)); // term bank
-        const prompts = grp.map(function (c) {
-          return { no: ++qno, def: c.back, ansLetter: LET[bank.indexOf(c.front)] };
-        });
+      for (let i = 0; i < chosen.length; i += 6) {
+        const grp = chosen.slice(i, i + 6);
+        const bank = sh(grp.map(c => c.front));
+        const prompts = grp.map(c => ({ no: ++qno, def: c.back, ansLetter: LET[bank.indexOf(c.front)] }));
         blocks.push({ prompts: prompts, bank: bank });
       }
       sections.push({ kind: "match", title: "Part · Matching", instr: "Write the letter of the term that matches each description.", blocks: blocks });
     }
 
-    // Writing
     if (bp.writing && WRITING[cfg.subjectId === "all" ? "all" : cfg.subjectId]) {
       const prompts = WRITING[cfg.subjectId === "all" ? "all" : cfg.subjectId];
-      const p = prompts[Math.floor(Math.random() * prompts.length)];
-      sections.push({ kind: "writing", title: "Part · Written Response", prompt: p });
+      sections.push({ kind: "writing", title: "Part · Written Response", prompt: det ? prompts[Math.floor(rng() * prompts.length)] : rpick(Math.random, prompts) });
     }
 
-    return { title: subjName + ": Practice Final", subjName: subjName, sections: sections, total: qno,
-      stamp: new Date().toLocaleDateString() };
+    return { title: subjName + ": Practice Final", subjName: subjName, subjectId: cfg.subjectId, length: cfg.length,
+      seed: cfg.seed || null, sections: sections, total: qno, stamp: new Date().toLocaleDateString() };
+  };
+
+  /* flat question list for on-screen Exam Mode (mc/fill/tf), seeded or random */
+  TEST.examQuestions = function (cfg) {
+    const det = !!cfg.seed;
+    const rng = det ? mulberry32(hashStr((cfg.seed || "") + "|exam|" + cfg.subjectId)) : Math.random;
+    const P = pools(cfg.subjectId, rng, det);
+    let qs = P.mc.slice();
+    P.free.concat(P.fill).forEach(function (f) {
+      qs.push(f.answers ? f : { type: "fill", q: f.q, answers: [f.ans || (f.choices ? f.choices[f.answer] : "")], subjectId: f.subjectId, topicId: f.topicId });
+    });
+    qs = (det ? rshuf(rng, qs) : SRS.shuffle(qs));
+    // de-dupe by stem
+    const seen = {}, out = [];
+    qs.forEach(q => { const k = (q.q || "").toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(q); } });
+    const n = cfg.count || (cfg.length === "short" ? 15 : cfg.length === "full" ? 40 : 25);
+    return out.slice(0, Math.min(out.length, n));
+  };
+
+  TEST.newSeed = newSeed;
+  TEST.shareURL = function (cfg) {
+    const seed = cfg.seed || newSeed();
+    const base = location.href.split("#")[0];
+    return base + "#/test?s=" + encodeURIComponent(cfg.subjectId) + "&len=" + encodeURIComponent(cfg.length || "standard") + "&seed=" + encodeURIComponent(seed);
   };
 
   /* ---------------- printable document (its own page) ---------------- */
@@ -3668,9 +4129,10 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     // primary actions
     const actions = el("div", "actions");
     actions.appendChild(actionCard("wide", "⚡", "Smart Study", "Interleaved mix of new + due material across all subjects", () => startSmart(null)));
+    actions.appendChild(actionCard("", "🔥", "Cram Mode", "Blitz a subject before the exam", () => go("#/cram")));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
     actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
-    actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print a randomized mock final", () => go("#/test")));
+    actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
@@ -3767,9 +4229,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     app.appendChild(chips);
 
     const actions = el("div", "actions");
-    actions.appendChild(actionCard("wide", "⚡", "Study " + s.name, "Interleaved mix of this subject's material", () => startSmart(s.id)));
-    actions.appendChild(actionCard("", "🔀", "Mixed Practice", "Random questions from this subject", () => startMixed(s.id, 15)));
-    actions.appendChild(actionCard("", "🖨️", "Print Test", "Randomized " + esc(s.name) + " mock", () => go("#/test?s=" + s.id)));
+    actions.appendChild(actionCard("wide", "🔥", "Cram " + s.name, "Fast last-minute drilling of your weak + unseen items", () => startCram(s.id)));
+    actions.appendChild(actionCard("", "⚡", "Smart Study", "Interleaved smart mix", () => startSmart(s.id)));
+    actions.appendChild(actionCard("", "🔀", "Mixed Practice", "Random questions", () => startMixed(s.id, 15)));
+    actions.appendChild(actionCard("", "📝", "Exam Mode", "Timed & auto-graded", () => go("#/exam?s=" + s.id)));
+    actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
+    if (s.id === "french") actions.appendChild(actionCard("", "🔊", "Listening", "Hear & recall (oral prep)", () => startListening()));
     app.appendChild(actions);
 
     app.appendChild(sectionH("Topics", "tap to learn, flip cards, then test yourself"));
@@ -3784,10 +4249,20 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       tt.appendChild(el("p", null, esc(t.blurb || "")));
       const bar = el("div", "bar"); bar.appendChild(el("i")).style.width = Math.round(tp.mastery * 100) + "%";
       tt.appendChild(bar);
+      // completion roadmap: Learn / Cards / Practice
+      const d = STUDY.topicDone(t.id);
+      const dots = el("div", "tdots");
+      [["learn", "Learn"], ["cards", "Cards"], ["practice", "Practice"]].forEach(function (p) {
+        if (p[0] === "cards" && !(t.cards && t.cards.length)) return;
+        const on = !!d[p[0]];
+        dots.appendChild(el("div", "tdot" + (on ? " on" : ""), (on ? "✓ " : "") + p[1]));
+      });
+      tt.appendChild(dots);
       row.appendChild(tt);
       let state = "○";
-      if (tp.due) state = "🔁";
-      else if (tp.mastery >= 0.85) state = "✅";
+      if (d.practice && tp.mastery >= 0.8) state = "✅";
+      else if (tp.due) state = "🔁";
+      else if (d.practice) state = "✓";
       else if (tp.seen) state = "•";
       row.appendChild(el("div", "state", state));
       app.appendChild(row);
@@ -3826,11 +4301,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
     if (tab === "cards") {
       if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic yet. Head to Practice.</div>'; return; }
-      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => go("#/t/" + id + "/learn") });
+      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => { STUDY.markDone(id, "cards"); go("#/t/" + id + "/learn"); } });
     } else if (tab === "practice") {
       if (!t.questions || !t.questions.length) { body.innerHTML = '<div class="empty">No questions yet for this topic.</div>'; return; }
+      // practice draws from the FULL pool for this topic (authored + variety + generated)
       QUIZ.run(body, SRS.shuffle(t.questions.slice()), {
         showTags: false, doneLabel: "Back to topic",
+        onResults: (state) => STUDY.markDone(id, "practice", state.correct / Math.max(1, state.list.length)),
         onDone: () => go("#/t/" + id + "/learn"),
       });
     } else {
@@ -3947,6 +4424,89 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         return;
       }
       QUIZ.run(mount, SRS.interleave(all), { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+    });
+  }
+
+  // ---- CRAM: criterion-based massed retrieval, weak/unseen prioritised ----
+  function cramList(subjectId, cap) {
+    const now = Date.now();
+    const pool = STUDY.allQuestions(function (q, t, s) {
+      return (subjectId ? s.id === subjectId : true) && (q.type === "mc" || q.type === "fill" || q.type === "tf");
+    });
+    const wrong = [], unseen = [], weak = [], rest = [];
+    pool.forEach(function (q) {
+      const st = STUDY.itemState(q.id);
+      if (STUDY.store().wrong[q.id]) wrong.push(q);
+      else if (!st) unseen.push(q);
+      else if (st.box <= 2) weak.push(q);
+      else rest.push(q);
+    });
+    const ordered = SRS.shuffle(wrong).concat(SRS.shuffle(unseen)).concat(SRS.shuffle(weak)).concat(SRS.shuffle(rest));
+    const seen = {}, out = [];
+    for (let i = 0; i < ordered.length && out.length < cap; i++) { if (!seen[ordered[i].id]) { seen[ordered[i].id] = 1; out.push(ordered[i]); } }
+    return out;
+  }
+  function startCram(subjectId) {
+    const s = STUDY.byId[subjectId];
+    if (!s) return renderCramChooser();
+    sessionScreen("🔥 Cram · " + s.name, function (mount) {
+      const intro = el("div", "card");
+      intro.innerHTML = "<b>Cram Mode</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>Fast, repeated retrieval with instant feedback. Items you miss come back almost immediately; each card is <b>locked in</b> only after you get it right twice in a row. Keep going until everything's locked. This is the most effective way to drill the night before.</p>";
+      mount.appendChild(intro);
+      const list = cramList(subjectId, 40);
+      const startBtn = el("button", "btn primary full", "Start cramming " + list.length + " items →");
+      startBtn.onclick = function () { QUIZ.runCram(mount, list, { doneLabel: "Back to " + s.name, onDone: () => go("#/s/" + subjectId) }); };
+      mount.appendChild(startBtn);
+    });
+  }
+  function renderCramChooser() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Cram Mode" }]));
+    app.appendChild(el("div", "hero", "<h1>🔥 Cram Mode</h1><p class='muted'>Last-minute drilling, maximised for fast memorisation. Pick a subject to blitz.</p>"));
+    STUDY.subjects.forEach(function (s) {
+      const row = el("div", "topic"); row.style.setProperty("--sub", s.accent);
+      row.onclick = () => go("#/cram/" + s.id);
+      row.appendChild(el("div", "n", s.icon));
+      const tt = el("div", "tt"); tt.appendChild(el("h4", null, "Cram " + esc(s.name))); tt.appendChild(el("p", null, "Drill the weak + unseen items first"));
+      row.appendChild(tt); row.appendChild(el("div", "state", "🔥"));
+      app.appendChild(row);
+    });
+  }
+
+  // ---- EXAM: on-screen, timed, auto-graded ----
+  function startExam(params) {
+    const cfg = { subjectId: params.s || "all", length: params.len || "standard", seed: params.seed || null };
+    const qs = TEST.examQuestions(cfg);
+    const name = cfg.subjectId === "all" ? "Cumulative" : (STUDY.byId[cfg.subjectId] || {}).name || "";
+    sessionScreen("📝 Exam · " + name, function (mount) {
+      if (!qs.length) { mount.innerHTML = '<div class="empty">No questions available for this exam.</div>'; return; }
+      const secs = qs.length * 45;
+      const intro = el("div", "card");
+      intro.innerHTML = "<b>📝 Exam Mode — " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Your score and a full review come at the finish.</p>";
+      mount.appendChild(intro);
+      const start = el("button", "btn primary full", "Start the exam →");
+      start.onclick = function () {
+        QUIZ.run(mount, qs, {
+          instant: false, timeLimit: secs, showTags: false,
+          doneLabel: "Done", onDone: () => go("#/test?s=" + cfg.subjectId),
+        });
+      };
+      mount.appendChild(start);
+    });
+  }
+
+  // ---- LISTENING: French audio drill ----
+  function startListening() {
+    sessionScreen("🔊 French Listening", function (mount) {
+      if (!QUIZ.canSpeak) { mount.innerHTML = '<div class="empty">Your browser doesn\'t support speech. Try Chrome or Safari.</div>'; return; }
+      const cards = [];
+      STUDY.byId.french.topics.forEach(t => (t.cards || []).forEach(c => cards.push(c)));
+      const intro = el("div", "card");
+      intro.innerHTML = "<b>🔊 Listening practice</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>Each card reads the French aloud. Try to recall the meaning before you flip. Tap 🔊 to hear it again — great prep for the oral and listening sections.</p>";
+      mount.appendChild(intro);
+      const b = el("button", "btn primary full", "Start listening →");
+      b.onclick = () => QUIZ.runCards(mount, cards, { audio: true, doneLabel: "Back to French", onDone: () => go("#/s/french") });
+      mount.appendChild(b);
     });
   }
 
@@ -4096,6 +4656,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (parts[0] === "t") return renderTopic(parts[1], parts[2] || "learn");
     if (parts[0] === "dash") return renderDashboard();
     if (parts[0] === "test") return renderTestSetup(params);
+    if (parts[0] === "exam") return startExam(params);
+    if (parts[0] === "cram") return parts[1] ? startCram(parts[1]) : renderCramChooser();
     if (parts[0] === "settings") return renderSettings();
     return renderHome();
   }
@@ -4109,7 +4671,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     window.addEventListener("hashchange", route);
     // persist immediately when the tab is backgrounded or closed (mobile-safe)
     window.addEventListener("pagehide", STUDY.flush);
+    window.addEventListener("beforeunload", STUDY.flush);
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") STUDY.flush(); });
+    // service worker → full offline on the hosted site (skip on file://)
+    if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+      window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+    }
     if (!location.hash) location.replace("#/home");
     route();
   }

@@ -39,18 +39,26 @@
     });
   };
 
-  // append generated questions to a topic at runtime (after registration)
-  STUDY.addQuestions = function (topic, qs) {
+  // append questions to a topic at runtime (after registration).
+  // isGen=true  -> auto-generated (card→MC, parametric)
+  // isGen=false -> authored "extra" variety questions
+  STUDY.addQuestions = function (topic, qs, isGen) {
     const start = topic.questions.length;
     qs.forEach(function (q, k) {
       const qi = start + k;
       q.id = topic.id + "#q" + qi;
       q.topicId = topic.id;
       q.subjectId = topic.subjectId;
-      q.gen = true;
+      q.gen = (isGen !== false);
       topic.questions.push(q);
       STUDY.itemIndex[q.id] = { type: "q", subject: STUDY.byId[topic.subjectId], topic: topic, ref: q };
     });
+  };
+
+  // add authored variety questions onto an existing topic by id (used by data/extra.js)
+  STUDY.addAuthored = function (topicId, qs) {
+    const entry = STUDY.topicIndex[topicId];
+    if (entry) STUDY.addQuestions(entry.topic, qs, false);
   };
 
   STUDY.allQuestions = function (filterFn) {
@@ -73,6 +81,7 @@
       stats: {},      // topicId -> {attempts, correct, seen, cards}
       wrong: {},      // itemId -> true (needs review)
       seen: {},       // topicId -> last visited ts
+      done: {},       // topicId -> {learn, cards, practice, practiceBest}
       streak: { count: 0, last: 0, best: 0 },
       activity: {},   // 'yyyy-mm-dd' -> count
       settings: { theme: "dark" },
@@ -88,7 +97,7 @@
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "activity"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "activity"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -98,19 +107,12 @@
     return store;
   };
 
-  let saveTimer = null;
+  // Write synchronously on every change so progress survives an immediate
+  // tab close / refresh. localStorage is fast and the payload is tiny.
   STUDY.save = function () {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
-    }, 120);
-  };
-
-  // immediate write (called when the tab is hidden/closed, esp. on mobile)
-  STUDY.flush = function () {
-    clearTimeout(saveTimer);
     try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
   };
+  STUDY.flush = STUDY.save;
 
   STUDY.store = function () { return store; };
 
@@ -196,8 +198,19 @@
 
   STUDY.markSeen = function (topicId) {
     store.seen[topicId] = Date.now();
+    const d = store.done[topicId] || (store.done[topicId] = {});
+    d.learn = true;
     STUDY.save();
   };
+
+  // which: 'learn' | 'cards' | 'practice'; extra optional (e.g. practice score 0..1)
+  STUDY.markDone = function (topicId, which, score) {
+    const d = store.done[topicId] || (store.done[topicId] = {});
+    d[which] = true;
+    if (which === "practice" && typeof score === "number") d.practiceBest = Math.max(d.practiceBest || 0, score);
+    STUDY.save();
+  };
+  STUDY.topicDone = function (topicId) { return store.done[topicId] || {}; };
 
   /* ---------- progress queries ---------- */
   // mastery of an item: based on box (0..5). returns 0..1
