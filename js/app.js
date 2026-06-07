@@ -430,17 +430,25 @@
   }
   function startReview(subjectId) {
     sessionScreen("Review", function (mount) {
-      let items = STUDY.dueItems(subjectId);
-      const wrong = STUDY.wrongItems(subjectId);
-      const seen = {}; const all = [];
-      items.concat(wrong).forEach(function (q) { if (!seen[q.id]) { seen[q.id] = 1; all.push(q); } });
-      if (!all.length) {
+      const seen = {}, all = [];
+      STUDY.dueItems(subjectId).concat(STUDY.wrongItems(subjectId)).forEach(function (it) { if (!seen[it.id]) { seen[it.id] = 1; all.push(it); } });
+      // split: questions go through the quiz runner, flashcards through the card flipper
+      const cards = all.filter(x => x && x.front !== undefined && x.back !== undefined);
+      const questions = all.filter(x => x && (x.type === "mc" || x.type === "fill" || x.type === "tf" || x.type === "match"));
+      const back = () => go(subjectId ? "#/s/" + subjectId : "#/home");
+      if (!questions.length && !cards.length) {
         mount.innerHTML = '<div class="empty"><div class="big">✅</div>Nothing due right now. Come back later and earlier topics will resurface. That\'s the spacing working.</div>';
         const bar = el("div", "qbar"); const b = el("button", "btn primary", "Do a mixed set instead");
         b.onclick = () => startMixed(subjectId, 15); bar.appendChild(b); mount.appendChild(bar);
         return;
       }
-      QUIZ.run(mount, SRS.interleave(all), { mode: "review", onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+      const runCs = () => cards.length ? QUIZ.runCards(mount, SRS.shuffle(cards.slice()), { mode: "flashcard", doneLabel: "Done", onDone: back }) : back();
+      if (questions.length) {
+        QUIZ.run(mount, SRS.interleave(questions), {
+          mode: "review", doneLabel: cards.length ? "Review " + cards.length + " cards →" : "Done",
+          onDone: cards.length ? runCs : back,
+        });
+      } else { runCs(); }
     });
   }
 

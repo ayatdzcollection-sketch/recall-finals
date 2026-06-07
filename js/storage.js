@@ -364,7 +364,7 @@
         const meta = STUDY.itemIndex[id];
         if (!meta) continue;
         if (subjectId && meta.subject.id !== subjectId) continue;
-        if (meta.type === "q") out.push(meta.ref);
+        out.push(meta.ref);                        // questions AND flashcards
       }
     }
     // most overdue first
@@ -376,7 +376,7 @@
     const out = [];
     for (const id in store.wrong) {
       const meta = STUDY.itemIndex[id];
-      if (!meta || meta.type !== "q") continue;
+      if (!meta) continue;                          // questions AND flashcards
       if (subjectId && meta.subject.id !== subjectId) continue;
       out.push(meta.ref);
     }
