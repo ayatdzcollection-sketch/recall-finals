@@ -93,7 +93,7 @@
 
     // --- expectation from your Glicko ability vs this item's difficulty ---
     const ability = ADAPT.abilityOf(q.subjectId);
-    const diff = pre && pre.diff ? pre.diff : 1500;
+    const diff = pre && pre.diff ? pre.diff : STUDY.seedDiff(q);
     const expct = 1 / (1 + Math.pow(10, (diff - ability) / 400));
 
     // --- effective grade for spacing (fluency-based, with a guess flag) ---
@@ -131,7 +131,7 @@
     const store = STUDY.store();
     const st = store.srs[q.id];
     const ability = ADAPT.abilityOf(q.subjectId);
-    const diff = st ? st.diff : 1500;
+    const diff = st && st.diff ? st.diff : STUDY.seedDiff(q);
     const expct = 1 / (1 + Math.pow(10, (diff - ability) / 400));
     if (!st) return { expct: expct, recall: 1, seen: false, ready: 0.0, p: expct };
     const r = recall(st, now);
@@ -171,6 +171,7 @@
     pool().forEach(function (q) {
       if (only && q.subjectId !== only) return;
       if (recent && recent.indexOf(q.id) >= 0) return;
+      if (STUDY.isFlagged && STUDY.isFlagged(q.id)) return;
       const st = store.srs[q.id];
       if (st && st.reps > 0 && st.due && st.due <= now) out.push({ q: q, over: now - st.due, sub: q.subjectId });
     });
@@ -220,8 +221,9 @@
       subj = weightedPick(subScores) || STUDY.subjects[0];
     }
 
-    // (2) best item within that subject
-    const cands = pool().filter(q => q.subjectId === subj.id && ctx.recent.indexOf(q.id) < 0);
+    // (2) best item within that subject (skip reported-broken questions)
+    const flagged = store.flagged || {};
+    const cands = pool().filter(q => q.subjectId === subj.id && ctx.recent.indexOf(q.id) < 0 && !flagged[q.id]);
     if (!cands.length) { const all = pool(); return all[Math.floor(Math.random() * all.length)] || null; }
     const scored = cands.map(function (q) {
       const pc = pCorrect(q, now);
@@ -248,7 +250,7 @@
     const subj = STUDY.byId[subjectId]; if (!subj) return 0;
     let sum = 0, n = 0;
     subj.topics.forEach(function (t) {
-      const items = (t.questions || []).filter(q => q.type !== "match");
+      const items = (t.questions || []).filter(q => q.type !== "match" && !STUDY.isFlagged(q.id));
       if (!items.length) return;
       let mastered = 0, attempted = 0;
       items.forEach(function (q) { const m = STUDY.itemMastery(q.id); if (m > 0) attempted++; if (m >= 0.55) mastered++; });
@@ -283,7 +285,7 @@
     const store = STUDY.store();
     const st = store.srs[q.id];
     const ability = ADAPT.abilityOf(q.subjectId);
-    const diff = st ? (st.diff || 1500) : 1500;
+    const diff = st && st.diff ? st.diff : STUDY.seedDiff(q);
     const pSkill = 1 / (1 + Math.pow(10, (diff - ability) / 400));
     const g = guessFloor(q);
     if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
@@ -309,7 +311,7 @@
     const store = STUDY.store(), examMs = examMsFor(subjectId);
     let sum = 0, n = 0;
     subj.topics.forEach(function (t) {
-      const items = (t.questions || []).filter(q => q.type !== "match");
+      const items = (t.questions || []).filter(q => q.type !== "match" && !STUDY.isFlagged(q.id));
       if (!items.length) return;
       let acc = 0, studied = 0;
       items.forEach(function (q) { if (store.srs[q.id]) { acc += pExamAt(q, examMs); studied++; } });

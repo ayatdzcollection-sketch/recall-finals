@@ -93,6 +93,7 @@
       tele: {},       // anonymous telemetry state (anon id, last ping day)
       teleQueue: [],  // outbound anonymous events awaiting upload
       miss: {},       // subjectId -> [{it, c:chosenText, a:answerText, cc:concept, t}] (misconception radar)
+      flagged: {},    // itemId -> {t, reason} reported-as-broken questions (suppressed)
       rtBase: {},     // questionType -> rolling baseline response time (self-calibrated fluency)
       settings: { theme: "dark" },
     };
@@ -107,7 +108,7 @@
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss", "flagged", "glicko"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -327,6 +328,7 @@
 
     // honest mastery: passively update P(you really know it) + log misconceptions
     const ix0 = STUDY.itemIndex[id], ref0 = ix0 && ix0.ref;
+    if (st.diff == null && ref0) st.diff = STUDY.seedDiff(ref0);    // calibrated cold-start difficulty
     st.kn = bktUpdate(st.kn, grade, guessProb(ref0), meta || {});   // fluency + difficulty aware
     if (meta && typeof meta.chosen === "number") captureMiss(id, grade, ref0, meta.chosen, ix0);
 
@@ -617,6 +619,36 @@
     const s = (q.q || "").toLowerCase();
     if (/which (is|of the following is|sentence|line|statement)\b|identify the (device|type)|example of|which is not|conjugate |solve the|find the|what is the (area|volume|circumference|hypotenuse|surface|measure|sum|third|length|value)/.test(s)) return 2;
     return 1;
+  };
+  // cold-start difficulty: use the difficulty signals already in the bank (authored
+  // Easy/Hard level, generated-recall, answer format) so the engine is calibrated
+  // from the FIRST answer instead of treating every item as a coin-flip (1500).
+  STUDY.seedDiff = function (q) {
+    if (!q) return 1450;
+    let d = STUDY.levelOf(q) === 2 ? 1650 : (q.gen ? 1320 : 1430);   // hard application vs easy/recall
+    if (q.type === "fill") d += 90;        // no multiple-choice safety net
+    else if (q.type === "tf") d -= 70;     // 50/50 floor makes them easier
+    return d;
+  };
+
+  // report a broken / confusing question: suppress it and keep it from dragging
+  // your numbers. Logged anonymously (ready for crowd review later).
+  STUDY.flagItem = function (id, reason) {
+    if (!id) return;
+    if (!store.flagged) store.flagged = {};
+    store.flagged[id] = { t: Date.now(), reason: reason || "" };
+    if (STUDY.logUsage) STUDY.logUsage("report", { it: id });
+    STUDY.save();
+  };
+  STUDY.isFlagged = function (id) { return !!(store.flagged && store.flagged[id]); };
+  STUDY.unflag = function (id) { if (store.flagged) delete store.flagged[id]; STUDY.save(); };
+  STUDY.flaggedList = function () {
+    const out = [];
+    Object.keys(store.flagged || {}).forEach(function (id) {
+      const ix = STUDY.itemIndex[id]; if (!ix || !ix.ref) return;
+      out.push({ id: id, q: ix.ref.q || "", subject: ix.subject ? ix.subject.id : "", topic: ix.topic ? ix.topic.id : "", t: store.flagged[id].t });
+    });
+    return out.sort((a, b) => b.t - a.t);
   };
   function topicConcepts(topic) {
     const cs = [];

@@ -871,6 +871,21 @@
     });
     return box;
   }
+  // reported (broken) questions, hidden from the feed; restorable here
+  function flaggedPanel() {
+    const list = STUDY.flaggedList ? STUDY.flaggedList() : [];
+    if (!list.length) return null;
+    const box = el("div", null);
+    box.appendChild(sectionH("Reported questions", "hidden from your feed and excluded from your scores"));
+    list.slice(0, 10).forEach(function (f) {
+      const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:10px";
+      row.appendChild(el("div", null, "<span class='muted' style='font-size:.72rem'>⚐</span> " + esc((f.q || "(question)").slice(0, 90))));
+      const un = el("button", "btn sm ghost", "Restore"); un.style.marginLeft = "auto";
+      un.onclick = function () { STUDY.unflag(f.id); renderDashboard(); };
+      row.appendChild(un); box.appendChild(row);
+    });
+    return box;
+  }
 
   function renderDashboard() {
     clear();
@@ -925,6 +940,7 @@
     }
 
     const mix = mixupsPanel(); if (mix) app.appendChild(mix);
+    const flg = flaggedPanel(); if (flg) app.appendChild(flg);
 
     const bar = el("div", "qbar");
     const b = el("button", "btn primary full", "🔁 Review everything due (" + STUDY.overallDue() + ")");

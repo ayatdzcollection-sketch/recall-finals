@@ -579,6 +579,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       tele: {},       // anonymous telemetry state (anon id, last ping day)
       teleQueue: [],  // outbound anonymous events awaiting upload
       miss: {},       // subjectId -> [{it, c:chosenText, a:answerText, cc:concept, t}] (misconception radar)
+      flagged: {},    // itemId -> {t, reason} reported-as-broken questions (suppressed)
       rtBase: {},     // questionType -> rolling baseline response time (self-calibrated fluency)
       settings: { theme: "dark" },
     };
@@ -593,7 +594,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss", "flagged", "glicko"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -813,6 +814,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 
     // honest mastery: passively update P(you really know it) + log misconceptions
     const ix0 = STUDY.itemIndex[id], ref0 = ix0 && ix0.ref;
+    if (st.diff == null && ref0) st.diff = STUDY.seedDiff(ref0);    // calibrated cold-start difficulty
     st.kn = bktUpdate(st.kn, grade, guessProb(ref0), meta || {});   // fluency + difficulty aware
     if (meta && typeof meta.chosen === "number") captureMiss(id, grade, ref0, meta.chosen, ix0);
 
@@ -1104,6 +1106,36 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     if (/which (is|of the following is|sentence|line|statement)\b|identify the (device|type)|example of|which is not|conjugate |solve the|find the|what is the (area|volume|circumference|hypotenuse|surface|measure|sum|third|length|value)/.test(s)) return 2;
     return 1;
   };
+  // cold-start difficulty: use the difficulty signals already in the bank (authored
+  // Easy/Hard level, generated-recall, answer format) so the engine is calibrated
+  // from the FIRST answer instead of treating every item as a coin-flip (1500).
+  STUDY.seedDiff = function (q) {
+    if (!q) return 1450;
+    let d = STUDY.levelOf(q) === 2 ? 1650 : (q.gen ? 1320 : 1430);   // hard application vs easy/recall
+    if (q.type === "fill") d += 90;        // no multiple-choice safety net
+    else if (q.type === "tf") d -= 70;     // 50/50 floor makes them easier
+    return d;
+  };
+
+  // report a broken / confusing question: suppress it and keep it from dragging
+  // your numbers. Logged anonymously (ready for crowd review later).
+  STUDY.flagItem = function (id, reason) {
+    if (!id) return;
+    if (!store.flagged) store.flagged = {};
+    store.flagged[id] = { t: Date.now(), reason: reason || "" };
+    if (STUDY.logUsage) STUDY.logUsage("report", { it: id });
+    STUDY.save();
+  };
+  STUDY.isFlagged = function (id) { return !!(store.flagged && store.flagged[id]); };
+  STUDY.unflag = function (id) { if (store.flagged) delete store.flagged[id]; STUDY.save(); };
+  STUDY.flaggedList = function () {
+    const out = [];
+    Object.keys(store.flagged || {}).forEach(function (id) {
+      const ix = STUDY.itemIndex[id]; if (!ix || !ix.ref) return;
+      out.push({ id: id, q: ix.ref.q || "", subject: ix.subject ? ix.subject.id : "", topic: ix.topic ? ix.topic.id : "", t: store.flagged[id].t });
+    });
+    return out.sort((a, b) => b.t - a.t);
+  };
   function topicConcepts(topic) {
     const cs = [];
     (topic.lesson || []).forEach(function (b) {
@@ -1393,7 +1425,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 
     // --- expectation from your Glicko ability vs this item's difficulty ---
     const ability = ADAPT.abilityOf(q.subjectId);
-    const diff = pre && pre.diff ? pre.diff : 1500;
+    const diff = pre && pre.diff ? pre.diff : STUDY.seedDiff(q);
     const expct = 1 / (1 + Math.pow(10, (diff - ability) / 400));
 
     // --- effective grade for spacing (fluency-based, with a guess flag) ---
@@ -1431,7 +1463,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const store = STUDY.store();
     const st = store.srs[q.id];
     const ability = ADAPT.abilityOf(q.subjectId);
-    const diff = st ? st.diff : 1500;
+    const diff = st && st.diff ? st.diff : STUDY.seedDiff(q);
     const expct = 1 / (1 + Math.pow(10, (diff - ability) / 400));
     if (!st) return { expct: expct, recall: 1, seen: false, ready: 0.0, p: expct };
     const r = recall(st, now);
@@ -1471,6 +1503,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     pool().forEach(function (q) {
       if (only && q.subjectId !== only) return;
       if (recent && recent.indexOf(q.id) >= 0) return;
+      if (STUDY.isFlagged && STUDY.isFlagged(q.id)) return;
       const st = store.srs[q.id];
       if (st && st.reps > 0 && st.due && st.due <= now) out.push({ q: q, over: now - st.due, sub: q.subjectId });
     });
@@ -1520,8 +1553,9 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       subj = weightedPick(subScores) || STUDY.subjects[0];
     }
 
-    // (2) best item within that subject
-    const cands = pool().filter(q => q.subjectId === subj.id && ctx.recent.indexOf(q.id) < 0);
+    // (2) best item within that subject (skip reported-broken questions)
+    const flagged = store.flagged || {};
+    const cands = pool().filter(q => q.subjectId === subj.id && ctx.recent.indexOf(q.id) < 0 && !flagged[q.id]);
     if (!cands.length) { const all = pool(); return all[Math.floor(Math.random() * all.length)] || null; }
     const scored = cands.map(function (q) {
       const pc = pCorrect(q, now);
@@ -1548,7 +1582,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const subj = STUDY.byId[subjectId]; if (!subj) return 0;
     let sum = 0, n = 0;
     subj.topics.forEach(function (t) {
-      const items = (t.questions || []).filter(q => q.type !== "match");
+      const items = (t.questions || []).filter(q => q.type !== "match" && !STUDY.isFlagged(q.id));
       if (!items.length) return;
       let mastered = 0, attempted = 0;
       items.forEach(function (q) { const m = STUDY.itemMastery(q.id); if (m > 0) attempted++; if (m >= 0.55) mastered++; });
@@ -1583,7 +1617,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const store = STUDY.store();
     const st = store.srs[q.id];
     const ability = ADAPT.abilityOf(q.subjectId);
-    const diff = st ? (st.diff || 1500) : 1500;
+    const diff = st && st.diff ? st.diff : STUDY.seedDiff(q);
     const pSkill = 1 / (1 + Math.pow(10, (diff - ability) / 400));
     const g = guessFloor(q);
     if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
@@ -1609,7 +1643,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const store = STUDY.store(), examMs = examMsFor(subjectId);
     let sum = 0, n = 0;
     subj.topics.forEach(function (t) {
-      const items = (t.questions || []).filter(q => q.type !== "match");
+      const items = (t.questions || []).filter(q => q.type !== "match" && !STUDY.isFlagged(q.id));
       if (!items.length) return;
       let acc = 0, studied = 0;
       items.forEach(function (q) { if (store.srs[q.id]) { acc += pExamAt(q, examMs); studied++; } });
@@ -4684,6 +4718,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         const star = el("button", "btn sm ghost", STUDY.isStarred(q.id) ? "★ Starred" : "☆ Star");
         star.onclick = function () { const on = STUDY.toggleStar(q.id); star.textContent = on ? "★ Starred" : "☆ Star"; };
         row.appendChild(star);
+        const rep = el("button", "btn sm ghost", STUDY.isFlagged(q.id) ? "⚐ Reported" : "⚐ Report");
+        rep.title = "Report a wrong or confusing question (we'll stop showing it)";
+        rep.onclick = function () {
+          if (STUDY.isFlagged(q.id)) { STUDY.unflag(q.id); rep.textContent = "⚐ Report"; toast("Un-reported"); }
+          else { STUDY.flagItem(q.id, "user"); rep.textContent = "⚐ Reported"; toast("Thanks, we'll stop showing this one"); }
+        };
+        row.appendChild(rep);
       }
       fb.appendChild(row);
     }
@@ -6713,6 +6754,21 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     });
     return box;
   }
+  // reported (broken) questions, hidden from the feed; restorable here
+  function flaggedPanel() {
+    const list = STUDY.flaggedList ? STUDY.flaggedList() : [];
+    if (!list.length) return null;
+    const box = el("div", null);
+    box.appendChild(sectionH("Reported questions", "hidden from your feed and excluded from your scores"));
+    list.slice(0, 10).forEach(function (f) {
+      const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:10px";
+      row.appendChild(el("div", null, "<span class='muted' style='font-size:.72rem'>⚐</span> " + esc((f.q || "(question)").slice(0, 90))));
+      const un = el("button", "btn sm ghost", "Restore"); un.style.marginLeft = "auto";
+      un.onclick = function () { STUDY.unflag(f.id); renderDashboard(); };
+      row.appendChild(un); box.appendChild(row);
+    });
+    return box;
+  }
 
   function renderDashboard() {
     clear();
@@ -6767,6 +6823,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     }
 
     const mix = mixupsPanel(); if (mix) app.appendChild(mix);
+    const flg = flaggedPanel(); if (flg) app.appendChild(flg);
 
     const bar = el("div", "qbar");
     const b = el("button", "btn primary full", "🔁 Review everything due (" + STUDY.overallDue() + ")");

@@ -135,6 +135,13 @@
         const star = el("button", "btn sm ghost", STUDY.isStarred(q.id) ? "★ Starred" : "☆ Star");
         star.onclick = function () { const on = STUDY.toggleStar(q.id); star.textContent = on ? "★ Starred" : "☆ Star"; };
         row.appendChild(star);
+        const rep = el("button", "btn sm ghost", STUDY.isFlagged(q.id) ? "⚐ Reported" : "⚐ Report");
+        rep.title = "Report a wrong or confusing question (we'll stop showing it)";
+        rep.onclick = function () {
+          if (STUDY.isFlagged(q.id)) { STUDY.unflag(q.id); rep.textContent = "⚐ Report"; toast("Un-reported"); }
+          else { STUDY.flagItem(q.id, "user"); rep.textContent = "⚐ Reported"; toast("Thanks, we'll stop showing this one"); }
+        };
+        row.appendChild(rep);
       }
       fb.appendChild(row);
     }
