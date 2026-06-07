@@ -628,6 +628,7 @@
     let d = STUDY.levelOf(q) === 2 ? 1650 : (q.gen ? 1320 : 1430);   // hard application vs easy/recall
     if (q.type === "fill") d += 90;        // no multiple-choice safety net
     else if (q.type === "tf") d -= 70;     // 50/50 floor makes them easier
+    if (STUDY.CROWD && q.id) d = STUDY.CROWD.shrunkDiff(q.id, d);    // blend crowd difficulty (shrunk by sample size)
     return d;
   };
 

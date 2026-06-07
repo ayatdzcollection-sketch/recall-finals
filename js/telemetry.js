@@ -77,4 +77,61 @@
     anonId: function () { return (STUDY.store().tele || {}).anonId || ""; },
     setEnabled: function (on) { STUDY.store().settings.telemetry = !!on; if (!on) STUDY.store().teleQueue = []; STUDY.save(); },
   };
+
+  /* ============================================================
+     CROWD CALIBRATION (read-only aggregates).
+     Reads a per-item AGGREGATE view (item_stats: attempts, correct, avg_rt,
+     learners), never raw rows or anon IDs, so privacy holds. Every use is
+     SHRUNK by sample size, so with little data (just you + a little) it changes
+     almost nothing, then strengthens automatically as more people play.
+     Degrades to a no-op if the view doesn't exist yet (fetch just returns empty).
+     ============================================================ */
+  const STATS_URL = ENDPOINT.replace(/\/events$/, "/item_stats");
+  const CROWD_KEY = "recall_crowd_v1";
+  const REF = 1500, K_SHRINK = 18, SUSPECT_N = 8, SUSPECT_RATE = 0.4;
+  const cclamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+  let CROWD = { items: {}, fetched: 0 };
+
+  function loadCrowd() { try { const r = localStorage.getItem(CROWD_KEY); if (r) CROWD = JSON.parse(r) || CROWD; } catch (e) { } }
+  function saveCrowd() { try { localStorage.setItem(CROWD_KEY, JSON.stringify(CROWD)); } catch (e) { } }
+  function fetchCrowd() {
+    if (!configured() || typeof fetch !== "function") return;
+    fetch(STATS_URL + "?select=item,attempts,correct,avg_rt,learners", { headers: { apikey: KEY, "Authorization": "Bearer " + KEY } })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (rows) {
+        if (!Array.isArray(rows)) return;                 // view missing / blocked → stay no-op
+        const items = {};
+        rows.forEach(function (r) { if (r.item) items[r.item] = { n: r.attempts | 0, c: r.correct | 0, rt: r.avg_rt || 0, u: r.learners | 0 }; });
+        CROWD = { items: items, fetched: Date.now() };
+        saveCrowd();
+      })
+      .catch(function () { });
+  }
+
+  STUDY.CROWD = {
+    start: function () { loadCrowd(); if (!CROWD.fetched || Date.now() - CROWD.fetched > 6 * 3600 * 1000) fetchCrowd(); },
+    refresh: fetchCrowd,
+    has: function () { return Object.keys(CROWD.items).length > 0; },
+    // raw per-item stat (or null). rate = crowd success rate; learners = distinct people
+    stat: function (id) { const s = CROWD.items[id]; if (!s || !s.n) return null; return { n: s.n, rate: s.c / s.n, rt: s.rt, learners: s.u }; },
+    // crowd difficulty (Elo-ish) from success rate
+    diff: function (id) { const s = this.stat(id); if (!s) return null; const r = cclamp(s.rate, 0.03, 0.97); return REF - 400 * Math.log(r / (1 - r)) / Math.LN10; },
+    // blend crowd difficulty into a local estimate, weighted by sample size:
+    // w = n/(n+18) → ~0 when sparse (safe), → 1 as the crowd grows.
+    shrunkDiff: function (id, localDiff) {
+      const s = this.stat(id); if (!s) return localDiff;
+      const cd = this.diff(id); if (cd == null) return localDiff;
+      const w = s.n / (s.n + K_SHRINK);
+      return Math.round(w * cd + (1 - w) * localDiff);
+    },
+    // suspected mis-keyed / ambiguous: enough attempts yet most people miss it
+    suspect: function (id) { const s = this.stat(id); return !!(s && s.n >= SUSPECT_N && s.rate < SUSPECT_RATE); },
+    suspectList: function () {
+      const out = [];
+      Object.keys(CROWD.items).forEach(function (id) {
+        if (STUDY.CROWD.suspect(id)) { const ix = STUDY.itemIndex[id]; if (ix && ix.ref) out.push({ id: id, q: ix.ref.q || "", rate: CROWD.items[id].c / CROWD.items[id].n, n: CROWD.items[id].n }); }
+      });
+      return out.sort(function (a, b) { return a.rate - b.rate; });
+    },
+  };
 })(window.STUDY);

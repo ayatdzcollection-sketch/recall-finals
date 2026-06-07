@@ -886,6 +886,20 @@
     });
     return box;
   }
+  // crowd-flagged: questions most students miss (suspected mis-keyed/ambiguous)
+  function crowdSuspectPanel() {
+    if (!(STUDY.CROWD && STUDY.CROWD.suspectList)) return null;
+    const list = STUDY.CROWD.suspectList();
+    if (!list.length) return null;
+    const box = el("div", null);
+    box.appendChild(sectionH("Crowd flags", "most students miss these, worth a second look"));
+    list.slice(0, 8).forEach(function (f) {
+      const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:10px";
+      row.appendChild(el("div", null, "<span class='muted' style='font-size:.72rem'>👥 " + Math.round(f.rate * 100) + "% · n" + f.n + "</span> " + esc((f.q || "").slice(0, 84))));
+      box.appendChild(row);
+    });
+    return box;
+  }
 
   function renderDashboard() {
     clear();
@@ -941,6 +955,7 @@
 
     const mix = mixupsPanel(); if (mix) app.appendChild(mix);
     const flg = flaggedPanel(); if (flg) app.appendChild(flg);
+    const csp = crowdSuspectPanel(); if (csp) app.appendChild(csp);
 
     const bar = el("div", "qbar");
     const b = el("button", "btn primary full", "🔁 Review everything due (" + STUDY.overallDue() + ")");
@@ -1107,6 +1122,7 @@
   function boot() {
     STUDY.load();
     if (STUDY.TELE) try { STUDY.TELE.start(); } catch (e) {}
+    if (STUDY.CROWD) try { STUDY.CROWD.start(); } catch (e) {}
     document.documentElement.setAttribute("data-theme", STUDY.theme());
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));

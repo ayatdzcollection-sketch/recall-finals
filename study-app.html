@@ -457,6 +457,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 .mx-n{margin-left:auto;font-size:.74rem;color:var(--text-dim);background:var(--surface-2);border-radius:999px;padding:1px 8px}
 
 .feed-gain{text-align:center;font-size:.86rem;color:var(--text);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:12px;padding:9px 12px;margin:10px 0}
+.crowd-line{margin-top:7px;font-size:.78rem;color:var(--text-dim)}
 
 /* inline lesson sheet (pulled up from a wrong answer, over the feed) */
 .sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;transition:opacity .2s}
@@ -1114,6 +1115,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     let d = STUDY.levelOf(q) === 2 ? 1650 : (q.gen ? 1320 : 1430);   // hard application vs easy/recall
     if (q.type === "fill") d += 90;        // no multiple-choice safety net
     else if (q.type === "tf") d -= 70;     // 50/50 floor makes them easier
+    if (STUDY.CROWD && q.id) d = STUDY.CROWD.shrunkDiff(q.id, d);    // blend crowd difficulty (shrunk by sample size)
     return d;
   };
 
@@ -1797,6 +1799,63 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     pending: function () { return (STUDY.store().teleQueue || []).length; },
     anonId: function () { return (STUDY.store().tele || {}).anonId || ""; },
     setEnabled: function (on) { STUDY.store().settings.telemetry = !!on; if (!on) STUDY.store().teleQueue = []; STUDY.save(); },
+  };
+
+  /* ============================================================
+     CROWD CALIBRATION (read-only aggregates).
+     Reads a per-item AGGREGATE view (item_stats: attempts, correct, avg_rt,
+     learners), never raw rows or anon IDs, so privacy holds. Every use is
+     SHRUNK by sample size, so with little data (just you + a little) it changes
+     almost nothing, then strengthens automatically as more people play.
+     Degrades to a no-op if the view doesn't exist yet (fetch just returns empty).
+     ============================================================ */
+  const STATS_URL = ENDPOINT.replace(/\/events$/, "/item_stats");
+  const CROWD_KEY = "recall_crowd_v1";
+  const REF = 1500, K_SHRINK = 18, SUSPECT_N = 8, SUSPECT_RATE = 0.4;
+  const cclamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+  let CROWD = { items: {}, fetched: 0 };
+
+  function loadCrowd() { try { const r = localStorage.getItem(CROWD_KEY); if (r) CROWD = JSON.parse(r) || CROWD; } catch (e) { } }
+  function saveCrowd() { try { localStorage.setItem(CROWD_KEY, JSON.stringify(CROWD)); } catch (e) { } }
+  function fetchCrowd() {
+    if (!configured() || typeof fetch !== "function") return;
+    fetch(STATS_URL + "?select=item,attempts,correct,avg_rt,learners", { headers: { apikey: KEY, "Authorization": "Bearer " + KEY } })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (rows) {
+        if (!Array.isArray(rows)) return;                 // view missing / blocked → stay no-op
+        const items = {};
+        rows.forEach(function (r) { if (r.item) items[r.item] = { n: r.attempts | 0, c: r.correct | 0, rt: r.avg_rt || 0, u: r.learners | 0 }; });
+        CROWD = { items: items, fetched: Date.now() };
+        saveCrowd();
+      })
+      .catch(function () { });
+  }
+
+  STUDY.CROWD = {
+    start: function () { loadCrowd(); if (!CROWD.fetched || Date.now() - CROWD.fetched > 6 * 3600 * 1000) fetchCrowd(); },
+    refresh: fetchCrowd,
+    has: function () { return Object.keys(CROWD.items).length > 0; },
+    // raw per-item stat (or null). rate = crowd success rate; learners = distinct people
+    stat: function (id) { const s = CROWD.items[id]; if (!s || !s.n) return null; return { n: s.n, rate: s.c / s.n, rt: s.rt, learners: s.u }; },
+    // crowd difficulty (Elo-ish) from success rate
+    diff: function (id) { const s = this.stat(id); if (!s) return null; const r = cclamp(s.rate, 0.03, 0.97); return REF - 400 * Math.log(r / (1 - r)) / Math.LN10; },
+    // blend crowd difficulty into a local estimate, weighted by sample size:
+    // w = n/(n+18) → ~0 when sparse (safe), → 1 as the crowd grows.
+    shrunkDiff: function (id, localDiff) {
+      const s = this.stat(id); if (!s) return localDiff;
+      const cd = this.diff(id); if (cd == null) return localDiff;
+      const w = s.n / (s.n + K_SHRINK);
+      return Math.round(w * cd + (1 - w) * localDiff);
+    },
+    // suspected mis-keyed / ambiguous: enough attempts yet most people miss it
+    suspect: function (id) { const s = this.stat(id); return !!(s && s.n >= SUSPECT_N && s.rate < SUSPECT_RATE); },
+    suspectList: function () {
+      const out = [];
+      Object.keys(CROWD.items).forEach(function (id) {
+        if (STUDY.CROWD.suspect(id)) { const ix = STUDY.itemIndex[id]; if (ix && ix.ref) out.push({ id: id, q: ix.ref.q || "", rate: CROWD.items[id].c / CROWD.items[id].n, n: CROWD.items[id].n }); }
+      });
+      return out.sort(function (a, b) { return a.rate - b.rate; });
+    },
   };
 })(window.STUDY);
 
@@ -4702,6 +4761,10 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (ex) body += "<span class='why'>" + esc(ex) + "</span>";
     if (extraHtml) body += (body ? "<br>" : "") + extraHtml;
     if (body) fb.insertAdjacentHTML("beforeend", body);
+    if (q && q.id && STUDY.CROWD && STUDY.CROWD.stat) {
+      const cs = STUDY.CROWD.stat(q.id);   // only show when it's really a crowd (>=2 people), not just you
+      if (cs && cs.learners >= 2 && cs.n >= 5) fb.appendChild(el("div", "crowd-line", "👥 " + Math.round(cs.rate * 100) + "% of students get this one right"));
+    }
     if (q && q.subjectId === "french" && correctText && QUIZ.canSpeak) { fb.appendChild(document.createElement("br")); fb.appendChild(QUIZ.speakerBtn(correctText, "fr-FR")); }
     if (q && (q.topicId && STUDY.topicIndex[q.topicId] || q.id)) {
       const row = el("div", "row"); row.style.marginTop = "9px";
@@ -6769,6 +6832,20 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     });
     return box;
   }
+  // crowd-flagged: questions most students miss (suspected mis-keyed/ambiguous)
+  function crowdSuspectPanel() {
+    if (!(STUDY.CROWD && STUDY.CROWD.suspectList)) return null;
+    const list = STUDY.CROWD.suspectList();
+    if (!list.length) return null;
+    const box = el("div", null);
+    box.appendChild(sectionH("Crowd flags", "most students miss these, worth a second look"));
+    list.slice(0, 8).forEach(function (f) {
+      const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:10px";
+      row.appendChild(el("div", null, "<span class='muted' style='font-size:.72rem'>👥 " + Math.round(f.rate * 100) + "% · n" + f.n + "</span> " + esc((f.q || "").slice(0, 84))));
+      box.appendChild(row);
+    });
+    return box;
+  }
 
   function renderDashboard() {
     clear();
@@ -6824,6 +6901,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
     const mix = mixupsPanel(); if (mix) app.appendChild(mix);
     const flg = flaggedPanel(); if (flg) app.appendChild(flg);
+    const csp = crowdSuspectPanel(); if (csp) app.appendChild(csp);
 
     const bar = el("div", "qbar");
     const b = el("button", "btn primary full", "🔁 Review everything due (" + STUDY.overallDue() + ")");
@@ -6990,6 +7068,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   function boot() {
     STUDY.load();
     if (STUDY.TELE) try { STUDY.TELE.start(); } catch (e) {}
+    if (STUDY.CROWD) try { STUDY.CROWD.start(); } catch (e) {}
     document.documentElement.setAttribute("data-theme", STUDY.theme());
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));

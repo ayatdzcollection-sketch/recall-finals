@@ -119,6 +119,10 @@
     if (ex) body += "<span class='why'>" + esc(ex) + "</span>";
     if (extraHtml) body += (body ? "<br>" : "") + extraHtml;
     if (body) fb.insertAdjacentHTML("beforeend", body);
+    if (q && q.id && STUDY.CROWD && STUDY.CROWD.stat) {
+      const cs = STUDY.CROWD.stat(q.id);   // only show when it's really a crowd (>=2 people), not just you
+      if (cs && cs.learners >= 2 && cs.n >= 5) fb.appendChild(el("div", "crowd-line", "👥 " + Math.round(cs.rate * 100) + "% of students get this one right"));
+    }
     if (q && q.subjectId === "french" && correctText && QUIZ.canSpeak) { fb.appendChild(document.createElement("br")); fb.appendChild(QUIZ.speakerBtn(correctText, "fr-FR")); }
     if (q && (q.topicId && STUDY.topicIndex[q.topicId] || q.id)) {
       const row = el("div", "row"); row.style.marginTop = "9px";
