@@ -53,6 +53,13 @@
     e("meter", "METER in poetry refers to its:", ["rhyme pattern", "rhythmic structure / beat", "number of stanzas", "main idea"], 1),
     e("speaker", "The SPEAKER of a poem is:", ["always the poet themselves", "the voice or persona telling the poem", "the rhyme pattern", "the main idea"], 1, "The speaker is the voice of the poem, which may differ from the poet."),
     h("speaker", "A poem is narrated by a lonely lighthouse keeper. The lighthouse keeper is the poem's:", ["meter", "speaker", "stanza", "rhyme scheme"], 1),
+    h("consonance", "“The lumpy, bumpy road” repeats the 'mp' sound inside the words. This is:", ["alliteration", "consonance", "onomatopoeia", "a simile"], 1, "Repeated consonant sounds within/at the ends of words = consonance."),
+    h("alliteration", "What is the difference between ALLITERATION and ASSONANCE?", ["alliteration repeats vowels; assonance repeats consonants", "alliteration repeats beginning consonant sounds; assonance repeats vowel sounds", "they are the same thing", "assonance happens only at line ends"], 1),
+    e("couplet", "Two consecutive rhyming lines form a:", ["stanza", "couplet", "refrain", "meter"], 1),
+    h("rhyme", "A poem whose end-rhymes follow the pattern AABB is described by its:", ["meter", "rhyme scheme", "stanza count", "tone"], 1),
+    h("freeverse", "A poem written with NO regular rhyme or meter is in:", ["a sonnet", "free verse", "iambic pentameter", "couplets"], 1),
+    h("refrain", "A line or group of lines repeated throughout a poem (like a chorus) is a:", ["stanza", "refrain", "meter", "simile"], 1),
+    h("onomatopoeia", "Which sentence uses ONOMATOPOEIA?", ["The forest was peaceful.", "The bees buzzed and the twigs snapped underfoot.", "She felt very tired.", "The night was long."], 1, "'buzzed' and 'snapped' imitate sounds."),
   ]);
 
   /* ===== ELA · Story elements (harder) ===== */
@@ -71,6 +78,15 @@
     h("logos", "“Recycling one ton of paper saves about 17 trees.” This appeal is:", ["ethos", "pathos", "logos", "mood"], 2),
     h("memoir", "An author writes a book reflecting on a few formative years of their own life. This is a:", ["biography", "memoir", "novel", "news article"], 1),
     h("fact", "Which is a verifiable FACT?", ["Autumn is the most beautiful season.", "The Pacific is Earth's largest ocean.", "Everyone should learn an instrument.", "That book is boring."], 1),
+    h("purpose", "The author's PURPOSE in a 'how to change a tire' article is mainly to:", ["persuade", "inform / explain", "entertain", "frighten"], 1, "Step-by-step instructions inform and explain."),
+    h("structure", "A nonfiction text that lists events in the order they happened uses ___ structure.", ["compare-and-contrast", "chronological / sequence", "problem-and-solution", "spatial"], 1),
+    h("structure", "“Because factories dumped waste, the river's fish died off.” This passage uses ___ structure.", ["cause-and-effect", "chronological", "compare-and-contrast", "spatial"], 0),
+    h("ethos", "“As a pediatric nurse for 18 years, I can tell you...” relies mainly on:", ["pathos", "logos", "ethos", "imagery"], 2, "Appeal to the speaker's credibility = ethos."),
+    h("pathos", "An ad showing a shivering, hungry puppy to raise donations relies mainly on:", ["logos", "ethos", "pathos", "syntax"], 2, "Targets emotion = pathos."),
+    h("logos", "“Three peer-reviewed studies found a 30% drop in errors.” relies mainly on:", ["pathos", "ethos", "logos", "tone"], 2, "Facts and data = logos."),
+    h("genre", "A book about Lincoln's life written by a historian (not Lincoln) is a:", ["autobiography", "biography", "memoir", "novel"], 1, "Someone else writes a biography."),
+    h("objective", "Which sentence is OBJECTIVE (unbiased)?", ["The movie was a thrilling masterpiece.", "The movie runs for 142 minutes.", "Everyone should see this movie.", "The ending felt disappointing."], 1, "A verifiable, opinion-free statement."),
+    e("anecdote", "A short personal story an author tells to illustrate a point is a(n):", ["statistic", "anecdote", "citation", "thesis"], 1),
   ]);
 
   /* ===== A few harder items in other subjects ===== */
@@ -195,11 +211,25 @@
     h("thesis", "Which is the strongest THESIS statement?", ["This essay is about Romeo and Juliet.", "Is fate to blame in Romeo and Juliet?", "Shakespeare shows that impulsive choices, not fate, drive the tragedy.", "Romeo and Juliet is a famous play."], 2, "A thesis is a debatable claim, not a topic or question."),
     h("citation", "Which is the correct MLA in-text citation for page 14 by author Lee?", ["(Lee, pg. 14)", "(Lee 14)", "(Harper Lee, 2020)", "Lee, page 14"], 1),
     e("conclusion", "A conclusion should:", ["introduce a new quote", "restate the thesis and give a final 'so what'", "ask a question", "add a new argument"], 1),
+    h("structure", "Which belongs in the INTRODUCTION, not a body paragraph?", ["a supporting quote", "the thesis statement", "quote analysis", "a concluding sentence"], 1, "The thesis lives in the intro."),
+    e("structure", "A TOPIC SENTENCE does what?", ["introduces the whole essay", "opens a body paragraph and mirrors the thesis", "lists the Works Cited", "gives the final 'so what'"], 1),
+    h("pov", "A formal literary essay should be written in:", ["first person ('I think...')", "second person ('you should...')", "third person", "a mix of all three"], 2, "Avoid I/you in formal essays."),
+    h("quote", "What is the correct way to integrate a quote?", ["drop it in with no introduction", "use a lead-in, then the quote, then analysis", "stack several quotes back-to-back", "end the paragraph on a bare quote"], 1, "Lead-in, quote (citation), then analysis = the quote sandwich."),
+    h("citation", "With an MLA in-text citation, the period goes:", ["before the closing quotation mark", "after the citation, outside the quotation marks", "nowhere, there is no period", "before the author's name"], 1, "...tragedy” (Lee 12). Period after the parentheses."),
+    h("citation", "Which is NOT part of correct MLA format?", ["double spacing", "Times New Roman 12pt", "a separate cover/title page", "a Works Cited page"], 2, "MLA uses a heading, not a cover page."),
+    h("conclusion", "Which is a MISTAKE in a conclusion?", ["restating the thesis in fresh words", "giving a final 'so what'", "introducing a brand-new quote and argument", "tying the ideas together"], 2, "Conclusions add no new evidence."),
   ]);
   A("ela-grammar", [
     h("splice", "Which sentence is a COMMA SPLICE?", ["I was late, so I ran.", "I was late, I ran.", "Because I was late, I ran.", "I was late and ran."], 1, "Two complete sentences joined by only a comma."),
     h("run", "Which is a RUN-ON sentence?", ["The bell rang and we left.", "The bell rang we left.", "When the bell rang, we left.", "The bell rang; we left."], 1),
     h("fragment", "Which is a sentence FRAGMENT?", ["She left early.", "Running through the rain without an umbrella.", "We won.", "They cheered loudly."], 1),
+    e("fanboys", "The FANBOYS coordinating conjunctions are:", ["for, and, nor, but, or, yet, so", "is, am, are, was, were", "who, what, when, where, why", "first, next, then, finally"], 0, "FANBOYS = For, And, Nor, But, Or, Yet, So."),
+    h("splice", "The best way to FIX the comma splice “She studied hard, she passed” is:", ["just delete the comma", "“She studied hard, so she passed.”", "“She studied hard she passed.”", "add a second comma"], 1, "A comma + a FANBOYS word (so) joins the two clauses correctly."),
+    h("fragment", "Why is “Because she forgot her keys.” a FRAGMENT?", ["it has no verb", "it has no subject", "it starts with a subordinating word and never finishes the thought", "it is too long"], 2, "'Because...' leaves the idea incomplete."),
+    e("comma", "Which sentence needs a comma after its INTRODUCTORY phrase?", ["The dog barked at noon.", "After the long meeting we grabbed lunch.", "She ran and jumped.", "We left early."], 1, "'After the long meeting,' is an introductory phrase."),
+    h("comma", "Which sentence punctuates a LIST correctly?", ["We bought apples bread and milk.", "We bought apples, bread, and milk.", "We, bought apples bread and milk.", "We bought, apples, bread and milk."], 1, "Commas separate three or more items."),
+    h("comma", "Which correctly uses a comma + conjunction to join two complete sentences?", ["I cooked, and washed the dishes.", "I cooked dinner, and she washed the dishes.", "I cooked dinner and, she washed the dishes.", "I, cooked dinner and she washed the dishes."], 1, "Two full clauses joined by ', and' is correct."),
+    h("run", "Which is a correct fix for a RUN-ON?", ["jam the sentences closer together", "add a period, semicolon, or comma + FANBOYS between the clauses", "remove the subject", "make it one long word"], 1, "Run-ons need a real break between the two sentences."),
   ]);
   A("ela-rj", [
     // ----- plot / sequence of events -----
@@ -243,8 +273,31 @@
     h("quote", "'My only love sprung from my only hate!' Juliet says this when she realizes that Romeo:", ["loves Rosaline", "is a Montague, her family's enemy", "killed Tybalt", "is leaving for Mantua"], 1, "Her beloved belongs to the hated house."),
   ]);
   A("ela-poems", [
-    h("poem", "In “The Road Not Taken,” the two roads are a metaphor for:", ["a real forest", "life's choices", "two friends", "the seasons"], 1),
-    h("poem", "“Fog” by Sandburg compares the fog to a cat. Sustained through the poem, this is:", ["a simile", "an extended metaphor", "onomatopoeia", "alliteration"], 1),
+    // ----- "Fog" (Sandburg) -----
+    e("fog", "Who wrote the short poem “Fog”?", ["Robert Frost", "Carl Sandburg", "Emily Dickinson", "William Wordsworth"], 1, "Carl Sandburg."),
+    h("fog", "In “Fog,” the fog arrives “on little cat feet.” Sustained through the whole poem, the fog-as-cat comparison is a(n):", ["simile", "extended metaphor", "onomatopoeia", "hyperbole"], 1, "One image carried across the poem = extended metaphor."),
+    h("fog", "The mood and theme of Sandburg's “Fog” are best described as:", ["loud and violent", "quiet, mysterious, and fleeting", "angry and bitter", "joyful and noisy"], 1, "The fog comes silently and moves on."),
+    // ----- "I Wandered Lonely as a Cloud" / Daffodils (Wordsworth) -----
+    e("daffodils", "“I Wandered Lonely as a Cloud” (the Daffodils poem) was written by:", ["Emily Dickinson", "William Wordsworth", "Robert Frost", "Carl Sandburg"], 1, "William Wordsworth."),
+    h("daffodils", "The line “I wandered lonely as a cloud” is a:", ["metaphor", "simile", "personification", "pun"], 1, "'as a cloud' uses 'as' = simile."),
+    h("daffodils", "Describing the daffodils as “dancing” and “tossing their heads” is:", ["personification", "onomatopoeia", "alliteration", "hyperbole"], 0, "Human actions given to flowers = personification."),
+    h("daffodils", "The theme of the Daffodils poem is that nature's beauty:", ["is frightening", "brings lasting joy and comfort in memory", "is best ignored", "quickly fades from memory"], 1, "Recalling the daffodils later fills the speaker's heart with pleasure."),
+    // ----- "The Road Not Taken" (Frost) -----
+    e("road", "“The Road Not Taken” was written by:", ["Robert Frost", "Shakespeare", "Wordsworth", "Dickinson"], 0, "Robert Frost."),
+    h("road", "In “The Road Not Taken,” the two diverging roads are an extended metaphor for:", ["a real forest path", "choices and their consequences in life", "two old friends", "the four seasons"], 1, "The roads stand for life's decisions."),
+    h("road", "Looking back, the speaker of “The Road Not Taken” tends to:", ["forget his choices", "dramatize and romanticize the choice he made", "make no choices at all", "blame others"], 1, "'I shall be telling this with a sigh': he later mythologizes the choice."),
+    // ----- "The Seven Ages of Man" (Shakespeare) -----
+    e("seven-ages", "“The Seven Ages of Man” (“All the world's a stage”) is by:", ["Frost", "Shakespeare", "Sandburg", "Wordsworth"], 1, "William Shakespeare."),
+    h("seven-ages", "“All the world's a stage, / And all the men and women merely players” compares life to:", ["a river", "a play / performance", "a battle", "a garden"], 1, "Life as a stage play = an extended metaphor."),
+    h("seven-ages", "“The Seven Ages of Man” divides a human life into:", ["four seasons", "seven stages", "three acts", "twelve months"], 1, "Infant, schoolboy, lover, soldier, justice, old age, second childhood."),
+    // ----- "A Narrow Fellow in the Grass" (Dickinson) -----
+    e("narrow", "“A Narrow Fellow in the Grass” was written by:", ["Emily Dickinson", "Robert Frost", "Carl Sandburg", "Shakespeare"], 0, "Emily Dickinson."),
+    h("narrow", "The “narrow fellow” the poem describes, without ever naming it, is a:", ["river", "snake", "bird", "fox"], 1, "Vivid imagery describes a snake gliding through the grass."),
+    h("narrow", "Dickinson's poem conveys that nature can inspire both:", ["hunger and thirst", "wonder and fear", "love and wealth", "noise and silence"], 1, "'Zero at the bone': awe mixed with fear."),
+    // ----- cross-poem discrimination -----
+    h("device", "Which studied poem OPENS with a simile rather than a metaphor?", ["“Fog”", "“The Road Not Taken”", "“I Wandered Lonely as a Cloud”", "“The Seven Ages of Man”"], 2, "'lonely as a cloud' uses 'as'."),
+    h("device", "Three studied poems rely on an EXTENDED METAPHOR. Which group is correct?", ["Fog, The Road Not Taken, The Seven Ages of Man", "Daffodils, Fog, A Narrow Fellow", "The Road Not Taken, Daffodils, A Narrow Fellow", "The Seven Ages, Daffodils, Fog"], 0, "Fog = cat, Road = life's choices, Seven Ages = life as a play."),
+    h("poet", "Which poem-and-poet pairing is CORRECT?", ["“Fog” = Frost", "“The Road Not Taken” = Dickinson", "“A Narrow Fellow in the Grass” = Dickinson", "“Daffodils” = Sandburg"], 2, "Dickinson wrote 'A Narrow Fellow in the Grass.'"),
   ]);
   A("ela-story", [
     h("narrator", "A THIRD-PERSON OMNISCIENT narrator:", ["is a character in the story", "knows every character's thoughts", "only knows one character's thoughts", "never describes feelings"], 1),

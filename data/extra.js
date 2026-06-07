@@ -53,11 +53,15 @@
     mc("Which is the correct MLA in-text citation for a quote on page 12 by author Harper Lee?", ["(Lee, pg. 12)", "(Harper Lee 12)", "(Lee 12)", "(Lee, 2020, 12)"], 2, "MLA = (LastName Page), no comma, no 'pg.'"),
     mc("Which is NOT part of correct MLA formatting?", ["Double spacing", "Times New Roman 12pt", "A separate cover page", "A Works Cited page"], 2),
     tf("A conclusion should introduce brand-new evidence and quotes.", false, "Conclusions restate and give a final 'so what,' not new info."),
+    mc("Which sentence belongs in a CONCLUSION?", ["Here is a brand-new piece of evidence.", "In short, the play shows that haste, not fate, destroys the lovers.", "First, let me define my thesis.", "According to the author (Lee 3)..."], 1, "Conclusions wrap up; they add no new evidence."),
+    fill("A correct MLA in-text citation for author Lee, page 7, is (Lee ___).", ["7"], "(Lee 7): last name + page, no comma."),
   ]);
   A("ela-grammar", [
     mc("Which sentence is a COMMA SPLICE?", ["I was tired, so I went to bed.", "I was tired, I went to bed.", "Because I was tired, I went to bed.", "I was tired and went to bed."], 1, "Two complete sentences joined by only a comma."),
     mc("Which is a complete, correct sentence (not a fragment or run-on)?", ["Running through the rain.", "She missed the bus she walked instead.", "After the long game.", "We won the game, and everyone celebrated."], 3),
     mc("Which sentence is a RUN-ON?", ["The dog barked loudly.", "The sun set we kept hiking.", "When the sun set, we kept hiking.", "The sun set, so we kept hiking."], 1),
+    fill("The coordinating conjunctions (for, and, nor, but, or, yet, so) are remembered by the acronym ______.", ["FANBOYS", "fanboys"], "FANBOYS."),
+    tf("A comma by itself can correctly join two complete sentences.", false, "That makes a comma splice; use a period, semicolon, or comma + FANBOYS."),
   ]);
   A("ela-rj", [
     mc("Romeo and Juliet is best classified as a:", ["comedy", "tragedy", "history", "sonnet sequence"], 1),
@@ -74,6 +78,11 @@
   A("ela-poems", [
     mc("In “The Road Not Taken,” the diverging roads are a metaphor for:", ["a literal forest walk", "life's choices and their consequences", "the four seasons", "two friends arguing"], 1),
     mc("“All the world's a stage” (The Seven Ages of Man) compares life to:", ["a journey", "a play/performance", "a river", "a battle"], 1),
+    fill("The poem “Fog” was written by Carl ______.", ["Sandburg"], "Carl Sandburg."),
+    fill("“The Road Not Taken” was written by Robert ______.", ["Frost"], "Robert Frost."),
+    fill("In the Daffodils poem, “I wandered lonely as a ______” is a simile.", ["cloud"], "'lonely as a cloud' = simile."),
+    mc("“A Narrow Fellow in the Grass” by Emily Dickinson describes, without naming, a:", ["spider", "snake", "rabbit", "stream"], 1, "The unnamed 'narrow fellow' is a snake."),
+    tf("“All the world's a stage” is an extended metaphor comparing life to a play.", true, "Life as a staged performance."),
   ]);
 
   /* ===================== BIOLOGY ===================== */
