@@ -54,7 +54,7 @@
     let st = store.srs[q.id];
     const pBefore = recall(st, now);               // how forgotten it was (for spacing boost)
 
-    STUDY.recordItem(q.id, grade, q.topicId);      // legacy: box, wrong-set, stats, streak, mastery snapshot
+    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // legacy + log
     st = store.srs[q.id];                           // now exists
     st.rt = rtMs || st.rt || 0;
 

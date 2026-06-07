@@ -228,7 +228,7 @@
     }
 
     function commit(q, grade, ok) {
-      STUDY.recordItem(q.id, grade, q.topicId);
+      STUDY.recordItem(q.id, grade, q.topicId, { mode: opts.mode || "practice", level: opts.level || 0 });
       state.answered++;
       if (ok) state.correct++;
       state.results.push({ q: q, ok: ok });
@@ -353,7 +353,7 @@
         const extra = el("div", "row");
         if (!ok) {
           const mark = el("button", "btn sm good", "I was right →");
-          mark.onclick = function () { STUDY.recordItem(q.id, 2, q.topicId); state.correct++; state.results[state.results.length - 1].ok = true; mark.remove(); toast("Counted as correct"); };
+          mark.onclick = function () { STUDY.recordItem(q.id, 2, q.topicId, { mode: opts.mode || "practice" }); state.correct++; state.results[state.results.length - 1].ok = true; mark.remove(); toast("Counted as correct"); };
           extra.appendChild(mark);
         }
         nextBar(extra.children.length ? extra : null);
@@ -512,7 +512,7 @@
       [["Again", "again", 0], ["Hard", "hard", 1], ["Good", "good", 2], ["Easy", "easy", 3]].forEach(function (r) {
         const intervalTxt = humanInterval(STUDY.SRS.BOX_INTERVAL[Math.min(5, (STUDY.itemState(c.id) ? STUDY.itemState(c.id).box : 0) + (r[2] >= 2 ? r[2] - 1 : 0))] || 0);
         const b = el("button", r[1], r[0] + "<small>" + (r[2] === 0 ? "soon" : intervalTxt) + "</small>");
-        b.onclick = function (e) { e.stopPropagation(); STUDY.recordItem(c.id, r[2], c.topicId); next(); };
+        b.onclick = function (e) { e.stopPropagation(); STUDY.recordItem(c.id, r[2], c.topicId, { mode: "flashcard" }); next(); };
         rate.appendChild(b);
       });
       mount.appendChild(rate);
@@ -720,7 +720,7 @@
       function settle(ok) {
         if (done) return; done = true; inp.disabled = true; go.disabled = true; rev.disabled = true;
         answered[idx] = part.label; if (ok) correct++;
-        STUDY.recordItem("diagram:" + diagram.id + "#" + idx, ok ? 2 : 0, diagram.topicId);
+        STUDY.recordItem("diagram:" + diagram.id + "#" + idx, ok ? 2 : 0, diagram.topicId, { mode: "diagram" });
         inp.classList.add(ok ? "correct" : "wrong");
         const fb = el("div", "explain " + (ok ? "ok" : "no"));
         fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ It's the " + part.label));
@@ -769,7 +769,7 @@
 
     function after(q, ok) {
       answered++; if (ok) correct++;
-      STUDY.recordItem(q.id, ok ? 2 : 0, q.topicId);
+      STUDY.recordItem(q.id, ok ? 2 : 0, q.topicId, { mode: "cram" });
       if (ok) {
         cc[q.id] = (cc[q.id] || 0) + 1;
         if (cc[q.id] >= DROP) { locked[q.id] = true; lockedCount++; queue.shift(); toast("🔒 Locked in"); }

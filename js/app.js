@@ -105,6 +105,35 @@
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
+    // work on these — items you flagged (Again/Hard) or missed
+    const flagged = STUDY.wrongItems();
+    if (flagged.length) {
+      app.appendChild(sectionH("Work on these", "flagged Again/Hard or missed — clear them by getting them right twice"));
+      const card = el("div", "panel");
+      const row = el("div", "row");
+      row.appendChild(el("div", null, "<b>🎯 " + flagged.length + " item" + (flagged.length > 1 ? "s" : "") + " to work on</b>"));
+      row.appendChild(el("div", "spacer"));
+      const b = el("button", "btn sm primary", "Review now");
+      b.onclick = () => startReview(null);
+      row.appendChild(b);
+      card.appendChild(row);
+      const byTopic = {};
+      flagged.forEach(q => { byTopic[q.topicId] = (byTopic[q.topicId] || 0) + 1; });
+      const tops = Object.keys(byTopic).sort((a, b2) => byTopic[b2] - byTopic[a]).slice(0, 6);
+      if (tops.length) {
+        const cw = el("div", "row wrap"); cw.style.marginTop = "10px";
+        tops.forEach(function (tid) {
+          const e = STUDY.topicIndex[tid]; if (!e) return;
+          const c = el("button", "pill"); c.style.cursor = "pointer";
+          c.textContent = e.subject.icon + " " + e.topic.title + " · " + byTopic[tid];
+          c.onclick = () => go("#/t/" + tid + "/practice");
+          cw.appendChild(c);
+        });
+        card.appendChild(cw);
+      }
+      app.appendChild(card);
+    }
+
     // subjects
     app.appendChild(sectionH("Subjects", "weighted by how much it matters on your finals"));
     const list = el("div", "subjects");
@@ -218,10 +247,15 @@
       const tt = el("div", "tt");
       tt.appendChild(el("h4", null, esc(t.title)));
       tt.appendChild(el("p", null, esc(t.blurb || "")));
-      const bar = el("div", "bar"); bar.appendChild(el("i")).style.width = Math.round(tp.mastery * 100) + "%";
-      tt.appendChild(bar);
       // completion roadmap: Learn / Cards / Practice
       const d = STUDY.topicDone(t.id);
+      const hasCards = !!(t.cards && t.cards.length);
+      const availSecs = 2 + (hasCards ? 1 : 0);
+      const doneSecs = (d.learn ? 1 : 0) + (hasCards && d.cards ? 1 : 0) + (d.practice ? 1 : 0);
+      const completion = availSecs ? doneSecs / availSecs : 0;
+      // bar shows the higher of "sections finished" and "mastery" → finishing fills it
+      const bar = el("div", "bar"); bar.appendChild(el("i")).style.width = Math.round(Math.max(completion, tp.mastery) * 100) + "%";
+      tt.appendChild(bar);
       const dots = el("div", "tdots");
       [["learn", "Learn"], ["cards", "Cards"], ["practice", "Practice"]].forEach(function (p) {
         if (p[0] === "cards" && !(t.cards && t.cards.length)) return;
@@ -288,7 +322,7 @@
       // concept-balanced set so every lesson idea is covered (not just the common ones)
       const set = STUDY.practiceSet(id, lvl);
       QUIZ.run(qmount, set, {
-        showTags: false, doneLabel: "Back to topic",
+        showTags: false, doneLabel: "Back to topic", mode: "practice", level: lvl === "easy" ? 1 : lvl === "hard" ? 2 : 0,
         onResults: (state) => STUDY.markDone(id, "practice", state.correct / Math.max(1, state.list.length)),
         onDone: () => go("#/t/" + id + "/learn"),
       });
@@ -383,14 +417,14 @@
   function startSmart(subjectId) {
     sessionScreen(subjectId ? "Smart Study · " + STUDY.byId[subjectId].name : "Smart Study · all subjects", function (mount) {
       const q = SRS.buildSession({ size: 16, subjectId: subjectId });
-      QUIZ.run(mount, q, { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+      QUIZ.run(mount, q, { mode: "smart", onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
   function startMixed(subjectId, n) {
     sessionScreen("Mixed Practice", function (mount) {
       let pool = STUDY.allQuestions(function (q, t, s) { return subjectId ? s.id === subjectId : true; });
       pool = SRS.interleave(SRS.shuffle(pool).slice(0, n));
-      QUIZ.run(mount, pool, { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+      QUIZ.run(mount, pool, { mode: "mixed", onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
   function startReview(subjectId) {
@@ -405,7 +439,7 @@
         b.onclick = () => startMixed(subjectId, 15); bar.appendChild(b); mount.appendChild(bar);
         return;
       }
-      QUIZ.run(mount, SRS.interleave(all), { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+      QUIZ.run(mount, SRS.interleave(all), { mode: "review", onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
 
@@ -476,7 +510,7 @@
       const start = el("button", "btn primary full", "Start the exam →");
       start.onclick = function () {
         QUIZ.run(mount, qs, {
-          instant: false, timeLimit: secs, showTags: false,
+          instant: false, timeLimit: secs, showTags: false, mode: "exam",
           doneLabel: "Done", onDone: () => go("#/test?s=" + cfg.subjectId),
         });
       };
@@ -862,6 +896,17 @@
     pastec.onclick = function () { pasteWrap.style.display = pasteWrap.style.display === "none" ? "block" : "none"; if (pasteWrap.style.display === "block") pta.focus(); };
     card.appendChild(el("hr", "div"));
 
+    // study-data export (for your own analysis)
+    const sd = STUDY.studyData();
+    card.appendChild(el("div", null, "<b>Study data</b><div class='muted' style='font-size:.85rem'>" + sd.totals.events + " events logged on this device — every answer's timestamp, subject/topic, right/wrong, speed and mode. Behaviour only, no personal info. Download it to analyze your own study.</div>"));
+    const dr = el("div", "row wrap"); dr.style.marginTop = "10px";
+    const dj = el("button", "btn sm", "⬇️ Download JSON");
+    dj.onclick = () => downloadFile(JSON.stringify(STUDY.studyData(), null, 2), "recall-study-data.json", "application/json");
+    const dc = el("button", "btn sm", "⬇️ Download CSV");
+    dc.onclick = () => downloadFile(STUDY.studyDataCSV(), "recall-study-data.csv", "text/csv");
+    dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
+    card.appendChild(el("hr", "div"));
+
     // reset
     card.appendChild(el("div", null, "<b>Reset</b><div class='muted' style='font-size:.85rem'>Wipe all progress on this device.</div>"));
     const rb = el("button", "btn sm", "Reset all progress"); rb.style.marginTop = "10px";
@@ -876,12 +921,13 @@
     app.appendChild(about);
   }
 
-  function exportProgress() {
-    const blob = new Blob([STUDY.exportData()], { type: "application/json" });
+  function downloadFile(content, name, type) {
+    const blob = new Blob([content], { type: type || "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "recall-progress.json"; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
+  function exportProgress() { downloadFile(STUDY.exportData(), "recall-progress.json", "application/json"); }
   function importProgress() {
     const inp = document.createElement("input"); inp.type = "file"; inp.accept = "application/json";
     inp.onchange = function () {

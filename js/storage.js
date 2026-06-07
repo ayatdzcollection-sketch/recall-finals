@@ -88,6 +88,7 @@
       masteryHist: {},// 'yyyy-mm-dd' -> overall mastery % (snapshot)
       subjectSkill: {},// subjectId -> Elo skill rating (adaptive engine)
       examDates: {},  // subjectId -> 'yyyy-mm-dd'
+      log: [],        // study-data event log (local, behavior only, no PII)
       settings: { theme: "dark" },
     };
   };
@@ -105,6 +106,7 @@
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
+        if (!Array.isArray(store.log)) store.log = [];
         if (!store.settings) store.settings = { theme: "dark" };
       }
     } catch (e) { store = DEFAULT(); }
@@ -127,6 +129,37 @@
   };
 
   STUDY.exportData = function () { return JSON.stringify(store); };
+
+  // --- study-data export (for your own analysis; local + private) ---
+  STUDY.studyData = function () {
+    const log = store.log || [];
+    const bySubject = {}, byTopic = {}, byMode = {}, byDay = {};
+    let totalRt = 0, rtN = 0;
+    log.forEach(function (e) {
+      const add = (o, k) => { const r = o[k] || (o[k] = { attempts: 0, correct: 0 }); r.attempts++; if (e.ok) r.correct++; };
+      if (e.s) add(bySubject, e.s);
+      if (e.tp) add(byTopic, e.tp);
+      add(byMode, e.m || "other");
+      const day = dayKey(e.t); byDay[day] = (byDay[day] || 0) + 1;
+      if (e.rt) { totalRt += e.rt; rtN++; }
+    });
+    const acc = (o) => { Object.keys(o).forEach(k => o[k].accuracy = +(o[k].correct / Math.max(1, o[k].attempts)).toFixed(3)); return o; };
+    return {
+      generated: new Date().toISOString(),
+      note: "Local study-data export from Recall. Behavior events only — no personal information.",
+      legend: { t: "timestamp(ms)", it: "itemId", tp: "topicId", s: "subjectId", g: "grade 0=again 1=hard 2=good 3=easy", ok: "correct(1/0)", rt: "responseTime(ms)", m: "mode", lv: "level 1=easy 2=hard" },
+      totals: { events: log.length, days: Object.keys(byDay).length, avgResponseMs: rtN ? Math.round(totalRt / rtN) : null, streakBest: store.streak.best || 0 },
+      bySubject: acc(bySubject), byTopic: acc(byTopic), byMode: acc(byMode), byDay: byDay,
+      events: log,
+    };
+  };
+  STUDY.studyDataCSV = function () {
+    const rows = [["iso_time", "epoch_ms", "subject", "topic", "item", "grade", "correct", "response_ms", "mode", "level"]];
+    (store.log || []).forEach(function (e) {
+      rows.push([new Date(e.t).toISOString(), e.t, e.s, e.tp, e.it, e.g, e.ok, e.rt, e.m, e.lv]);
+    });
+    return rows.map(r => r.map(c => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(",")).join("\n");
+  };
   STUDY.importData = function (json) {
     try { store = Object.assign(DEFAULT(), JSON.parse(json)); STUDY.save(); return true; }
     catch (e) { return false; }
@@ -194,7 +227,8 @@
 
   // record an attempt on an item (question or card)
   // grade: 0=again/wrong, 1=hard, 2=good/correct, 3=easy
-  STUDY.recordItem = function (id, grade, topicId) {
+  // meta (optional): { rt, mode, level } for the study-data log
+  STUDY.recordItem = function (id, grade, topicId, meta) {
     const now = Date.now();
     let st = store.srs[id];
     if (!st) st = store.srs[id] = { box: 0, due: now, last: 0, reps: 0, lapses: 0 };
@@ -202,22 +236,34 @@
     st.last = now;
     st.reps++;
 
-    // wrong list
-    if (grade === 0) { store.wrong[id] = true; st.lapses++; }
-    else if (grade >= 2) { delete store.wrong[id]; }
+    // "work on" list: Again (0) and Hard (1) both flag; Good/Easy clear it
+    if (grade <= 1) { store.wrong[id] = true; if (grade === 0) st.lapses++; }
+    else { delete store.wrong[id]; }
 
     // topic stats
-    const meta = STUDY.itemIndex[id];
-    const tid = topicId || (meta && meta.topic.id);
+    const indexed = STUDY.itemIndex[id];
+    const tid = topicId || (indexed && indexed.topic.id);
     if (tid) {
       const s = store.stats[tid] || (store.stats[tid] = { attempts: 0, correct: 0, seen: 0 });
       s.attempts++;
       if (grade >= 2) s.correct++;
       store.seen[tid] = now;
     }
+    // study-data log (local, behavior only, no PII)
+    logEvent(id, grade, tid, indexed, meta);
     STUDY.touchStreak();
     STUDY.save();
   };
+
+  function logEvent(id, grade, tid, indexed, meta) {
+    if (!Array.isArray(store.log)) store.log = [];
+    const m = meta || {};
+    store.log.push({
+      t: Date.now(), it: id, tp: tid || "", s: indexed ? indexed.subject.id : "",
+      g: grade, ok: grade >= 2 ? 1 : 0, rt: m.rt || 0, m: m.mode || "", lv: m.level || 0,
+    });
+    if (store.log.length > 6000) store.log.splice(0, store.log.length - 6000);
+  }
 
   STUDY.markSeen = function (topicId) {
     store.seen[topicId] = Date.now();

@@ -139,7 +139,7 @@ button{font-family:inherit}
 /* big action grid on home */
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0 6px}
 .action{
-  text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);
+  text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);color:var(--text);
   padding:15px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:3px;min-height:84px;
 }
 .action:hover{border-color:var(--accent);background:var(--surface-2);transform:translateY(-2px)}
@@ -573,6 +573,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       masteryHist: {},// 'yyyy-mm-dd' -> overall mastery % (snapshot)
       subjectSkill: {},// subjectId -> Elo skill rating (adaptive engine)
       examDates: {},  // subjectId -> 'yyyy-mm-dd'
+      log: [],        // study-data event log (local, behavior only, no PII)
       settings: { theme: "dark" },
     };
   };
@@ -590,6 +591,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
+        if (!Array.isArray(store.log)) store.log = [];
         if (!store.settings) store.settings = { theme: "dark" };
       }
     } catch (e) { store = DEFAULT(); }
@@ -612,6 +614,37 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   };
 
   STUDY.exportData = function () { return JSON.stringify(store); };
+
+  // --- study-data export (for your own analysis; local + private) ---
+  STUDY.studyData = function () {
+    const log = store.log || [];
+    const bySubject = {}, byTopic = {}, byMode = {}, byDay = {};
+    let totalRt = 0, rtN = 0;
+    log.forEach(function (e) {
+      const add = (o, k) => { const r = o[k] || (o[k] = { attempts: 0, correct: 0 }); r.attempts++; if (e.ok) r.correct++; };
+      if (e.s) add(bySubject, e.s);
+      if (e.tp) add(byTopic, e.tp);
+      add(byMode, e.m || "other");
+      const day = dayKey(e.t); byDay[day] = (byDay[day] || 0) + 1;
+      if (e.rt) { totalRt += e.rt; rtN++; }
+    });
+    const acc = (o) => { Object.keys(o).forEach(k => o[k].accuracy = +(o[k].correct / Math.max(1, o[k].attempts)).toFixed(3)); return o; };
+    return {
+      generated: new Date().toISOString(),
+      note: "Local study-data export from Recall. Behavior events only — no personal information.",
+      legend: { t: "timestamp(ms)", it: "itemId", tp: "topicId", s: "subjectId", g: "grade 0=again 1=hard 2=good 3=easy", ok: "correct(1/0)", rt: "responseTime(ms)", m: "mode", lv: "level 1=easy 2=hard" },
+      totals: { events: log.length, days: Object.keys(byDay).length, avgResponseMs: rtN ? Math.round(totalRt / rtN) : null, streakBest: store.streak.best || 0 },
+      bySubject: acc(bySubject), byTopic: acc(byTopic), byMode: acc(byMode), byDay: byDay,
+      events: log,
+    };
+  };
+  STUDY.studyDataCSV = function () {
+    const rows = [["iso_time", "epoch_ms", "subject", "topic", "item", "grade", "correct", "response_ms", "mode", "level"]];
+    (store.log || []).forEach(function (e) {
+      rows.push([new Date(e.t).toISOString(), e.t, e.s, e.tp, e.it, e.g, e.ok, e.rt, e.m, e.lv]);
+    });
+    return rows.map(r => r.map(c => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(",")).join("\n");
+  };
   STUDY.importData = function (json) {
     try { store = Object.assign(DEFAULT(), JSON.parse(json)); STUDY.save(); return true; }
     catch (e) { return false; }
@@ -679,7 +712,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 
   // record an attempt on an item (question or card)
   // grade: 0=again/wrong, 1=hard, 2=good/correct, 3=easy
-  STUDY.recordItem = function (id, grade, topicId) {
+  // meta (optional): { rt, mode, level } for the study-data log
+  STUDY.recordItem = function (id, grade, topicId, meta) {
     const now = Date.now();
     let st = store.srs[id];
     if (!st) st = store.srs[id] = { box: 0, due: now, last: 0, reps: 0, lapses: 0 };
@@ -687,22 +721,34 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     st.last = now;
     st.reps++;
 
-    // wrong list
-    if (grade === 0) { store.wrong[id] = true; st.lapses++; }
-    else if (grade >= 2) { delete store.wrong[id]; }
+    // "work on" list: Again (0) and Hard (1) both flag; Good/Easy clear it
+    if (grade <= 1) { store.wrong[id] = true; if (grade === 0) st.lapses++; }
+    else { delete store.wrong[id]; }
 
     // topic stats
-    const meta = STUDY.itemIndex[id];
-    const tid = topicId || (meta && meta.topic.id);
+    const indexed = STUDY.itemIndex[id];
+    const tid = topicId || (indexed && indexed.topic.id);
     if (tid) {
       const s = store.stats[tid] || (store.stats[tid] = { attempts: 0, correct: 0, seen: 0 });
       s.attempts++;
       if (grade >= 2) s.correct++;
       store.seen[tid] = now;
     }
+    // study-data log (local, behavior only, no PII)
+    logEvent(id, grade, tid, indexed, meta);
     STUDY.touchStreak();
     STUDY.save();
   };
+
+  function logEvent(id, grade, tid, indexed, meta) {
+    if (!Array.isArray(store.log)) store.log = [];
+    const m = meta || {};
+    store.log.push({
+      t: Date.now(), it: id, tp: tid || "", s: indexed ? indexed.subject.id : "",
+      g: grade, ok: grade >= 2 ? 1 : 0, rt: m.rt || 0, m: m.mode || "", lv: m.level || 0,
+    });
+    if (store.log.length > 6000) store.log.splice(0, store.log.length - 6000);
+  }
 
   STUDY.markSeen = function (topicId) {
     store.seen[topicId] = Date.now();
@@ -1135,7 +1181,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     let st = store.srs[q.id];
     const pBefore = recall(st, now);               // how forgotten it was (for spacing boost)
 
-    STUDY.recordItem(q.id, grade, q.topicId);      // legacy: box, wrong-set, stats, streak, mastery snapshot
+    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // legacy + log
     st = store.srs[q.id];                           // now exists
     st.rt = rtMs || st.rt || 0;
 
@@ -3441,6 +3487,132 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   A("fr-conditionnel", [
     h("conditionnel", "Which fully correct sentence uses the conditional to soften a request?", ["Je veux de l'eau.", "Je voudrais de l'eau, s'il vous plaît.", "J'ai voulu de l'eau.", "Je voudrai de l'eau."], 1, "voudrais (conditional) = 'I would like' — polite; voudrai is future."),
   ]);
+
+  /* ============ BIOLOGY (Easy recall + Hard application per topic) ============ */
+  A("bio-mitosis", [
+    e("interphase", "During which interphase sub-stage is DNA copied?", ["G1", "S", "G2", "M"], 1, "S = Synthesis."),
+    h("mitosis", "Which event happens during ANAPHASE?", ["Chromosomes line up in the middle", "Sister chromatids are pulled to opposite poles", "DNA is copied", "Two nuclei reform"], 1),
+    h("chromatin", "Most of the time, a cell's DNA exists as long, thin ______ (not condensed chromosomes).", ["chromatin", "centromeres", "ribosomes", "gametes"], 0),
+  ]);
+  A("bio-chromosome", [
+    h("p", "A cell with a faulty p53 gene is dangerous because it:", ["divides too slowly", "can't catch mutations, so damaged cells keep dividing", "makes too much bile", "can't copy DNA at all"], 1),
+    h("cancer", "Why are OLDER people statistically more likely to develop cancer?", ["their cells are bigger", "they've had more cell divisions, so more chances for mutations", "they have more p53 genes", "they stopped making chromatin"], 1),
+  ]);
+  A("bio-meiosis", [
+    h("meiosis", "Why are siblings (same parents) often quite different from each other?", ["they were raised differently", "meiosis makes genetically different sex cells each time", "mitosis copied them wrong", "they have different numbers of chromosomes"], 1),
+    e("haploid", "A gamete is described as HAPLOID, meaning it has:", ["two sets of chromosomes", "one set of chromosomes", "no chromosomes", "double the DNA"], 1),
+  ]);
+  A("bio-mendel", [
+    h("heterozygous", "A cross of Tt × tt (T = tall, dominant) gives what chance of a TALL child?", ["0%", "25%", "50%", "100%"], 2, "Tt × tt → 2 Tt : 2 tt → 50% tall."),
+    h("genotype", "An organism shows the recessive trait. Its genotype must be:", ["homozygous dominant (TT)", "homozygous recessive (tt)", "heterozygous (Tt)", "impossible to tell"], 1, "Recessive trait shows only with two lowercase alleles."),
+  ]);
+  A("bio-pedigree", [
+    h("pedigree", "On a pedigree, an UNSHADED individual must carry at least one:", ["recessive allele", "dominant allele", "mutation", "extra chromosome"], 1, "Unshaded = doesn't show the trait → has ≥1 dominant allele."),
+  ]);
+  A("bio-systems", [
+    h("respiratory", "Which body system exchanges oxygen and carbon dioxide?", ["digestive", "respiratory", "excretory", "muscular"], 1),
+    h("nervous", "Which system sends the signals that control all the others?", ["circulatory", "nervous", "skeletal", "lymphatic"], 1),
+  ]);
+  A("bio-heart", [
+    h("heart", "Blood from the body enters the heart at the:", ["left ventricle", "right atrium", "aorta", "left atrium"], 1, "Body → vena cava → right atrium."),
+    h("heart", "Which path is correct for oxygen-poor blood heading to the lungs?", ["left ventricle → aorta", "right ventricle → pulmonary artery", "left atrium → pulmonary vein", "right atrium → aorta"], 1),
+  ]);
+
+  /* ============ HISTORY ============ */
+  A("his-industrial", [
+    h("industrial", "Why did the Industrial Revolution begin in Britain specifically?", ["it had no rivers", "abundant resources, capital, and geography", "it banned factories", "it had the smallest population"], 1),
+    h("industrial", "Labor unions of the era did NOT primarily fight for:", ["banning child labor", "better worker safety", "higher wages", "equal pay for men and women"], 3, "Equal pay was not a typical union goal at that time."),
+  ]);
+  A("his-nationalism", [
+    h("nationalism", "Bismarck and Cavour both unified their nations mainly through:", ["democracy and voting", "Realpolitik — practical power politics", "religious reform", "foreign aid"], 1),
+    h("nationalism", "Meiji Japan's modernization differed from the West's because it was:", ["slow and gradual", "fast and state-directed", "led by labor unions", "focused on farming only"], 1),
+  ]);
+  A("his-imperialism", [
+    h("imperialism", "At the Berlin Conference, African borders were decided by:", ["African leaders voting", "European powers, with no African input", "the United Nations", "a continent-wide election"], 1),
+    h("imperialism", "Social Darwinism was used to justify imperialism by claiming:", ["all cultures are equal", "'survival of the fittest' applied to whole races/societies", "colonies should be freed", "trade should be banned"], 1),
+  ]);
+  A("his-interwar", [
+    h("interwar", "Economic chaos from the Great Depression helped dictators rise because leaders promised:", ["more taxes", "economic stability and national pride", "to abolish armies", "open borders"], 1),
+    h("interwar", "Gandhi's main weapon against British rule was:", ["a large navy", "nonviolent resistance / civil disobedience", "foreign alliances", "guerrilla bombing"], 1),
+  ]);
+  A("his-wwii", [
+    h("wwii", "Appeasement failed because giving in to Hitler's demands:", ["satisfied him permanently", "let him seize more land unchecked", "started a trade war", "created the UN"], 1),
+    h("wwii", "Germany's central location in Europe was a disadvantage because it had to:", ["import all its food", "fight a war on multiple fronts at once", "build a navy first", "abandon its allies"], 1),
+  ]);
+  A("his-decolonization", [
+    h("decolonization", "The 1960 'Year of Africa' refers to:", ["the Berlin Conference", "seventeen African nations gaining independence in one year", "the start of apartheid", "the Rwandan genocide"], 1),
+    h("decolonization", "Mandela and Gandhi are historically linked because both:", ["led armies", "used nonviolent protest against injustice", "ruled as kings", "started world wars"], 1),
+  ]);
+
+  /* ============ GEOMETRY (formula recall = Easy; the parametric problems = Hard) ============ */
+  A("geo-area", [
+    e("triangle", "The area of a triangle equals:", ["base × height", "½ × base × height", "2 × base × height", "base + height"], 1),
+    e("trapezoid", "The area of a trapezoid equals:", ["b₁ × b₂", "½(b₁ + b₂) × height", "(b₁ + b₂) × height", "½ × b₁ × b₂"], 1),
+  ]);
+  A("geo-solids", [
+    e("cylinder", "The volume of a cylinder equals:", ["2πrh", "πr²h", "⅓πr²h", "4πr²"], 1),
+    e("sphere", "The volume of a sphere equals:", ["4πr²", "(4/3)πr³", "πr²h", "2πr"], 1),
+    h("cone", "A cone and a cylinder have the same radius and height. The cone's volume is:", ["the same", "one-third of the cylinder's", "twice the cylinder's", "half the cylinder's"], 1, "Cone = ⅓πr²h."),
+  ]);
+  A("geo-circlemeasure", [
+    e("circumference", "The circumference of a circle equals:", ["πr²", "πd (or 2πr)", "½πr", "4πr²"], 1),
+  ]);
+  A("geo-righttri", [
+    e("pythagorean", "The Pythagorean theorem is:", ["a + b = c", "a² + b² = c²", "½ab = c", "a² − b² = c²"], 1),
+    h("pythagorean", "Which set of side lengths forms a RIGHT triangle?", ["3, 6, 9", "6, 8, 10", "4, 5, 6", "5, 5, 9"], 1, "6²+8²=10² (36+64=100)."),
+  ]);
+  A("geo-trig", [
+    e("tangent", "In SOH-CAH-TOA, tangent equals:", ["opposite ÷ hypotenuse", "adjacent ÷ hypotenuse", "opposite ÷ adjacent", "hypotenuse ÷ opposite"], 2),
+    h("sine", "To find a missing ANGLE from the opposite and hypotenuse, you use:", ["sin", "sin⁻¹ (inverse sine)", "cos", "tan"], 1),
+  ]);
+  A("geo-quads", [
+    e("parallelogram", "In a parallelogram, opposite sides are always:", ["perpendicular", "congruent (equal)", "different", "curved"], 1),
+    h("parallelogram", "Which is NOT always true of a parallelogram?", ["opposite angles are congruent", "diagonals bisect each other", "all four sides are congruent", "opposite sides are parallel"], 2, "All sides congruent only for a rhombus/square."),
+  ]);
+  A("geo-similarity", [
+    h("similarity", "Two figures are similar with scale factor 3. Their AREAS are in the ratio:", ["3 : 1", "9 : 1", "1 : 3", "6 : 1"], 1, "Area ratio = (scale factor)²."),
+  ]);
+  A("geo-circles", [
+    e("tangent", "A tangent line meets a circle's radius at the point of tangency at a ___ angle.", ["45°", "60°", "90°", "180°"], 2),
+    h("inscribed", "An inscribed angle is ___ the central angle that intercepts the same arc.", ["equal to", "half of", "twice", "unrelated to"], 1),
+  ]);
+
+  /* ============ FRENCH ============ */
+  A("fr-belgique", [
+    h("wallonie", "In which region of Belgium is French spoken?", ["Flanders", "Wallonia", "the Netherlands", "Luxembourg"], 1),
+    h("bruxelles", "Brussels is special because it is officially:", ["French-only", "Dutch-only", "bilingual (French + Dutch)", "German-only"], 2),
+  ]);
+  A("fr-environnement", [
+    h("canicule", "« la canicule » in English is:", ["a flood", "a heat wave", "a wildfire", "recycling"], 1),
+    h("incendie", "« un incendie » means:", ["a drought", "a storm", "a fire / wildfire", "a heat wave"], 2),
+  ]);
+  A("fr-futur", [
+    h("futur", "Which is the FUTUR (not conditional) of 'nous (aller)'?", ["nous irions", "nous irons", "nous allions", "nous irais"], 1, "irons = future; irions = conditional."),
+  ]);
+
+  /* ============ ELA — remaining topics ============ */
+  A("ela-writing", [
+    h("thesis", "Which is the strongest THESIS statement?", ["This essay is about Romeo and Juliet.", "Is fate to blame in Romeo and Juliet?", "Shakespeare shows that impulsive choices, not fate, drive the tragedy.", "Romeo and Juliet is a famous play."], 2, "A thesis is a debatable claim, not a topic or question."),
+    h("citation", "Which is the correct MLA in-text citation for page 14 by author Lee?", ["(Lee, pg. 14)", "(Lee 14)", "(Harper Lee, 2020)", "Lee, page 14"], 1),
+    e("conclusion", "A conclusion should:", ["introduce a new quote", "restate the thesis and give a final 'so what'", "ask a question", "add a new argument"], 1),
+  ]);
+  A("ela-grammar", [
+    h("splice", "Which sentence is a COMMA SPLICE?", ["I was late, so I ran.", "I was late, I ran.", "Because I was late, I ran.", "I was late and ran."], 1, "Two complete sentences joined by only a comma."),
+    h("run", "Which is a RUN-ON sentence?", ["The bell rang and we left.", "The bell rang we left.", "When the bell rang, we left.", "The bell rang; we left."], 1),
+    h("fragment", "Which is a sentence FRAGMENT?", ["She left early.", "Running through the rain without an umbrella.", "We won.", "They cheered loudly."], 1),
+  ]);
+  A("ela-rj", [
+    h("character", "Which character secretly marries Romeo and Juliet?", ["The Prince", "Friar Laurence", "Mercutio", "Tybalt"], 1),
+    h("character", "Mercutio and Benvolio are best described as:", ["Capulets", "allies/friends of Romeo (Montague side)", "Juliet's parents", "rival suitors"], 1),
+  ]);
+  A("ela-poems", [
+    h("poem", "In “The Road Not Taken,” the two roads are a metaphor for:", ["a real forest", "life's choices", "two friends", "the seasons"], 1),
+    h("poem", "“Fog” by Sandburg compares the fog to a cat. Sustained through the poem, this is:", ["a simile", "an extended metaphor", "onomatopoeia", "alliteration"], 1),
+  ]);
+  A("ela-story", [
+    h("narrator", "A THIRD-PERSON OMNISCIENT narrator:", ["is a character in the story", "knows every character's thoughts", "only knows one character's thoughts", "never describes feelings"], 1),
+    h("setting", "The SETTING of a story includes:", ["only the time", "only the place", "the time, place, and culture", "the main character"], 2),
+  ]);
 })(window.STUDY);
 
 </script>
@@ -3991,7 +4163,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     }
 
     function commit(q, grade, ok) {
-      STUDY.recordItem(q.id, grade, q.topicId);
+      STUDY.recordItem(q.id, grade, q.topicId, { mode: opts.mode || "practice", level: opts.level || 0 });
       state.answered++;
       if (ok) state.correct++;
       state.results.push({ q: q, ok: ok });
@@ -4116,7 +4288,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         const extra = el("div", "row");
         if (!ok) {
           const mark = el("button", "btn sm good", "I was right →");
-          mark.onclick = function () { STUDY.recordItem(q.id, 2, q.topicId); state.correct++; state.results[state.results.length - 1].ok = true; mark.remove(); toast("Counted as correct"); };
+          mark.onclick = function () { STUDY.recordItem(q.id, 2, q.topicId, { mode: opts.mode || "practice" }); state.correct++; state.results[state.results.length - 1].ok = true; mark.remove(); toast("Counted as correct"); };
           extra.appendChild(mark);
         }
         nextBar(extra.children.length ? extra : null);
@@ -4275,7 +4447,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       [["Again", "again", 0], ["Hard", "hard", 1], ["Good", "good", 2], ["Easy", "easy", 3]].forEach(function (r) {
         const intervalTxt = humanInterval(STUDY.SRS.BOX_INTERVAL[Math.min(5, (STUDY.itemState(c.id) ? STUDY.itemState(c.id).box : 0) + (r[2] >= 2 ? r[2] - 1 : 0))] || 0);
         const b = el("button", r[1], r[0] + "<small>" + (r[2] === 0 ? "soon" : intervalTxt) + "</small>");
-        b.onclick = function (e) { e.stopPropagation(); STUDY.recordItem(c.id, r[2], c.topicId); next(); };
+        b.onclick = function (e) { e.stopPropagation(); STUDY.recordItem(c.id, r[2], c.topicId, { mode: "flashcard" }); next(); };
         rate.appendChild(b);
       });
       mount.appendChild(rate);
@@ -4483,7 +4655,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       function settle(ok) {
         if (done) return; done = true; inp.disabled = true; go.disabled = true; rev.disabled = true;
         answered[idx] = part.label; if (ok) correct++;
-        STUDY.recordItem("diagram:" + diagram.id + "#" + idx, ok ? 2 : 0, diagram.topicId);
+        STUDY.recordItem("diagram:" + diagram.id + "#" + idx, ok ? 2 : 0, diagram.topicId, { mode: "diagram" });
         inp.classList.add(ok ? "correct" : "wrong");
         const fb = el("div", "explain " + (ok ? "ok" : "no"));
         fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ It's the " + part.label));
@@ -4532,7 +4704,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
     function after(q, ok) {
       answered++; if (ok) correct++;
-      STUDY.recordItem(q.id, ok ? 2 : 0, q.topicId);
+      STUDY.recordItem(q.id, ok ? 2 : 0, q.topicId, { mode: "cram" });
       if (ok) {
         cc[q.id] = (cc[q.id] || 0) + 1;
         if (cc[q.id] >= DROP) { locked[q.id] = true; lockedCount++; queue.shift(); toast("🔒 Locked in"); }
@@ -5136,6 +5308,35 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
+    // work on these — items you flagged (Again/Hard) or missed
+    const flagged = STUDY.wrongItems();
+    if (flagged.length) {
+      app.appendChild(sectionH("Work on these", "flagged Again/Hard or missed — clear them by getting them right twice"));
+      const card = el("div", "panel");
+      const row = el("div", "row");
+      row.appendChild(el("div", null, "<b>🎯 " + flagged.length + " item" + (flagged.length > 1 ? "s" : "") + " to work on</b>"));
+      row.appendChild(el("div", "spacer"));
+      const b = el("button", "btn sm primary", "Review now");
+      b.onclick = () => startReview(null);
+      row.appendChild(b);
+      card.appendChild(row);
+      const byTopic = {};
+      flagged.forEach(q => { byTopic[q.topicId] = (byTopic[q.topicId] || 0) + 1; });
+      const tops = Object.keys(byTopic).sort((a, b2) => byTopic[b2] - byTopic[a]).slice(0, 6);
+      if (tops.length) {
+        const cw = el("div", "row wrap"); cw.style.marginTop = "10px";
+        tops.forEach(function (tid) {
+          const e = STUDY.topicIndex[tid]; if (!e) return;
+          const c = el("button", "pill"); c.style.cursor = "pointer";
+          c.textContent = e.subject.icon + " " + e.topic.title + " · " + byTopic[tid];
+          c.onclick = () => go("#/t/" + tid + "/practice");
+          cw.appendChild(c);
+        });
+        card.appendChild(cw);
+      }
+      app.appendChild(card);
+    }
+
     // subjects
     app.appendChild(sectionH("Subjects", "weighted by how much it matters on your finals"));
     const list = el("div", "subjects");
@@ -5249,10 +5450,15 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const tt = el("div", "tt");
       tt.appendChild(el("h4", null, esc(t.title)));
       tt.appendChild(el("p", null, esc(t.blurb || "")));
-      const bar = el("div", "bar"); bar.appendChild(el("i")).style.width = Math.round(tp.mastery * 100) + "%";
-      tt.appendChild(bar);
       // completion roadmap: Learn / Cards / Practice
       const d = STUDY.topicDone(t.id);
+      const hasCards = !!(t.cards && t.cards.length);
+      const availSecs = 2 + (hasCards ? 1 : 0);
+      const doneSecs = (d.learn ? 1 : 0) + (hasCards && d.cards ? 1 : 0) + (d.practice ? 1 : 0);
+      const completion = availSecs ? doneSecs / availSecs : 0;
+      // bar shows the higher of "sections finished" and "mastery" → finishing fills it
+      const bar = el("div", "bar"); bar.appendChild(el("i")).style.width = Math.round(Math.max(completion, tp.mastery) * 100) + "%";
+      tt.appendChild(bar);
       const dots = el("div", "tdots");
       [["learn", "Learn"], ["cards", "Cards"], ["practice", "Practice"]].forEach(function (p) {
         if (p[0] === "cards" && !(t.cards && t.cards.length)) return;
@@ -5319,7 +5525,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       // concept-balanced set so every lesson idea is covered (not just the common ones)
       const set = STUDY.practiceSet(id, lvl);
       QUIZ.run(qmount, set, {
-        showTags: false, doneLabel: "Back to topic",
+        showTags: false, doneLabel: "Back to topic", mode: "practice", level: lvl === "easy" ? 1 : lvl === "hard" ? 2 : 0,
         onResults: (state) => STUDY.markDone(id, "practice", state.correct / Math.max(1, state.list.length)),
         onDone: () => go("#/t/" + id + "/learn"),
       });
@@ -5414,14 +5620,14 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   function startSmart(subjectId) {
     sessionScreen(subjectId ? "Smart Study · " + STUDY.byId[subjectId].name : "Smart Study · all subjects", function (mount) {
       const q = SRS.buildSession({ size: 16, subjectId: subjectId });
-      QUIZ.run(mount, q, { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+      QUIZ.run(mount, q, { mode: "smart", onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
   function startMixed(subjectId, n) {
     sessionScreen("Mixed Practice", function (mount) {
       let pool = STUDY.allQuestions(function (q, t, s) { return subjectId ? s.id === subjectId : true; });
       pool = SRS.interleave(SRS.shuffle(pool).slice(0, n));
-      QUIZ.run(mount, pool, { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+      QUIZ.run(mount, pool, { mode: "mixed", onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
   function startReview(subjectId) {
@@ -5436,7 +5642,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         b.onclick = () => startMixed(subjectId, 15); bar.appendChild(b); mount.appendChild(bar);
         return;
       }
-      QUIZ.run(mount, SRS.interleave(all), { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+      QUIZ.run(mount, SRS.interleave(all), { mode: "review", onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
 
@@ -5507,7 +5713,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const start = el("button", "btn primary full", "Start the exam →");
       start.onclick = function () {
         QUIZ.run(mount, qs, {
-          instant: false, timeLimit: secs, showTags: false,
+          instant: false, timeLimit: secs, showTags: false, mode: "exam",
           doneLabel: "Done", onDone: () => go("#/test?s=" + cfg.subjectId),
         });
       };
@@ -5893,6 +6099,17 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     pastec.onclick = function () { pasteWrap.style.display = pasteWrap.style.display === "none" ? "block" : "none"; if (pasteWrap.style.display === "block") pta.focus(); };
     card.appendChild(el("hr", "div"));
 
+    // study-data export (for your own analysis)
+    const sd = STUDY.studyData();
+    card.appendChild(el("div", null, "<b>Study data</b><div class='muted' style='font-size:.85rem'>" + sd.totals.events + " events logged on this device — every answer's timestamp, subject/topic, right/wrong, speed and mode. Behaviour only, no personal info. Download it to analyze your own study.</div>"));
+    const dr = el("div", "row wrap"); dr.style.marginTop = "10px";
+    const dj = el("button", "btn sm", "⬇️ Download JSON");
+    dj.onclick = () => downloadFile(JSON.stringify(STUDY.studyData(), null, 2), "recall-study-data.json", "application/json");
+    const dc = el("button", "btn sm", "⬇️ Download CSV");
+    dc.onclick = () => downloadFile(STUDY.studyDataCSV(), "recall-study-data.csv", "text/csv");
+    dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
+    card.appendChild(el("hr", "div"));
+
     // reset
     card.appendChild(el("div", null, "<b>Reset</b><div class='muted' style='font-size:.85rem'>Wipe all progress on this device.</div>"));
     const rb = el("button", "btn sm", "Reset all progress"); rb.style.marginTop = "10px";
@@ -5907,12 +6124,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     app.appendChild(about);
   }
 
-  function exportProgress() {
-    const blob = new Blob([STUDY.exportData()], { type: "application/json" });
+  function downloadFile(content, name, type) {
+    const blob = new Blob([content], { type: type || "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "recall-progress.json"; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
+  function exportProgress() { downloadFile(STUDY.exportData(), "recall-progress.json", "application/json"); }
   function importProgress() {
     const inp = document.createElement("input"); inp.type = "file"; inp.accept = "application/json";
     inp.onchange = function () {
