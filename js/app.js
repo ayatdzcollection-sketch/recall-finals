@@ -86,16 +86,16 @@
     // stat chips
     const st = STUDY.store();
     const chips = el("div", "chips");
+    chips.appendChild(statChip("🚀", STUDY.ADAPT.overallReadiness() + "%", "finals ready"));
     chips.appendChild(statChip("🔥", st.streak.count, "day streak"));
     const due = STUDY.overallDue();
     chips.appendChild(statChip("🔁", due, "due to review"));
-    const mastery = overallMastery();
-    chips.appendChild(statChip("🎯", mastery + "%", "overall mastery"));
     app.appendChild(chips);
 
     // primary actions
     const actions = el("div", "actions");
-    actions.appendChild(actionCard("wide", "⚡", "Smart Study", "Interleaved mix of new + due material across all subjects", () => startSmart(null)));
+    actions.appendChild(actionCard("wide foryou", "⚡", "For You", "One adaptive feed that learns what you know and serves exactly what to study next", () => startFeed()));
+    actions.appendChild(actionCard("", "🧠", "Smart Study", "Interleaved new + due material", () => startSmart(null)));
     actions.appendChild(actionCard("", "🔥", "Cram Mode", "Blitz a subject before the exam", () => go("#/cram")));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
     actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
@@ -395,6 +395,13 @@
         return;
       }
       QUIZ.run(mount, SRS.interleave(all), { onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
+    });
+  }
+
+  // ---- FOR YOU: the adaptive feed ----
+  function startFeed() {
+    sessionScreen("⚡ For You", function (mount) {
+      QUIZ.runFeed(mount, { onDone: () => go("#/home") });
     });
   }
 
@@ -744,7 +751,7 @@
       const row = el("div", "row");
       row.appendChild(el("div", null, "<b>" + s.icon + " " + esc(s.name) + "</b>"));
       row.appendChild(el("div", "spacer"));
-      row.appendChild(el("div", "muted", prog.studied + "/" + prog.items + " items"));
+      row.appendChild(el("div", "muted", "🚀 " + STUDY.ADAPT.readiness(s.id) + "% · " + prog.studied + "/" + prog.items));
       card.appendChild(row);
       const bar = el("div", "bar"); bar.style.setProperty("--sub", s.accent);
       bar.appendChild(el("i")).style.width = Math.round(prog.mastery * 100) + "%";
@@ -808,6 +815,22 @@
     });
     row.appendChild(seg);
     card.appendChild(row);
+    card.appendChild(el("hr", "div"));
+
+    // exam dates → powers the "For You" urgency weighting
+    card.appendChild(el("div", null, "<b>Exam dates</b><div class='muted' style='font-size:.85rem'>The closer an exam, the more the For You feed prioritizes it. Defaults to finals week.</div>"));
+    STUDY.subjects.forEach(function (s) {
+      const er = el("div", "exam-row");
+      er.appendChild(el("div", "nm", s.icon + " " + esc(s.name)));
+      const dd = el("div", "dd");
+      const inp = document.createElement("input"); inp.type = "date";
+      inp.value = STUDY.examDate(s.id) || STUDY.FINALS_DEFAULT;
+      function refreshDays() { const d = STUDY.daysToExam(s.id); dd.textContent = d > 1 ? d + " days" : d === 1 ? "tomorrow" : d === 0 ? "today" : "past"; }
+      inp.onchange = function () { STUDY.setExamDate(s.id, inp.value); refreshDays(); };
+      refreshDays();
+      er.appendChild(inp); er.appendChild(dd);
+      card.appendChild(er);
+    });
     card.appendChild(el("hr", "div"));
 
     // export / import — files
@@ -875,6 +898,7 @@
     if (parts[0] === "t") return renderTopic(parts[1], parts[2] || "learn");
     if (parts[0] === "dash") return renderDashboard();
     if (parts[0] === "test") return renderTestSetup(params);
+    if (parts[0] === "feed") return startFeed();
     if (parts[0] === "exam") return startExam(params);
     if (parts[0] === "cram") return parts[1] ? startCram(parts[1]) : renderCramChooser();
     if (parts[0] === "label") return parts[1] ? startDiagram(parts[1]) : renderLabelChooser();

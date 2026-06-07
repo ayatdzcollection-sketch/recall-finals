@@ -362,6 +362,20 @@ table.vt tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 .tdot{font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid var(--line-strong);color:var(--text-faint);background:var(--surface-2)}
 .tdot.on{color:var(--good);border-color:transparent;background:var(--good-soft)}
 
+/* For You feed */
+.feed-status{display:flex;justify-content:space-between;gap:8px;font-size:.82rem;color:var(--text-dim);
+  background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 13px;margin-bottom:14px}
+.feed-status b{color:var(--text)}
+.btn.sm.on{border-color:var(--accent);background:var(--accent-soft);color:var(--text)}
+.action.foryou{background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 26%,var(--surface)),var(--surface));border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.readiness-ring{--p:0}
+
+/* exam-date editor */
+.exam-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.exam-row .nm{flex:1;font-size:.92rem}
+.exam-row input[type=date]{background:var(--surface-2);border:1px solid var(--line-strong);color:var(--text);border-radius:9px;padding:7px 9px;font-size:.85rem}
+.exam-row .dd{font-size:.72rem;color:var(--warn);white-space:nowrap;min-width:54px;text-align:right}
+
 /* activity heatmap */
 .heat{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;grid-auto-columns:1fr;gap:3px}
 .hcell{width:100%;aspect-ratio:1;border-radius:3px;background:var(--line)}

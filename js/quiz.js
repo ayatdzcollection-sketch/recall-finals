@@ -563,6 +563,127 @@
     return Math.round(ms / 86400000) + "d";
   }
 
+  /* ---------------- "For You" adaptive feed ----------------
+     One endless, self-adjusting feed. Each card is chosen by STUDY.ADAPT,
+     graded by correctness + speed (+ optional "guess"), and the engine
+     re-plans after every answer. Milestones + fatigue checks keep it human. */
+  QUIZ.runFeed = function (mount, opts) {
+    opts = opts || {};
+    const ADAPT = STUDY.ADAPT;
+    const ctx = { recent: [], lastTopic: null, lastSubject: null };
+    const startReady = ADAPT.overallReadiness();
+    let answered = 0, correct = 0, sinceMilestone = 0;
+    const windowOk = [];   // rolling accuracy for fatigue
+
+    function statusBar() {
+      const bar = el("div", "feed-status");
+      const ready = ADAPT.overallReadiness();
+      bar.innerHTML = "<span>🎯 <b>" + ready + "%</b> ready</span><span>🔥 " + STUDY.store().streak.count + "</span><span>" + answered + " done</span>";
+      return bar;
+    }
+
+    function render() {
+      const q = ADAPT.next(ctx);
+      if (!q) { mount.innerHTML = '<div class="empty">No questions available.</div>'; return; }
+      mount.innerHTML = "";
+      mount.appendChild(statusBar());
+      const subj = STUDY.byId[q.subjectId], topic = STUDY.topicIndex[q.topicId] ? STUDY.topicIndex[q.topicId].topic : null;
+      if (subj) mount.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
+      const t0 = Date.now();
+      renderItem(q, t0);
+    }
+
+    function proceed(q, ok, rt, guessed) {
+      ADAPT.update(q, ok, rt, guessed);
+      answered++; sinceMilestone++; if (ok) correct++;
+      windowOk.push(ok ? 1 : 0); if (windowOk.length > 8) windowOk.shift();
+      ctx.recent.push(q.id); if (ctx.recent.length > 8) ctx.recent.shift();
+      ctx.lastTopic = q.topicId; ctx.lastSubject = q.subjectId;
+      const tired = windowOk.length >= 6 && (windowOk.reduce((a, b) => a + b, 0) / windowOk.length) < 0.4;
+      if (sinceMilestone >= 12 || tired) milestone(tired);
+      else { render(); window.scrollTo(0, 0); }
+    }
+
+    function milestone(tired) {
+      sinceMilestone = 0;
+      mount.innerHTML = "";
+      const ready = ADAPT.overallReadiness(), delta = ready - startReady;
+      const big = el("div", "result-big");
+      big.appendChild(el("div", "score", ready + "%"));
+      big.appendChild(el("div", "lbl", "finals ready" + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
+      mount.appendChild(big);
+      if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped — a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
+      else mount.appendChild(el("div", "panel center", "Nice momentum. The feed keeps adapting to exactly what you need next."));
+      const bar = el("div", "qbar");
+      const go = el("button", "btn primary", tired ? "Push on" : "Keep going");
+      go.onclick = function () { render(); window.scrollTo(0, 0); };
+      const done = el("button", "btn", "Done for now");
+      done.onclick = function () { if (opts.onDone) opts.onDone(); };
+      bar.appendChild(go); bar.appendChild(done); mount.appendChild(bar);
+    }
+
+    function actionsRow(q, ok, rtState) {
+      const row = el("div", "row"); row.style.marginTop = "8px";
+      if (ok) {
+        const g = el("button", "btn sm ghost", "🤔 I guessed");
+        g.onclick = function () { rtState.guessed = !rtState.guessed; g.classList.toggle("on", rtState.guessed); g.textContent = rtState.guessed ? "✓ counted as a guess" : "🤔 I guessed"; };
+        row.appendChild(g);
+      }
+      return row;
+    }
+    function nextRow(q, ok, rt, rtState) {
+      const bar = el("div", "qbar");
+      const b = el("button", "btn primary", "Next →");
+      b.onclick = function () { document.onkeydown = null; proceed(q, ok, rt, rtState.guessed); };
+      bar.appendChild(b); mount.appendChild(bar); b.focus();
+    }
+
+    function renderItem(q, t0) {
+      const rtState = { guessed: false };
+      if (q.type === "listen") {
+        const ab = el("div", "row"); ab.style.cssText = "margin-bottom:13px;align-items:center;gap:11px";
+        ab.appendChild(QUIZ.speakerBtn(q.say, "fr-FR", "big"));
+        ab.appendChild(el("div", "muted", "🎧 Listen, then answer."));
+        mount.appendChild(ab);
+        if (QUIZ.canSpeak) setTimeout(function () { QUIZ.speak(q.say, "fr-FR"); }, 260);
+      }
+      mount.appendChild(el("h2", "q-stem", esc(q.q || "What did you hear?")));
+
+      if (q.type === "fill") {
+        const rowi = el("div", "fill-in"); const inp = el("input"); inp.type = "text"; inp.autocomplete = "off"; inp.spellcheck = false; inp.placeholder = "Type your answer…";
+        const go = el("button", "btn primary", "Check"); rowi.appendChild(inp); rowi.appendChild(go); mount.appendChild(rowi); inp.focus();
+        let done = false;
+        function check() { if (done || !norm(inp.value)) return inp.focus && inp.focus(); const ok = fuzzyMatch(inp.value, q.answers); const rt = Date.now() - t0; done = true; inp.disabled = true; go.disabled = true; inp.classList.add(ok ? "correct" : "wrong"); mount.appendChild(buildFeedback(ok, (q.answers || [])[0], q)); const a = actionsRow(q, ok, rtState); if (!ok) { const m = el("button", "btn sm good", "I was right →"); m.onclick = function () { m.remove(); proceed(q, true, rt, false); }; a.appendChild(m); } if (a.children.length) mount.appendChild(a); nextRow(q, ok, rt, rtState); }
+        go.onclick = check; inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); if (!done) check(); } };
+        return;
+      }
+      // mc / tf / listen → buttons
+      let opts2, ansIdx;
+      if (q.type === "tf") { opts2 = [["True", true], ["False", false]]; }
+      else { const order = SRS.shuffle(q.choices.map((_, i) => i)); opts2 = order.map(i => [q.choices[i], i]); ansIdx = q.answer; }
+      const wrap = el("div", "choices"); const btns = [];
+      opts2.forEach(function (pair, n) {
+        const c = el("button", "choice");
+        c.appendChild(el("span", "key", String.fromCharCode(65 + n)));
+        c.appendChild(el("span", "ct", esc(pair[0])));
+        c.onclick = function () {
+          const ok = q.type === "tf" ? (pair[1] === q.answer) : (pair[1] === ansIdx);
+          const rt = Date.now() - t0;
+          btns.forEach(function (b, k) { b.disabled = true; const ok2 = q.type === "tf" ? (opts2[k][1] === q.answer) : (opts2[k][1] === ansIdx); if (ok2) b.classList.add("correct"); else if (b === c) b.classList.add("wrong"); else b.classList.add("dim"); });
+          const correctText = q.type === "tf" ? (q.answer ? "True" : "False") : q.choices[q.answer];
+          mount.appendChild(buildFeedback(ok, correctText, q));
+          const a = actionsRow(q, ok, rtState); if (a.children.length) mount.appendChild(a);
+          nextRow(q, ok, rt, rtState); document.onkeydown = null;
+        };
+        wrap.appendChild(c); btns.push(c);
+      });
+      mount.appendChild(wrap);
+      document.onkeydown = function (e) { const k = e.key.toLowerCase(); let idx = -1; if (k >= "1" && k <= "9") idx = +k - 1; else if (k >= "a" && k <= "z") idx = k.charCodeAt(0) - 97; if (idx >= 0 && idx < btns.length && !btns[idx].disabled) { e.preventDefault(); btns[idx].click(); } };
+    }
+
+    render();
+  };
+
   /* ---------------- image-occlusion diagram runner ----------------
      Shows a diagram with every label hidden; you recall each part
      (typed, lenient) one at a time. */

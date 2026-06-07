@@ -86,6 +86,8 @@
       streak: { count: 0, last: 0, best: 0 },
       activity: {},   // 'yyyy-mm-dd' -> count
       masteryHist: {},// 'yyyy-mm-dd' -> overall mastery % (snapshot)
+      subjectSkill: {},// subjectId -> Elo skill rating (adaptive engine)
+      examDates: {},  // subjectId -> 'yyyy-mm-dd'
       settings: { theme: "dark" },
     };
   };
@@ -99,7 +101,7 @@
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -144,6 +146,21 @@
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
   STUDY.dayKey = dayKey;
+
+  /* ---------- exam dates (for adaptive urgency weighting) ---------- */
+  STUDY.FINALS_DEFAULT = "2026-06-09";
+  STUDY.setExamDate = function (subjectId, dateStr) {
+    if (dateStr) store.examDates[subjectId] = dateStr; else delete store.examDates[subjectId];
+    STUDY.save();
+  };
+  STUDY.examDate = function (subjectId) { return store.examDates[subjectId] || null; };
+  STUDY.daysToExam = function (subjectId) {
+    const d = store.examDates[subjectId] || STUDY.FINALS_DEFAULT;
+    const parts = d.split("-");
+    const exam = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    return Math.round((exam - now) / DAY);
+  };
 
   /* ---------- streak ---------- */
   STUDY.touchStreak = function () {
