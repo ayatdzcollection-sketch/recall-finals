@@ -309,14 +309,15 @@
       const seg2 = el("div", "seg"); seg2.style.marginBottom = "12px";
       [["mixed", "🔀 Mixed"], ["easy", "🟢 Easy"], ["hard", "🔴 Hard"]].forEach(function (o) {
         const b = el("button", lvl === o[0] ? "on" : "", o[1]);
-        b.onclick = function () { STUDY.store().settings.practiceLevel = o[0]; STUDY.save(); go("#/t/" + id + "/practice"); };
+        // re-render in place: go() to the same hash would not fire a route change
+        b.onclick = function () { STUDY.store().settings.practiceLevel = o[0]; STUDY.save(); renderTopic(id, "practice"); };
         seg2.appendChild(b);
       });
       body.appendChild(seg2);
       body.appendChild(el("p", "muted", lvl === "easy" ? "Easy: definitions & recall, balanced across every concept in the lesson." : lvl === "hard" ? "Hard: examples, discrimination & application, still covering every concept." : "A balanced mix across every concept in the lesson."));
       const qmount = el("div"); body.appendChild(qmount);
-      // concept-balanced set so every lesson idea is covered (not just the common ones)
-      const set = STUDY.practiceSet(id, lvl);
+      // concept-balanced set, capped to a focused ~20 (big banks live in For You / the final quiz)
+      const set = STUDY.practiceSet(id, lvl, 20);
       QUIZ.run(qmount, set, {
         showTags: false, doneLabel: "Back to topic", mode: "practice", level: lvl === "easy" ? 1 : lvl === "hard" ? 2 : 0,
         onResults: (state) => STUDY.markDone(id, "practice", state.correct / Math.max(1, state.list.length)),

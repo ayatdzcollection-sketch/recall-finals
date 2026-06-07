@@ -54,13 +54,21 @@
             return true;
           });
           if (cands.length < 3) return;
-          const cross = cands.filter(x => x.t !== t);
-          if (cross.length >= 3) cands = cross;
+          // PREFER same-topic distractors: a R&J character question should have
+          // other Verona characters as wrong options, not an essay-writing definition.
+          const same = cands.filter(x => x.t === t);
+          if (same.length >= 3) cands = same;
           cands.sort((a, b) => Math.abs(a.c.back.length - answer.length) - Math.abs(b.c.back.length - answer.length));
-          const chosen = shuffle0(cands.slice(0, Math.min(7, cands.length))).slice(0, 3);
-          const choices = shuffle0([answer, chosen[0].c.back, chosen[1].c.back, chosen[2].c.back]);
+          // keep a pool of plausible distractors so the wrong options can vary each serve
+          const poolArr = [];
+          shuffle0(cands.slice(0, Math.min(10, cands.length))).forEach(function (x) {
+            const b = x.c.back; if (poolArr.map(norm).indexOf(norm(b)) < 0) poolArr.push(b);
+          });
+          if (poolArr.length < 3) return;
+          const chosen = poolArr.slice(0, 3);
+          const choices = shuffle0([answer, chosen[0], chosen[1], chosen[2]]);
           if (new Set(choices.map(norm)).size < 4) return;
-          add.push({ type: "mc", q: stem, choices: choices, answer: choices.indexOf(answer) });
+          add.push({ type: "mc", q: stem, choices: choices, answer: choices.indexOf(answer), pool: poolArr });
           existing[norm(stem)] = 1;
         });
         if (add.length) STUDY.addQuestions(t, add);

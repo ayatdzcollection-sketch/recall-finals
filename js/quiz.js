@@ -200,7 +200,7 @@
       mount.appendChild(bar);
       if (QUIZ.canSpeak) setTimeout(function () { QUIZ.speak(q.say, "fr-FR"); }, 280);
       mount.appendChild(el("h2", "q-stem", esc(q.q || "What did you hear?")));
-      const order = q._order || (q._order = SRS.shuffle(q.choices.map((_, i) => i)));
+      const order = SRS.shuffle(q.choices.map((_, i) => i));
       const wrap = el("div", "choices"); const btns = [];
       order.forEach(function (oi, n) {
         const c = el("button", "choice");
@@ -252,9 +252,10 @@
 
     /* ----- multiple choice ----- */
     function renderMC(q) {
+      if (STUDY.varyGenerated) STUDY.varyGenerated(q);          // vary distractors (generated items)
       mount.appendChild(el("h2", "q-stem", esc(q.q)));
-      // build display order (shuffle) keeping track of correct
-      const order = q._order || (q._order = SRS.shuffle(q.choices.map((_, i) => i)));
+      // reshuffle positions every serve so the answer slot can't be memorised
+      const order = SRS.shuffle(q.choices.map((_, i) => i));
       const wrap = el("div", "choices");
       const btns = [];
       order.forEach(function (origIdx, n) {
@@ -669,6 +670,7 @@
         return;
       }
       // mc / tf / listen → buttons
+      if (STUDY.varyGenerated) STUDY.varyGenerated(q);          // vary distractors (generated items)
       let opts2, ansIdx;
       if (q.type === "tf") { opts2 = [["True", true], ["False", false]]; }
       else { const order = SRS.shuffle(q.choices.map((_, i) => i)); opts2 = order.map(i => [q.choices[i], i]); ansIdx = q.answer; }

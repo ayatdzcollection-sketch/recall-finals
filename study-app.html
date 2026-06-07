@@ -1073,8 +1073,10 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     });
     return best;
   };
-  // build a practice set for a topic at a level, balanced so EVERY concept is covered
-  STUDY.practiceSet = function (topicId, level) {
+  // build a practice set for a topic at a level, balanced so EVERY concept is
+  // covered, then capped to maxTotal (~20) so a session never feels bloated.
+  // The big banks stay for the For You feed / final quiz, not topic practice.
+  STUDY.practiceSet = function (topicId, level, maxTotal) {
     const entry = STUDY.topicIndex[topicId]; if (!entry) return [];
     const topic = entry.topic, sh = STUDY.SRS.shuffle;
     const concepts = topicConcepts(topic);
@@ -1085,15 +1087,39 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const CAP = 6, picked = {};
     Object.keys(groups).forEach(function (c) {
       let g = groups[c];
-      if (want) { const pref = g.filter(q => STUDY.levelOf(q) === want); g = pref.length ? pref : g; }  // fallback keeps coverage
-      picked[c] = sh(g).slice(0, CAP);
+      if (want === 2) {
+        // HARD = genuine application/discrimination only; never fall back to the
+        // auto-generated recall items, so Hard actually feels hard.
+        let pref = g.filter(q => STUDY.levelOf(q) === 2);
+        if (!pref.length) pref = g.filter(q => !q.gen && STUDY.levelOf(q) !== 1);
+        g = pref;                                   // may be empty → concept skipped
+      } else if (want === 1) {
+        const pref = g.filter(q => STUDY.levelOf(q) === 1);
+        g = pref.length ? pref : g;                 // fallback keeps coverage
+      }
+      if (g.length) picked[c] = sh(g).slice(0, CAP);
     });
     // round-robin across concepts → balanced + interleaved
     const keys = sh(Object.keys(picked)), ptr = {}; let total = 0;
     keys.forEach(k => { ptr[k] = 0; total += picked[k].length; });
     const out = [];
-    while (out.length < total) { let any = false; keys.forEach(function (k) { if (ptr[k] < picked[k].length) { out.push(picked[k][ptr[k]++]); any = true; } }); if (!any) break; }
-    return out;
+    while (out.length < total) { let any = false; keys.forEach(function (k) { if (picked[k] && ptr[k] < picked[k].length) { out.push(picked[k][ptr[k]++]); any = true; } }); if (!any) break; }
+    return maxTotal ? out.slice(0, maxTotal) : out;
+  };
+
+  // ANTI-MEMORISATION: for an auto-generated question that carries a distractor
+  // pool, resample its wrong options in place each time it's served, so you can't
+  // memorise "the answer is the one about cousins." Mutates the shared item so
+  // the misconception radar (which reads the live choices) stays consistent.
+  STUDY.varyGenerated = function (q) {
+    if (!q || q.gen !== true || q.type !== "mc" || !Array.isArray(q.pool) || q.pool.length < 3) return;
+    const ans = q.choices[q.answer]; if (ans == null) return;
+    const sh = STUDY.SRS.shuffle;
+    const picks = sh(q.pool.filter(b => b !== ans)).slice(0, 3);
+    if (picks.length < 3) return;
+    const choices = sh([ans].concat(picks));
+    const seen = {}; for (let i = 0; i < choices.length; i++) { const k = String(choices[i]).toLowerCase().trim(); if (seen[k]) return; seen[k] = 1; }
+    q.choices = choices; q.answer = choices.indexOf(ans);
   };
 
   global.STUDY = STUDY;
@@ -4228,13 +4254,21 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             return true;
           });
           if (cands.length < 3) return;
-          const cross = cands.filter(x => x.t !== t);
-          if (cross.length >= 3) cands = cross;
+          // PREFER same-topic distractors: a R&J character question should have
+          // other Verona characters as wrong options, not an essay-writing definition.
+          const same = cands.filter(x => x.t === t);
+          if (same.length >= 3) cands = same;
           cands.sort((a, b) => Math.abs(a.c.back.length - answer.length) - Math.abs(b.c.back.length - answer.length));
-          const chosen = shuffle0(cands.slice(0, Math.min(7, cands.length))).slice(0, 3);
-          const choices = shuffle0([answer, chosen[0].c.back, chosen[1].c.back, chosen[2].c.back]);
+          // keep a pool of plausible distractors so the wrong options can vary each serve
+          const poolArr = [];
+          shuffle0(cands.slice(0, Math.min(10, cands.length))).forEach(function (x) {
+            const b = x.c.back; if (poolArr.map(norm).indexOf(norm(b)) < 0) poolArr.push(b);
+          });
+          if (poolArr.length < 3) return;
+          const chosen = poolArr.slice(0, 3);
+          const choices = shuffle0([answer, chosen[0], chosen[1], chosen[2]]);
           if (new Set(choices.map(norm)).size < 4) return;
-          add.push({ type: "mc", q: stem, choices: choices, answer: choices.indexOf(answer) });
+          add.push({ type: "mc", q: stem, choices: choices, answer: choices.indexOf(answer), pool: poolArr });
           existing[norm(stem)] = 1;
         });
         if (add.length) STUDY.addQuestions(t, add);
@@ -4561,7 +4595,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       mount.appendChild(bar);
       if (QUIZ.canSpeak) setTimeout(function () { QUIZ.speak(q.say, "fr-FR"); }, 280);
       mount.appendChild(el("h2", "q-stem", esc(q.q || "What did you hear?")));
-      const order = q._order || (q._order = SRS.shuffle(q.choices.map((_, i) => i)));
+      const order = SRS.shuffle(q.choices.map((_, i) => i));
       const wrap = el("div", "choices"); const btns = [];
       order.forEach(function (oi, n) {
         const c = el("button", "choice");
@@ -4613,9 +4647,10 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
     /* ----- multiple choice ----- */
     function renderMC(q) {
+      if (STUDY.varyGenerated) STUDY.varyGenerated(q);          // vary distractors (generated items)
       mount.appendChild(el("h2", "q-stem", esc(q.q)));
-      // build display order (shuffle) keeping track of correct
-      const order = q._order || (q._order = SRS.shuffle(q.choices.map((_, i) => i)));
+      // reshuffle positions every serve so the answer slot can't be memorised
+      const order = SRS.shuffle(q.choices.map((_, i) => i));
       const wrap = el("div", "choices");
       const btns = [];
       order.forEach(function (origIdx, n) {
@@ -5030,6 +5065,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         return;
       }
       // mc / tf / listen → buttons
+      if (STUDY.varyGenerated) STUDY.varyGenerated(q);          // vary distractors (generated items)
       let opts2, ansIdx;
       if (q.type === "tf") { opts2 = [["True", true], ["False", false]]; }
       else { const order = SRS.shuffle(q.choices.map((_, i) => i)); opts2 = order.map(i => [q.choices[i], i]); ansIdx = q.answer; }
@@ -5949,14 +5985,15 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const seg2 = el("div", "seg"); seg2.style.marginBottom = "12px";
       [["mixed", "🔀 Mixed"], ["easy", "🟢 Easy"], ["hard", "🔴 Hard"]].forEach(function (o) {
         const b = el("button", lvl === o[0] ? "on" : "", o[1]);
-        b.onclick = function () { STUDY.store().settings.practiceLevel = o[0]; STUDY.save(); go("#/t/" + id + "/practice"); };
+        // re-render in place: go() to the same hash would not fire a route change
+        b.onclick = function () { STUDY.store().settings.practiceLevel = o[0]; STUDY.save(); renderTopic(id, "practice"); };
         seg2.appendChild(b);
       });
       body.appendChild(seg2);
       body.appendChild(el("p", "muted", lvl === "easy" ? "Easy: definitions & recall, balanced across every concept in the lesson." : lvl === "hard" ? "Hard: examples, discrimination & application, still covering every concept." : "A balanced mix across every concept in the lesson."));
       const qmount = el("div"); body.appendChild(qmount);
-      // concept-balanced set so every lesson idea is covered (not just the common ones)
-      const set = STUDY.practiceSet(id, lvl);
+      // concept-balanced set, capped to a focused ~20 (big banks live in For You / the final quiz)
+      const set = STUDY.practiceSet(id, lvl, 20);
       QUIZ.run(qmount, set, {
         showTags: false, doneLabel: "Back to topic", mode: "practice", level: lvl === "easy" ? 1 : lvl === "hard" ? 2 : 0,
         onResults: (state) => STUDY.markDone(id, "practice", state.correct / Math.max(1, state.list.length)),

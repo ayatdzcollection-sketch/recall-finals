@@ -600,8 +600,10 @@
     });
     return best;
   };
-  // build a practice set for a topic at a level, balanced so EVERY concept is covered
-  STUDY.practiceSet = function (topicId, level) {
+  // build a practice set for a topic at a level, balanced so EVERY concept is
+  // covered, then capped to maxTotal (~20) so a session never feels bloated.
+  // The big banks stay for the For You feed / final quiz, not topic practice.
+  STUDY.practiceSet = function (topicId, level, maxTotal) {
     const entry = STUDY.topicIndex[topicId]; if (!entry) return [];
     const topic = entry.topic, sh = STUDY.SRS.shuffle;
     const concepts = topicConcepts(topic);
@@ -612,15 +614,39 @@
     const CAP = 6, picked = {};
     Object.keys(groups).forEach(function (c) {
       let g = groups[c];
-      if (want) { const pref = g.filter(q => STUDY.levelOf(q) === want); g = pref.length ? pref : g; }  // fallback keeps coverage
-      picked[c] = sh(g).slice(0, CAP);
+      if (want === 2) {
+        // HARD = genuine application/discrimination only; never fall back to the
+        // auto-generated recall items, so Hard actually feels hard.
+        let pref = g.filter(q => STUDY.levelOf(q) === 2);
+        if (!pref.length) pref = g.filter(q => !q.gen && STUDY.levelOf(q) !== 1);
+        g = pref;                                   // may be empty → concept skipped
+      } else if (want === 1) {
+        const pref = g.filter(q => STUDY.levelOf(q) === 1);
+        g = pref.length ? pref : g;                 // fallback keeps coverage
+      }
+      if (g.length) picked[c] = sh(g).slice(0, CAP);
     });
     // round-robin across concepts → balanced + interleaved
     const keys = sh(Object.keys(picked)), ptr = {}; let total = 0;
     keys.forEach(k => { ptr[k] = 0; total += picked[k].length; });
     const out = [];
-    while (out.length < total) { let any = false; keys.forEach(function (k) { if (ptr[k] < picked[k].length) { out.push(picked[k][ptr[k]++]); any = true; } }); if (!any) break; }
-    return out;
+    while (out.length < total) { let any = false; keys.forEach(function (k) { if (picked[k] && ptr[k] < picked[k].length) { out.push(picked[k][ptr[k]++]); any = true; } }); if (!any) break; }
+    return maxTotal ? out.slice(0, maxTotal) : out;
+  };
+
+  // ANTI-MEMORISATION: for an auto-generated question that carries a distractor
+  // pool, resample its wrong options in place each time it's served, so you can't
+  // memorise "the answer is the one about cousins." Mutates the shared item so
+  // the misconception radar (which reads the live choices) stays consistent.
+  STUDY.varyGenerated = function (q) {
+    if (!q || q.gen !== true || q.type !== "mc" || !Array.isArray(q.pool) || q.pool.length < 3) return;
+    const ans = q.choices[q.answer]; if (ans == null) return;
+    const sh = STUDY.SRS.shuffle;
+    const picks = sh(q.pool.filter(b => b !== ans)).slice(0, 3);
+    if (picks.length < 3) return;
+    const choices = sh([ans].concat(picks));
+    const seen = {}; for (let i = 0; i < choices.length; i++) { const k = String(choices[i]).toLowerCase().trim(); if (seen[k]) return; seen[k] = 1; }
+    q.choices = choices; q.answer = choices.indexOf(ans);
   };
 
   global.STUDY = STUDY;
