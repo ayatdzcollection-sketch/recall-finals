@@ -43,6 +43,7 @@
       anon: st.tele.anonId, sess: SESSION, app: "recall", v: APP_VERSION,
       t: e.t, item: e.it || null, topic: e.tp || null, subject: e.s || null,
       grade: e.g, correct: e.ok, rt: e.rt || null, mode: e.m || null, level: e.lv || null,
+      chosen: (typeof e.ch === "number" ? e.ch : null),   // which distractor was picked (wrong MC)
     }));
     const body = JSON.stringify(rows);
     const headers = { "Content-Type": "application/json", "apikey": KEY, "Authorization": "Bearer " + KEY, "Prefer": "return=minimal" };
