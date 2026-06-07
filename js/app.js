@@ -102,7 +102,7 @@
     actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
     actions.appendChild(actionCard("", "📥", "Check a Test", "Import weak spots from a graded test", () => go("#/import")));
     actions.appendChild(actionCard("", "⭐", "Starred", "Your bookmarked questions", () => go("#/starred")));
-    actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
+    actions.appendChild(actionCard("", "📊", "My Progress", "Readiness, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
     // work on these, items you flagged (Again/Hard) or missed
@@ -177,7 +177,7 @@
     const right = el("div", "prog");
     if (prog.due) right.appendChild(el("div", "due-pill", prog.due + " due"));
     const ring = el("div", "ring");
-    const pct = Math.round(prog.mastery * 100);
+    const pct = STUDY.ADAPT.readiness(s.id);   // unified "ready" metric (builds on each topic's mastery)
     ring.style.setProperty("--p", pct);
     ring.style.setProperty("--sub", s.accent);
     ring.appendChild(el("div", "inner", pct + "%"));
@@ -187,12 +187,6 @@
     right.appendChild(dots);
     card.appendChild(right);
     return card;
-  }
-
-  function overallMastery() {
-    let sum = 0, n = 0;
-    STUDY.subjects.forEach(function (s) { sum += STUDY.subjectProgress(s.id).mastery; n++; });
-    return n ? Math.round(sum / n * 100) : 0;
   }
 
   function footerNote() {
@@ -221,7 +215,7 @@
 
     const prog = STUDY.subjectProgress(s.id);
     const chips = el("div", "chips");
-    chips.appendChild(statChip("🎯", Math.round(prog.mastery * 100) + "%", "mastery"));
+    chips.appendChild(statChip("🚀", STUDY.ADAPT.readiness(s.id) + "%", "ready"));
     chips.appendChild(statChip("📚", prog.topicsSeen + "/" + prog.topics, "topics started"));
     chips.appendChild(statChip("🔁", prog.due, "due now"));
     app.appendChild(chips);
@@ -671,7 +665,7 @@
     if (keys.length < 2) return null;
     const pts = keys.slice(-21).map(k => st.masteryHist[k]);
     const box = el("div", "panel");
-    box.appendChild(el("div", "vcap", "Overall mastery over time"));
+    box.appendChild(el("div", "vcap", "Overall readiness over time"));
     const W = 300, H = 70, max = 100;
     const step = pts.length > 1 ? W / (pts.length - 1) : W;
     const path = pts.map((v, i) => (i ? "L" : "M") + (i * step).toFixed(1) + " " + (H - v / max * (H - 8) - 4).toFixed(1)).join(" ");
@@ -786,13 +780,13 @@
     clear();
     app.appendChild(topbar());
     app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Progress" }]));
-    app.appendChild(el("div", "hero", "<h1>Your progress</h1><p class='muted'>Mastery grows as you get items right across spaced sessions.</p>"));
+    app.appendChild(el("div", "hero", "<h1>Your progress</h1><p class='muted'>Readiness grows as you recall items correctly across spaced sessions. Finishing a topic's sections gets you started; getting items right over time is what makes you ready.</p>"));
 
     const st = STUDY.store();
     const chips = el("div", "chips");
     chips.appendChild(statChip("🔥", st.streak.count, "day streak"));
     chips.appendChild(statChip("🏆", st.streak.best || 0, "best streak"));
-    chips.appendChild(statChip("🎯", overallMastery() + "%", "overall"));
+    chips.appendChild(statChip("🚀", STUDY.ADAPT.overallReadiness() + "%", "overall ready"));
     chips.appendChild(statChip("🔁", STUDY.overallDue(), "due now"));
     app.appendChild(chips);
 
@@ -810,7 +804,7 @@
       row.appendChild(el("div", "muted", "🚀 " + STUDY.ADAPT.readiness(s.id) + "% · " + prog.studied + "/" + prog.items));
       card.appendChild(row);
       const bar = el("div", "bar"); bar.style.setProperty("--sub", s.accent);
-      bar.appendChild(el("i")).style.width = Math.round(prog.mastery * 100) + "%";
+      bar.appendChild(el("i")).style.width = STUDY.ADAPT.readiness(s.id) + "%";
       card.appendChild(bar);
       card.style.cursor = "pointer"; card.onclick = () => go("#/s/" + s.id);
       app.appendChild(card);

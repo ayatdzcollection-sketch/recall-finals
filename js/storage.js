@@ -217,10 +217,8 @@
     }
     store.streak.last = now;
     store.streak.best = Math.max(store.streak.best || 0, store.streak.count);
-    // snapshot overall mastery for today (for the progress graph)
-    let mSum = 0, n = 0;
-    STUDY.subjects.forEach(function (s) { mSum += STUDY.subjectProgress(s.id).mastery; n++; });
-    if (n) store.masteryHist[today] = Math.round(mSum / n * 100);
+    // snapshot overall readiness for today (for the progress graph)
+    if (STUDY.ADAPT) store.masteryHist[today] = STUDY.ADAPT.overallReadiness();
     STUDY.save();
   };
 
