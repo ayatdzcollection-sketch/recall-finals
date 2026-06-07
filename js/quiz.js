@@ -603,7 +603,7 @@
     }
 
     function proceed(q, ok, rt, guessed) {
-      ADAPT.update(q, ok, rt, guessed);
+      ADAPT.update(q, ok, rt, guessed, opts.subjectId ? "feed_subj" : "feed");
       answered++; sinceMilestone++; if (ok) correct++;
       windowOk.push(ok ? 1 : 0); if (windowOk.length > 8) windowOk.shift();
       ctx.recent.push(q.id); if (ctx.recent.length > 8) ctx.recent.shift();

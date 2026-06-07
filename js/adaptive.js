@@ -35,8 +35,8 @@
   const FAST = { mc: 4500, tf: 3500, fill: 9000, listen: 6500 };
 
   // ---- update after one answer ----
-  // correct: bool, rtMs: response time, guess: user flagged "lucky guess"
-  ADAPT.update = function (q, correct, rtMs, guess) {
+  // correct: bool, rtMs: response time, guess: user flagged "lucky guess", mode: log label
+  ADAPT.update = function (q, correct, rtMs, guess, mode) {
     const store = STUDY.store(), now = Date.now();
     const fast = rtMs && rtMs < (FAST[q.type] || 5000);
     // response-time + confidence → an effective grade (drives spacing)
@@ -47,7 +47,7 @@
     else grade = 2;
 
     let st = store.srs[q.id];
-    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // scheduling (box+stability+due) + log
+    STUDY.recordItem(q.id, grade, q.topicId, { mode: mode || "feed", rt: rtMs || 0 });   // scheduling (box+stability+due) + log
     st = store.srs[q.id];                           // now exists
     st.rt = rtMs || st.rt || 0;
 

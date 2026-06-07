@@ -1177,8 +1177,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   const FAST = { mc: 4500, tf: 3500, fill: 9000, listen: 6500 };
 
   // ---- update after one answer ----
-  // correct: bool, rtMs: response time, guess: user flagged "lucky guess"
-  ADAPT.update = function (q, correct, rtMs, guess) {
+  // correct: bool, rtMs: response time, guess: user flagged "lucky guess", mode: log label
+  ADAPT.update = function (q, correct, rtMs, guess, mode) {
     const store = STUDY.store(), now = Date.now();
     const fast = rtMs && rtMs < (FAST[q.type] || 5000);
     // response-time + confidence → an effective grade (drives spacing)
@@ -1189,7 +1189,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     else grade = 2;
 
     let st = store.srs[q.id];
-    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // scheduling (box+stability+due) + log
+    STUDY.recordItem(q.id, grade, q.topicId, { mode: mode || "feed", rt: rtMs || 0 });   // scheduling (box+stability+due) + log
     st = store.srs[q.id];                           // now exists
     st.rt = rtMs || st.rt || 0;
 
@@ -1497,6 +1497,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { front: "Stanza", back: "A grouped set of lines in a poem, set off by a blank line." },
           { front: "Rhyme scheme", back: "The pattern of rhymes at the ends of lines (e.g., ABAB)." },
           { front: "Meter", back: "The rhythmic structure / beat pattern of a poem." },
+          { front: "Speaker", back: "The voice or persona telling a poem — not necessarily the poet themselves." },
         ],
         questions: pool("sound"),
       },
@@ -3541,6 +3542,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     e("stanza", "A STANZA in a poem is:", ["a single rhyme", "a group of lines set off by a blank line", "the poem's beat", "the last word of a line"], 1),
     h("rhyme", "A poem whose line endings follow the pattern A-B-A-B has a defined:", ["meter", "rhyme scheme", "stanza", "tone"], 1),
     e("meter", "METER in poetry refers to its:", ["rhyme pattern", "rhythmic structure / beat", "number of stanzas", "main idea"], 1),
+    e("speaker", "The SPEAKER of a poem is:", ["always the poet themselves", "the voice or persona telling the poem", "the rhyme pattern", "the main idea"], 1, "The speaker is the voice of the poem, which may differ from the poet."),
+    h("speaker", "A poem is narrated by a lonely lighthouse keeper. The lighthouse keeper is the poem's:", ["meter", "speaker", "stanza", "rhyme scheme"], 1),
   ]);
 
   /* ===== ELA · Story elements (harder) ===== */
@@ -4626,7 +4629,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     }
 
     function proceed(q, ok, rt, guessed) {
-      ADAPT.update(q, ok, rt, guessed);
+      ADAPT.update(q, ok, rt, guessed, opts.subjectId ? "feed_subj" : "feed");
       answered++; sinceMilestone++; if (ok) correct++;
       windowOk.push(ok ? 1 : 0); if (windowOk.length > 8) windowOk.shift();
       ctx.recent.push(q.id); if (ctx.recent.length > 8) ctx.recent.shift();

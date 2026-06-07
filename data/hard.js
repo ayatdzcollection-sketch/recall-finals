@@ -51,6 +51,8 @@
     e("stanza", "A STANZA in a poem is:", ["a single rhyme", "a group of lines set off by a blank line", "the poem's beat", "the last word of a line"], 1),
     h("rhyme", "A poem whose line endings follow the pattern A-B-A-B has a defined:", ["meter", "rhyme scheme", "stanza", "tone"], 1),
     e("meter", "METER in poetry refers to its:", ["rhyme pattern", "rhythmic structure / beat", "number of stanzas", "main idea"], 1),
+    e("speaker", "The SPEAKER of a poem is:", ["always the poet themselves", "the voice or persona telling the poem", "the rhyme pattern", "the main idea"], 1, "The speaker is the voice of the poem, which may differ from the poet."),
+    h("speaker", "A poem is narrated by a lonely lighthouse keeper. The lighthouse keeper is the poem's:", ["meter", "speaker", "stanza", "rhyme scheme"], 1),
   ]);
 
   /* ===== ELA · Story elements (harder) ===== */

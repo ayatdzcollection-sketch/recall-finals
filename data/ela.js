@@ -90,6 +90,7 @@
           { front: "Stanza", back: "A grouped set of lines in a poem, set off by a blank line." },
           { front: "Rhyme scheme", back: "The pattern of rhymes at the ends of lines (e.g., ABAB)." },
           { front: "Meter", back: "The rhythmic structure / beat pattern of a poem." },
+          { front: "Speaker", back: "The voice or persona telling a poem — not necessarily the poet themselves." },
         ],
         questions: pool("sound"),
       },
