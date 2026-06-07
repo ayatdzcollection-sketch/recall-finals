@@ -357,10 +357,11 @@
   // Inline lesson peek: overlays the lesson OVER the current screen (e.g. the For
   // You feed) so a wrong answer can pull up the relevant lesson without tearing
   // down the session. Two one-tap ways back, so you never lose your place.
-  STUDY.showLesson = function (topicId) {
+  STUDY.showLesson = function (topicId, fromItemId) {
     const e = STUDY.topicIndex[topicId]; if (!e) return;
     const t = e.topic, s = e.subject;
     if (document.querySelector(".sheet-back")) return;            // one at a time
+    if (STUDY.logUsage) STUDY.logUsage("lesson_peek", { it: fromItemId || "", tp: t.id, s: s.id });
     document.documentElement.style.setProperty("--accent", s.accent);
     const back = el("div", "sheet-back");
     const sheet = el("div", "sheet"); sheet.style.setProperty("--sub", s.accent);

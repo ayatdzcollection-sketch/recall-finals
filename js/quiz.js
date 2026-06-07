@@ -126,7 +126,7 @@
         // wrong → nudge the lesson; right → keep it available but quiet
         const lb = el("button", "btn sm" + (ok ? " ghost" : " good"), ok ? "📖 Review lesson" : "📖 Learn why");
         lb.onclick = function () {
-          if (STUDY.showLesson) STUDY.showLesson(q.topicId);     // inline overlay, stays in the session
+          if (STUDY.showLesson) STUDY.showLesson(q.topicId, q.id);   // inline overlay, stays in the session
           else if (STUDY.go) STUDY.go("#/t/" + q.topicId + "/learn");
         };
         row.appendChild(lb);

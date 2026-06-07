@@ -350,6 +350,27 @@
     }
   }
 
+  // lightweight non-graded analytics event (e.g. opening a lesson after a miss).
+  // Uses the same anonymous schema as graded events (item/topic/subject + mode),
+  // so it needs no backend change. Respects the telemetry opt-out.
+  STUDY.logUsage = function (kind, meta) {
+    const m = meta || {};
+    const ix = m.it ? STUDY.itemIndex[m.it] : null;
+    const ev = {
+      t: Date.now(), it: m.it || "", tp: m.tp || (ix && ix.topic.id) || "",
+      s: m.s || (ix && ix.subject ? ix.subject.id : ""), g: null, ok: null, rt: 0, m: kind || "usage", lv: 0,
+    };
+    if (!Array.isArray(store.log)) store.log = [];
+    store.log.push(ev);
+    if (store.log.length > 6000) store.log.splice(0, store.log.length - 6000);
+    if (store.settings.telemetry !== false) {
+      if (!Array.isArray(store.teleQueue)) store.teleQueue = [];
+      store.teleQueue.push(ev);
+      if (store.teleQueue.length > 10000) store.teleQueue.splice(0, store.teleQueue.length - 10000);
+    }
+    STUDY.save();
+  };
+
   STUDY.markSeen = function (topicId) {
     store.seen[topicId] = Date.now();
     const d = store.done[topicId] || (store.done[topicId] = {});
