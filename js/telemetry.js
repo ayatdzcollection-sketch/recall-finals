@@ -92,7 +92,7 @@
   const cclamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
   let CROWD = { items: {}, fetched: 0 };
 
-  function loadCrowd() { try { const r = localStorage.getItem(CROWD_KEY); if (r) CROWD = JSON.parse(r) || CROWD; } catch (e) { } }
+  function loadCrowd() { try { const r = localStorage.getItem(CROWD_KEY); if (r) { const p = JSON.parse(r); if (p && p.items) CROWD = p; } } catch (e) { } }
   function saveCrowd() { try { localStorage.setItem(CROWD_KEY, JSON.stringify(CROWD)); } catch (e) { } }
   function fetchCrowd() {
     if (!configured() || typeof fetch !== "function") return;
@@ -111,9 +111,9 @@
   STUDY.CROWD = {
     start: function () { loadCrowd(); if (!CROWD.fetched || Date.now() - CROWD.fetched > 6 * 3600 * 1000) fetchCrowd(); },
     refresh: fetchCrowd,
-    has: function () { return Object.keys(CROWD.items).length > 0; },
+    has: function () { return CROWD.items && Object.keys(CROWD.items).length > 0; },
     // raw per-item stat (or null). rate = crowd success rate; learners = distinct people
-    stat: function (id) { const s = CROWD.items[id]; if (!s || !s.n) return null; return { n: s.n, rate: s.c / s.n, rt: s.rt, learners: s.u }; },
+    stat: function (id) { const s = CROWD.items && CROWD.items[id]; if (!s || !s.n) return null; return { n: s.n, rate: s.c / s.n, rt: s.rt, learners: s.u }; },
     // crowd difficulty (Elo-ish) from success rate
     diff: function (id) { const s = this.stat(id); if (!s) return null; const r = cclamp(s.rate, 0.03, 0.97); return REF - 400 * Math.log(r / (1 - r)) / Math.LN10; },
     // blend crowd difficulty into a local estimate, weighted by sample size:
