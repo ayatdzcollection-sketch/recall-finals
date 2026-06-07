@@ -88,7 +88,9 @@
       masteryHist: {},// 'yyyy-mm-dd' -> overall mastery % (snapshot)
       subjectSkill: {},// subjectId -> Elo skill rating (adaptive engine)
       examDates: {},  // subjectId -> 'yyyy-mm-dd'
-      log: [],        // study-data event log (local, behavior only, no PII)
+      log: [],        // study-data event log (local, for your own export)
+      tele: {},       // anonymous telemetry state (anon id, last ping day)
+      teleQueue: [],  // outbound anonymous events awaiting upload
       settings: { theme: "dark" },
     };
   };
@@ -107,6 +109,8 @@
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
         if (!Array.isArray(store.log)) store.log = [];
+        if (!store.tele) store.tele = {};
+        if (!Array.isArray(store.teleQueue)) store.teleQueue = [];
         if (!store.settings) store.settings = { theme: "dark" };
       }
     } catch (e) { store = DEFAULT(); }
@@ -258,11 +262,18 @@
   function logEvent(id, grade, tid, indexed, meta) {
     if (!Array.isArray(store.log)) store.log = [];
     const m = meta || {};
-    store.log.push({
+    const ev = {
       t: Date.now(), it: id, tp: tid || "", s: indexed ? indexed.subject.id : "",
       g: grade, ok: grade >= 2 ? 1 : 0, rt: m.rt || 0, m: m.mode || "", lv: m.level || 0,
-    });
+    };
+    store.log.push(ev);                                  // local copy (for your own export)
     if (store.log.length > 6000) store.log.splice(0, store.log.length - 6000);
+    // queue an anonymous copy for upload (default on; opt-out in Settings)
+    if (store.settings.telemetry !== false) {
+      if (!Array.isArray(store.teleQueue)) store.teleQueue = [];
+      store.teleQueue.push(ev);
+      if (store.teleQueue.length > 10000) store.teleQueue.splice(0, store.teleQueue.length - 10000);
+    }
   }
 
   STUDY.markSeen = function (topicId) {

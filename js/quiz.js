@@ -544,6 +544,7 @@
       else { render(); window.scrollTo(0, 0); }
     }
     function finish() {
+      if (opts.onComplete) opts.onComplete();   // mark done as soon as the deck is finished
       mount.innerHTML = "";
       mount.appendChild(el("div", "result-big", "<div class='score'>✓</div><div class='lbl'>Reviewed " + list.length + " cards</div>"));
       const bar = el("div", "qbar");

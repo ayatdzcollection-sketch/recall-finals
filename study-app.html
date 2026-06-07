@@ -573,7 +573,9 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       masteryHist: {},// 'yyyy-mm-dd' -> overall mastery % (snapshot)
       subjectSkill: {},// subjectId -> Elo skill rating (adaptive engine)
       examDates: {},  // subjectId -> 'yyyy-mm-dd'
-      log: [],        // study-data event log (local, behavior only, no PII)
+      log: [],        // study-data event log (local, for your own export)
+      tele: {},       // anonymous telemetry state (anon id, last ping day)
+      teleQueue: [],  // outbound anonymous events awaiting upload
       settings: { theme: "dark" },
     };
   };
@@ -592,6 +594,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
         if (!Array.isArray(store.log)) store.log = [];
+        if (!store.tele) store.tele = {};
+        if (!Array.isArray(store.teleQueue)) store.teleQueue = [];
         if (!store.settings) store.settings = { theme: "dark" };
       }
     } catch (e) { store = DEFAULT(); }
@@ -743,11 +747,18 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   function logEvent(id, grade, tid, indexed, meta) {
     if (!Array.isArray(store.log)) store.log = [];
     const m = meta || {};
-    store.log.push({
+    const ev = {
       t: Date.now(), it: id, tp: tid || "", s: indexed ? indexed.subject.id : "",
       g: grade, ok: grade >= 2 ? 1 : 0, rt: m.rt || 0, m: m.mode || "", lv: m.level || 0,
-    });
+    };
+    store.log.push(ev);                                  // local copy (for your own export)
     if (store.log.length > 6000) store.log.splice(0, store.log.length - 6000);
+    // queue an anonymous copy for upload (default on; opt-out in Settings)
+    if (store.settings.telemetry !== false) {
+      if (!Array.isArray(store.teleQueue)) store.teleQueue = [];
+      store.teleQueue.push(ev);
+      if (store.teleQueue.length > 10000) store.teleQueue.splice(0, store.teleQueue.length - 10000);
+    }
   }
 
   STUDY.markSeen = function (topicId) {
@@ -1307,6 +1318,88 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   };
 
   STUDY.ADAPT = ADAPT;
+})(window.STUDY);
+
+</script>
+  <script>
+/* ============================================================
+   telemetry.js — anonymous, opt-out usage & learning data.
+   • No name/email/account, no third-party trackers, no fingerprinting.
+   • Sends only the same study events you can export yourself, plus a daily
+     heartbeat and a session-open ping (for active-user counts).
+   • Fully offline-safe: events queue locally and upload when online.
+   • INERT until ENDPOINT + KEY are set below (a Supabase REST URL + anon key).
+     Until then nothing leaves the device; events just buffer.
+   Opt out anytime in Settings → Privacy & data.
+   ============================================================ */
+(function (STUDY) {
+  "use strict";
+  // ---- backend config (fill in to enable remote storage) ----
+  const ENDPOINT = "";   // e.g. "https://YOURPROJECT.supabase.co/rest/v1/events"
+  const KEY = "";        // Supabase anon (public) key
+  const APP_VERSION = "1.0";
+  const BATCH = 200;
+
+  function uid() {
+    return (Date.now().toString(36) + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6));
+  }
+  function enabled() { return STUDY.store().settings.telemetry !== false; }
+  function configured() { return !!(ENDPOINT && KEY); }
+
+  let SESSION = null, started = false;
+
+  function queueUsage(kind) {
+    if (!enabled()) return;
+    const st = STUDY.store();
+    if (!Array.isArray(st.teleQueue)) st.teleQueue = [];
+    st.teleQueue.push({ t: Date.now(), it: "", tp: "", s: "", g: null, ok: null, rt: 0, m: kind, lv: 0 });
+  }
+
+  let flushing = false;
+  function flush(final) {
+    if (!enabled() || !configured()) return;
+    const st = STUDY.store();
+    const q = st.teleQueue || [];
+    if (!q.length || (flushing && !final)) return;
+    flushing = true;
+    const slice = q.slice(0, BATCH);
+    const rows = slice.map(e => ({
+      anon: st.tele.anonId, sess: SESSION, app: "recall", v: APP_VERSION,
+      t: e.t, item: e.it || null, topic: e.tp || null, subject: e.s || null,
+      grade: e.g, correct: e.ok, rt: e.rt || null, mode: e.m || null, level: e.lv || null,
+    }));
+    const body = JSON.stringify(rows);
+    const headers = { "Content-Type": "application/json", "apikey": KEY, "Authorization": "Bearer " + KEY, "Prefer": "return=minimal" };
+    fetch(ENDPOINT, { method: "POST", headers: headers, body: body, keepalive: !!final })
+      .then(function (r) { if (r && r.ok) { st.teleQueue = q.slice(slice.length); STUDY.save(); } })
+      .catch(function () {})
+      .finally(function () { flushing = false; });
+  }
+
+  // called by app.js boot() AFTER STUDY.load()
+  function start() {
+    if (started) return; started = true;
+    const st = STUDY.store();
+    if (!st.tele) st.tele = {};
+    if (!st.tele.anonId) { st.tele.anonId = uid(); st.tele.firstSeen = Date.now(); STUDY.save(); }
+    SESSION = uid();
+    // daily heartbeat (one per local day) for active-user counts
+    const day = STUDY.dayKey(Date.now());
+    if (st.tele.lastPing !== day) { st.tele.lastPing = day; queueUsage("heartbeat"); STUDY.save(); }
+    queueUsage("open");
+    flush(false);
+    setInterval(function () { flush(false); }, 45000);
+    window.addEventListener("online", function () { flush(false); });
+    window.addEventListener("pagehide", function () { flush(true); });
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") flush(true); });
+  }
+
+  STUDY.TELE = {
+    start: start, flush: flush, enabled: enabled, configured: configured,
+    pending: function () { return (STUDY.store().teleQueue || []).length; },
+    anonId: function () { return (STUDY.store().tele || {}).anonId || ""; },
+    setEnabled: function (on) { STUDY.store().settings.telemetry = !!on; if (!on) STUDY.store().teleQueue = []; STUDY.save(); },
+  };
 })(window.STUDY);
 
 </script>
@@ -4479,6 +4572,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       else { render(); window.scrollTo(0, 0); }
     }
     function finish() {
+      if (opts.onComplete) opts.onComplete();   // mark done as soon as the deck is finished
       mount.innerHTML = "";
       mount.appendChild(el("div", "result-big", "<div class='score'>✓</div><div class='lbl'>Reviewed " + list.length + " cards</div>"));
       const bar = el("div", "qbar");
@@ -5467,12 +5561,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       });
       tt.appendChild(dots);
       row.appendChild(tt);
-      let state = "○";
-      if (d.practice && tp.mastery >= 0.8) state = "✅";
-      else if (tp.due) state = "🔁";
-      else if (d.practice) state = "✓";
-      else if (tp.seen) state = "•";
-      row.appendChild(el("div", "state", state));
+      let state = "○", stitle = "Not started";
+      if (completion >= 1) { state = "✅"; stitle = "Finished all sections" + (tp.due ? " · some items are due to review" : ""); }
+      else if (tp.due) { state = "🔁"; stitle = tp.due + " item" + (tp.due > 1 ? "s" : "") + " due for review"; }
+      else if (d.practice) { state = "✓"; stitle = "Practiced"; }
+      else if (tp.seen) { state = "•"; stitle = "Started"; }
+      const sg = el("div", "state", state); sg.title = stitle;
+      row.appendChild(sg);
       app.appendChild(row);
     });
   }
@@ -5509,7 +5604,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
     if (tab === "cards") {
       if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic yet. Head to Practice.</div>'; return; }
-      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => { STUDY.markDone(id, "cards"); go("#/t/" + id + "/learn"); } });
+      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", mode: "flashcard", onComplete: () => STUDY.markDone(id, "cards"), onDone: () => { STUDY.markDone(id, "cards"); go("#/t/" + id + "/learn"); } });
     } else if (tab === "practice") {
       if (!t.questions || !t.questions.length) { body.innerHTML = '<div class="empty">No questions yet for this topic.</div>'; return; }
       const lvl = STUDY.store().settings.practiceLevel || "mixed";
@@ -6110,6 +6205,21 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
     card.appendChild(el("hr", "div"));
 
+    // privacy & data (anonymous, opt-out) — mentioned only here
+    const teleOn = STUDY.store().settings.telemetry !== false;
+    const prow = el("div", "row");
+    prow.appendChild(el("div", null, "<b>Privacy &amp; data</b><div class='muted' style='font-size:.85rem'>Recall shares <b>anonymous</b> usage &amp; study events (timestamps, subject/topic, right/wrong, speed, mode) to help improve the app. No name, account, location, or trackers. Turn it off anytime.</div>"));
+    prow.appendChild(el("div", "spacer"));
+    const pseg = el("div", "seg");
+    [["on", "On"], ["off", "Off"]].forEach(function (o) {
+      const b = el("button", (o[0] === "on") === teleOn ? "on" : "", o[1]);
+      b.onclick = function () { if (STUDY.TELE) STUDY.TELE.setEnabled(o[0] === "on"); else STUDY.store().settings.telemetry = (o[0] === "on"); STUDY.save(); renderSettings(); };
+      pseg.appendChild(b);
+    });
+    prow.appendChild(pseg);
+    card.appendChild(prow);
+    card.appendChild(el("hr", "div"));
+
     // reset
     card.appendChild(el("div", null, "<b>Reset</b><div class='muted' style='font-size:.85rem'>Wipe all progress on this device.</div>"));
     const rb = el("button", "btn sm", "Reset all progress"); rb.style.marginTop = "10px";
@@ -6173,6 +6283,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   /* ---------- boot ---------- */
   function boot() {
     STUDY.load();
+    if (STUDY.TELE) try { STUDY.TELE.start(); } catch (e) {}
     document.documentElement.setAttribute("data-theme", STUDY.theme());
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));

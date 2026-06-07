@@ -264,12 +264,13 @@
       });
       tt.appendChild(dots);
       row.appendChild(tt);
-      let state = "○";
-      if (d.practice && tp.mastery >= 0.8) state = "✅";
-      else if (tp.due) state = "🔁";
-      else if (d.practice) state = "✓";
-      else if (tp.seen) state = "•";
-      row.appendChild(el("div", "state", state));
+      let state = "○", stitle = "Not started";
+      if (completion >= 1) { state = "✅"; stitle = "Finished all sections" + (tp.due ? " · some items are due to review" : ""); }
+      else if (tp.due) { state = "🔁"; stitle = tp.due + " item" + (tp.due > 1 ? "s" : "") + " due for review"; }
+      else if (d.practice) { state = "✓"; stitle = "Practiced"; }
+      else if (tp.seen) { state = "•"; stitle = "Started"; }
+      const sg = el("div", "state", state); sg.title = stitle;
+      row.appendChild(sg);
       app.appendChild(row);
     });
   }
@@ -306,7 +307,7 @@
 
     if (tab === "cards") {
       if (!t.cards || !t.cards.length) { body.innerHTML = '<div class="empty">No flashcards for this topic yet. Head to Practice.</div>'; return; }
-      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", onDone: () => { STUDY.markDone(id, "cards"); go("#/t/" + id + "/learn"); } });
+      QUIZ.runCards(body, t.cards.slice(), { doneLabel: "Back to topic", mode: "flashcard", onComplete: () => STUDY.markDone(id, "cards"), onDone: () => { STUDY.markDone(id, "cards"); go("#/t/" + id + "/learn"); } });
     } else if (tab === "practice") {
       if (!t.questions || !t.questions.length) { body.innerHTML = '<div class="empty">No questions yet for this topic.</div>'; return; }
       const lvl = STUDY.store().settings.practiceLevel || "mixed";
@@ -907,6 +908,21 @@
     dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
     card.appendChild(el("hr", "div"));
 
+    // privacy & data (anonymous, opt-out) — mentioned only here
+    const teleOn = STUDY.store().settings.telemetry !== false;
+    const prow = el("div", "row");
+    prow.appendChild(el("div", null, "<b>Privacy &amp; data</b><div class='muted' style='font-size:.85rem'>Recall shares <b>anonymous</b> usage &amp; study events (timestamps, subject/topic, right/wrong, speed, mode) to help improve the app. No name, account, location, or trackers. Turn it off anytime.</div>"));
+    prow.appendChild(el("div", "spacer"));
+    const pseg = el("div", "seg");
+    [["on", "On"], ["off", "Off"]].forEach(function (o) {
+      const b = el("button", (o[0] === "on") === teleOn ? "on" : "", o[1]);
+      b.onclick = function () { if (STUDY.TELE) STUDY.TELE.setEnabled(o[0] === "on"); else STUDY.store().settings.telemetry = (o[0] === "on"); STUDY.save(); renderSettings(); };
+      pseg.appendChild(b);
+    });
+    prow.appendChild(pseg);
+    card.appendChild(prow);
+    card.appendChild(el("hr", "div"));
+
     // reset
     card.appendChild(el("div", null, "<b>Reset</b><div class='muted' style='font-size:.85rem'>Wipe all progress on this device.</div>"));
     const rb = el("button", "btn sm", "Reset all progress"); rb.style.marginTop = "10px";
@@ -970,6 +986,7 @@
   /* ---------- boot ---------- */
   function boot() {
     STUDY.load();
+    if (STUDY.TELE) try { STUDY.TELE.start(); } catch (e) {}
     document.documentElement.setAttribute("data-theme", STUDY.theme());
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));
