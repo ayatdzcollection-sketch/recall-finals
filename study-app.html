@@ -684,6 +684,36 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     return store.srs[id] || null;
   };
 
+  /* ---------- forgetting model (one scheduler for every mode) ----------
+     Each item has a memory "stability" in HOURS. Reviewing grows it; the
+     four ratings always give distinct, growing intervals (no 7d plateau).
+     Carries over existing Leitner progress by seeding from the old box. */
+  const HOUR = 3600000, STAB_CAP = 2160;   // cap ~90 days
+  function clampN(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function recallNow(st, now) {
+    if (!st || !st.last) return 1;
+    const S = seedStability(st);
+    return Math.pow(2, -((now - st.last) / HOUR) / (S || 1));
+  }
+  function seedStability(st) {
+    if (st && st.stability) return st.stability;
+    const box = (st && st.box) || 0;
+    if (box > 0) return (STUDY.SRS.BOX_INTERVAL[box] || HOUR) / HOUR;   // carry Leitner progress
+    return 4;                                                          // fresh card base (hours)
+  }
+  // predicted next stability (hours) for a grade, given current seed + recall p
+  function gradeStability(seedS, grade, p) {
+    if (grade <= 0) return 0.2;                                         // ~12 min
+    if (grade === 1) return clampN(seedS * 1.2, 0.3, STAB_CAP);          // Hard
+    if (grade === 2) return clampN(seedS * (2.0 + 0.6 * (1 - p)), 0.3, STAB_CAP); // Good
+    return clampN(seedS * (3.2 + 0.8 * (1 - p)), 0.3, STAB_CAP);         // Easy
+  }
+  STUDY.recallNow = recallNow;
+  STUDY.predictStabilityHours = function (id, grade) {
+    const st = store.srs[id] || null;
+    return gradeStability(seedStability(st), grade, recallNow(st, Date.now()));
+  };
+
   // record an attempt on an item (question or card)
   // grade: 0=again/wrong, 1=hard, 2=good/correct, 3=easy
   // meta (optional): { rt, mode, level } for the study-data log
@@ -691,9 +721,13 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const now = Date.now();
     let st = store.srs[id];
     if (!st) st = store.srs[id] = { box: 0, due: now, last: 0, reps: 0, lapses: 0 };
-    STUDY.SRS.schedule(st, grade, now);   // mutates st (box, due)
+    const seedS = seedStability(st), pBefore = recallNow(st, now);
+    STUDY.SRS.schedule(st, grade, now);   // box (mastery proxy) + Leitner due
     st.last = now;
     st.reps++;
+    // forgetting-based scheduling overrides the Leitner due
+    st.stability = gradeStability(seedS, grade, pBefore);
+    st.due = now + Math.round(st.stability * HOUR);
 
     // "work on" list: Again (0) and Hard (1) both flag; Good/Easy clear it
     if (grade <= 1) { store.wrong[id] = true; if (grade === 0) st.lapses++; }
@@ -1135,13 +1169,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   }
   ADAPT.invalidate = function () { POOL = null; };
 
-  // ---- forgetting model ----
-  function recall(st, now) {
-    if (!st || !st.last) return 1;                 // just-seen / unseen → treat as fresh
-    const elapsedH = (now - st.last) / HOUR;
-    const S = st.stability || 1;
-    return Math.pow(2, -elapsedH / S);             // half-life curve: 0.5 at elapsed == S
-  }
+  // ---- forgetting model (single source: storage.recallNow) ----
+  function recall(st, now) { return STUDY.recallNow ? STUDY.recallNow(st, now) : (st && st.last ? Math.pow(2, -((now - st.last) / HOUR) / (st.stability || 1)) : 1); }
   ADAPT.recall = recall;
 
   // fast-answer thresholds (ms) → "knew it cold"
@@ -1160,18 +1189,9 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     else grade = 2;
 
     let st = store.srs[q.id];
-    const pBefore = recall(st, now);               // how forgotten it was (for spacing boost)
-
-    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // legacy + log
+    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // scheduling (box+stability+due) + log
     st = store.srs[q.id];                           // now exists
     st.rt = rtMs || st.rt || 0;
-
-    // forgetting stability (hours), capped to the cram window
-    const S = st.stability || 1;
-    if (grade === 0) st.stability = 0.25;
-    else if (grade === 1) st.stability = clamp(S * 0.95, 0.5, 168);
-    else if (grade === 2) st.stability = clamp(S * (1.5 + 0.8 * (1 - pBefore)), 0.4, 168);
-    else st.stability = clamp(S * (2.3 + 1.2 * (1 - pBefore)), 0.4, 168);
 
     // Elo: item difficulty + your subject skill
     const skill = store.subjectSkill[q.subjectId] || 1500;
@@ -4508,8 +4528,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const rate = el("div", "rate");
       rate.style.display = "none";
       [["Again", "again", 0], ["Hard", "hard", 1], ["Good", "good", 2], ["Easy", "easy", 3]].forEach(function (r) {
-        const intervalTxt = humanInterval(STUDY.SRS.BOX_INTERVAL[Math.min(5, (STUDY.itemState(c.id) ? STUDY.itemState(c.id).box : 0) + (r[2] >= 2 ? r[2] - 1 : 0))] || 0);
-        const b = el("button", r[1], r[0] + "<small>" + (r[2] === 0 ? "soon" : intervalTxt) + "</small>");
+        const intervalTxt = r[2] === 0 ? "soon" : humanHours(STUDY.predictStabilityHours(c.id, r[2]));
+        const b = el("button", r[1], r[0] + "<small>" + intervalTxt + "</small>");
         b.onclick = function (e) { e.stopPropagation(); STUDY.recordItem(c.id, r[2], c.topicId, { mode: "flashcard" }); next(); };
         rate.appendChild(b);
       });
@@ -4560,6 +4580,13 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (ms < 3600000) return Math.round(ms / 60000) + "m";
     if (ms < 86400000) return Math.round(ms / 3600000) + "h";
     return Math.round(ms / 86400000) + "d";
+  }
+  function humanHours(h) {
+    if (h < 1) return Math.max(1, Math.round(h * 60)) + "m";
+    if (h < 24) return Math.round(h) + "h";
+    if (h < 24 * 7) return Math.round(h / 24) + "d";
+    if (h < 24 * 60) return Math.round(h / 24 / 7) + "w";
+    return Math.round(h / 24 / 30) + "mo";
   }
 
   /* ---------------- "For You" adaptive feed ----------------

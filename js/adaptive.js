@@ -27,13 +27,8 @@
   }
   ADAPT.invalidate = function () { POOL = null; };
 
-  // ---- forgetting model ----
-  function recall(st, now) {
-    if (!st || !st.last) return 1;                 // just-seen / unseen → treat as fresh
-    const elapsedH = (now - st.last) / HOUR;
-    const S = st.stability || 1;
-    return Math.pow(2, -elapsedH / S);             // half-life curve: 0.5 at elapsed == S
-  }
+  // ---- forgetting model (single source: storage.recallNow) ----
+  function recall(st, now) { return STUDY.recallNow ? STUDY.recallNow(st, now) : (st && st.last ? Math.pow(2, -((now - st.last) / HOUR) / (st.stability || 1)) : 1); }
   ADAPT.recall = recall;
 
   // fast-answer thresholds (ms) → "knew it cold"
@@ -52,18 +47,9 @@
     else grade = 2;
 
     let st = store.srs[q.id];
-    const pBefore = recall(st, now);               // how forgotten it was (for spacing boost)
-
-    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // legacy + log
+    STUDY.recordItem(q.id, grade, q.topicId, { mode: "feed", rt: rtMs || 0 });   // scheduling (box+stability+due) + log
     st = store.srs[q.id];                           // now exists
     st.rt = rtMs || st.rt || 0;
-
-    // forgetting stability (hours), capped to the cram window
-    const S = st.stability || 1;
-    if (grade === 0) st.stability = 0.25;
-    else if (grade === 1) st.stability = clamp(S * 0.95, 0.5, 168);
-    else if (grade === 2) st.stability = clamp(S * (1.5 + 0.8 * (1 - pBefore)), 0.4, 168);
-    else st.stability = clamp(S * (2.3 + 1.2 * (1 - pBefore)), 0.4, 168);
 
     // Elo: item difficulty + your subject skill
     const skill = store.subjectSkill[q.subjectId] || 1500;

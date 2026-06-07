@@ -510,8 +510,8 @@
       const rate = el("div", "rate");
       rate.style.display = "none";
       [["Again", "again", 0], ["Hard", "hard", 1], ["Good", "good", 2], ["Easy", "easy", 3]].forEach(function (r) {
-        const intervalTxt = humanInterval(STUDY.SRS.BOX_INTERVAL[Math.min(5, (STUDY.itemState(c.id) ? STUDY.itemState(c.id).box : 0) + (r[2] >= 2 ? r[2] - 1 : 0))] || 0);
-        const b = el("button", r[1], r[0] + "<small>" + (r[2] === 0 ? "soon" : intervalTxt) + "</small>");
+        const intervalTxt = r[2] === 0 ? "soon" : humanHours(STUDY.predictStabilityHours(c.id, r[2]));
+        const b = el("button", r[1], r[0] + "<small>" + intervalTxt + "</small>");
         b.onclick = function (e) { e.stopPropagation(); STUDY.recordItem(c.id, r[2], c.topicId, { mode: "flashcard" }); next(); };
         rate.appendChild(b);
       });
@@ -562,6 +562,13 @@
     if (ms < 3600000) return Math.round(ms / 60000) + "m";
     if (ms < 86400000) return Math.round(ms / 3600000) + "h";
     return Math.round(ms / 86400000) + "d";
+  }
+  function humanHours(h) {
+    if (h < 1) return Math.max(1, Math.round(h * 60)) + "m";
+    if (h < 24) return Math.round(h) + "h";
+    if (h < 24 * 7) return Math.round(h / 24) + "d";
+    if (h < 24 * 60) return Math.round(h / 24 / 7) + "w";
+    return Math.round(h / 24 / 30) + "mo";
   }
 
   /* ---------------- "For You" adaptive feed ----------------

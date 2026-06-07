@@ -229,6 +229,36 @@
     return store.srs[id] || null;
   };
 
+  /* ---------- forgetting model (one scheduler for every mode) ----------
+     Each item has a memory "stability" in HOURS. Reviewing grows it; the
+     four ratings always give distinct, growing intervals (no 7d plateau).
+     Carries over existing Leitner progress by seeding from the old box. */
+  const HOUR = 3600000, STAB_CAP = 2160;   // cap ~90 days
+  function clampN(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function recallNow(st, now) {
+    if (!st || !st.last) return 1;
+    const S = seedStability(st);
+    return Math.pow(2, -((now - st.last) / HOUR) / (S || 1));
+  }
+  function seedStability(st) {
+    if (st && st.stability) return st.stability;
+    const box = (st && st.box) || 0;
+    if (box > 0) return (STUDY.SRS.BOX_INTERVAL[box] || HOUR) / HOUR;   // carry Leitner progress
+    return 4;                                                          // fresh card base (hours)
+  }
+  // predicted next stability (hours) for a grade, given current seed + recall p
+  function gradeStability(seedS, grade, p) {
+    if (grade <= 0) return 0.2;                                         // ~12 min
+    if (grade === 1) return clampN(seedS * 1.2, 0.3, STAB_CAP);          // Hard
+    if (grade === 2) return clampN(seedS * (2.0 + 0.6 * (1 - p)), 0.3, STAB_CAP); // Good
+    return clampN(seedS * (3.2 + 0.8 * (1 - p)), 0.3, STAB_CAP);         // Easy
+  }
+  STUDY.recallNow = recallNow;
+  STUDY.predictStabilityHours = function (id, grade) {
+    const st = store.srs[id] || null;
+    return gradeStability(seedStability(st), grade, recallNow(st, Date.now()));
+  };
+
   // record an attempt on an item (question or card)
   // grade: 0=again/wrong, 1=hard, 2=good/correct, 3=easy
   // meta (optional): { rt, mode, level } for the study-data log
@@ -236,9 +266,13 @@
     const now = Date.now();
     let st = store.srs[id];
     if (!st) st = store.srs[id] = { box: 0, due: now, last: 0, reps: 0, lapses: 0 };
-    STUDY.SRS.schedule(st, grade, now);   // mutates st (box, due)
+    const seedS = seedStability(st), pBefore = recallNow(st, now);
+    STUDY.SRS.schedule(st, grade, now);   // box (mastery proxy) + Leitner due
     st.last = now;
     st.reps++;
+    // forgetting-based scheduling overrides the Leitner due
+    st.stability = gradeStability(seedS, grade, pBefore);
+    st.due = now + Math.round(st.stability * HOUR);
 
     // "work on" list: Again (0) and Hard (1) both flag; Good/Easy clear it
     if (grade <= 1) { store.wrong[id] = true; if (grade === 0) st.lapses++; }
