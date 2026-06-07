@@ -10,9 +10,9 @@
    ============================================================ */
 (function (STUDY) {
   "use strict";
-  // ---- backend config (fill in to enable remote storage) ----
-  const ENDPOINT = "";   // e.g. "https://YOURPROJECT.supabase.co/rest/v1/events"
-  const KEY = "";        // Supabase anon (public) key
+  // ---- backend config (Supabase REST, insert-only) ----
+  const ENDPOINT = "https://gyfqhkhgosjpyvatffbi.supabase.co/rest/v1/events";
+  const KEY = "sb_publishable_q-_2MgYpTJB-OeGGIy8EzA_8mvRB1nb";   // publishable (client-safe) key
   const APP_VERSION = "1.0";
   const BATCH = 200;
 
