@@ -39,7 +39,8 @@
      while uncertain (early), small & stable once confident. RD regrows slowly
      over time (you may have forgotten), so estimates stay honest. */
   const Q = Math.LN10 / 400;                 // ≈ 0.0057565
-  const RD_MAX = 350, RD_MIN = 30, RD_GROW = 16 / DAY;   // RD variance growth per ms
+  const RD_MAX = 350, RD_MIN = 30;
+  const RD_C2 = (RD_MAX * RD_MAX) / (90 * DAY);   // variance regrowth per ms (~full re-widen after 90 idle days)
   function gFactor(rd) { return 1 / Math.sqrt(1 + 3 * Q * Q * rd * rd / (Math.PI * Math.PI)); }
   function glickoState(subjectId) {
     const store = STUDY.store();
@@ -52,7 +53,7 @@
   function glickoUpdate(subjectId, oppRating, s, now) {
     const gl = glickoState(subjectId);
     const dt = gl.t ? Math.max(0, now - gl.t) : 0;
-    let rd = Math.min(RD_MAX, Math.sqrt(gl.rd * gl.rd + RD_GROW * RD_GROW * dt));   // uncertainty grows with time
+    let rd = Math.min(RD_MAX, Math.sqrt(gl.rd * gl.rd + RD_C2 * dt));   // uncertainty regrows with time away
     const g = gFactor(50);                     // item rating treated as fairly certain
     const E = 1 / (1 + Math.pow(10, -g * (gl.r - oppRating) / 400));
     const dInv = Q * Q * g * g * E * (1 - E);
@@ -194,8 +195,10 @@
     // often the feed serves a review, so nothing rots in the queue. Interleaved
     // (we pick among the most-overdue few) so it never feels like pure drilling.
     const due = dueQueue(ctx.only, ctx.recent, now);
-    if (due.length && !explore && Math.random() < clamp(due.length / (due.length + 6), 0, 0.7)) {
-      const top = due.slice(0, Math.min(5, due.length));
+    if (due.length && !explore && Math.random() < clamp(due.length / (due.length + 6), 0, 0.55)) {
+      let top = due.slice(0, Math.min(6, due.length));
+      const spread = top.filter(q => q.topicId !== ctx.lastTopic);   // interleave: avoid back-to-back same topic
+      if (spread.length) top = spread;
       return top[Math.floor(Math.random() * top.length)];
     }
 

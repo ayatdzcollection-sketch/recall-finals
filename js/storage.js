@@ -278,7 +278,7 @@
   // easy one slowly = weak. opts: { fluency 0..1, pexp 0..1 }.
   function bktUpdate(prior, grade, g, opts) {
     const o = opts || {};
-    const p = (prior == null) ? 0.12 : prior;              // fresh item: mostly unknown
+    const p = (prior == null) ? 0.09 : prior;              // fresh item: mostly unknown (one correct shouldn't "master" it)
     const correct = grade >= 1;                            // 0 = wrong, >=1 = (some) recall
     const weak = grade === 1;                              // Hard / flagged-guess correct
     // fluency: provided by the feed; else inferred from the self-graded card button
