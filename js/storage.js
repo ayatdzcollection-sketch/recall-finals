@@ -1,5 +1,5 @@
 /* ============================================================
-   storage.js — global namespace, content registry, persistence
+   storage.js, global namespace, content registry, persistence
    ============================================================ */
 (function (global) {
   "use strict";
@@ -150,7 +150,7 @@
     const acc = (o) => { Object.keys(o).forEach(k => o[k].accuracy = +(o[k].correct / Math.max(1, o[k].attempts)).toFixed(3)); return o; };
     return {
       generated: new Date().toISOString(),
-      note: "Local study-data export from Recall. Behavior events only — no personal information.",
+      note: "Local study-data export from Recall. Behavior events only, no personal information.",
       legend: { t: "timestamp(ms)", it: "itemId", tp: "topicId", s: "subjectId", g: "grade 0=again 1=hard 2=good 3=easy", ok: "correct(1/0)", rt: "responseTime(ms)", m: "mode", lv: "level 1=easy 2=hard" },
       totals: { events: log.length, days: Object.keys(byDay).length, avgResponseMs: rtN ? Math.round(totalRt / rtN) : null, streakBest: store.streak.best || 0 },
       bySubject: acc(bySubject), byTopic: acc(byTopic), byMode: acc(byMode), byDay: byDay,
@@ -441,7 +441,7 @@
     lines.push("TOPIC IDS (use these exact ids only):");
     STUDY.subjects.forEach(function (s) {
       lines.push("# " + s.name);
-      s.topics.forEach(function (t) { lines.push("  " + t.id + " — " + t.title); });
+      s.topics.forEach(function (t) { lines.push("  " + t.id + ", " + t.title); });
     });
     lines.push("");
     lines.push("OUTPUT RULES: reply with ONLY a single code block in exactly this format, one topic id per line, listing the topics I was weakest in (repeat an id once per wrong question so heavier misses appear more):");

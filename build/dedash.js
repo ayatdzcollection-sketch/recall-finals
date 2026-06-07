@@ -4,7 +4,7 @@
    the em dash becomes a comma, which reads cleanly in study prose. */
 const fs = require("fs"), path = require("path");
 const root = path.resolve(__dirname, "..");
-const files = ["data/ela.js", "data/biology.js", "data/french.js", "data/geometry.js", "data/history.js"];
+const files = fs.readdirSync(path.join(root,"data")).filter(f=>f.endsWith(".js")).map(f=>"data/"+f);
 
 let total = 0;
 for (const f of files) {

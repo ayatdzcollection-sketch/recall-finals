@@ -1,4 +1,4 @@
-/* data/diagrams.js — image-occlusion diagrams (label-the-part recall).
+/* data/diagrams.js, image-occlusion diagrams (label-the-part recall).
    Detailed, original textbook-style SVGs (color-coded). Each part has x/y as
    % of the SVG box. Used by QUIZ.runDiagram (Biology "Label It"). */
 (function (STUDY) {
@@ -33,7 +33,7 @@
       "</svg>",
     parts: [
       { x: 27, y: 13, label: "superior vena cava", aliases: ["svc", "vena cava"], note: " Returns oxygen-poor blood from the upper body to the right atrium." },
-      { x: 38, y: 13, label: "aorta", aliases: [], note: " The largest artery — carries oxygen-rich blood out to the body." },
+      { x: 38, y: 13, label: "aorta", aliases: [], note: " The largest artery, carries oxygen-rich blood out to the body." },
       { x: 64, y: 15, label: "pulmonary artery", aliases: ["pulmonary trunk"], note: " Carries oxygen-poor blood from the right ventricle to the lungs." },
       { x: 78, y: 33, label: "pulmonary vein", aliases: ["pulmonary veins"], note: " Brings oxygen-rich blood from the lungs to the left atrium." },
       { x: 37, y: 37, label: "right atrium", aliases: ["ra"], note: " Receives blood from the body (it's on your left as you look at the diagram)." },
@@ -68,7 +68,7 @@
     parts: [
       { x: 19, y: 43, label: "phosphate", aliases: ["phosphate group", "po4"], note: " Part of the DNA backbone." },
       { x: 49, y: 60, label: "sugar", aliases: ["deoxyribose", "5-carbon sugar"], note: " The 5-carbon sugar (deoxyribose) links the phosphate and base." },
-      { x: 80, y: 49, label: "nitrogen base", aliases: ["base", "nitrogenous base"], note: " A, T, G, or C — this carries the genetic code." },
+      { x: 80, y: 49, label: "nitrogen base", aliases: ["base", "nitrogenous base"], note: " A, T, G, or C, this carries the genetic code." },
     ],
   });
 

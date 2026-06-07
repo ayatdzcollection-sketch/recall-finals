@@ -1,5 +1,5 @@
 /* ============================================================
-   quiz.js — interactive question + flashcard runner
+   quiz.js, interactive question + flashcard runner
    Question shapes:
      {type:'mc',   q, choices:[...], answer:<index>, explain}
      {type:'fill', q, answers:['accepted', ...], explain, placeholder}
@@ -517,7 +517,7 @@
       });
       mount.appendChild(rate);
 
-      // optional typed recall (lenient: typos / wording OK) — type then it flips
+      // optional typed recall (lenient: typos / wording OK), type then it flips
       if (!opts.audio) {
         const typeRow = el("div", "fill-in"); typeRow.style.marginTop = "10px";
         const tinp = el("input"); tinp.type = "text"; tinp.autocomplete = "off"; tinp.spellcheck = false; tinp.placeholder = "Optional: type your answer, press Enter";
@@ -528,7 +528,7 @@
           const ok = QUIZ.fuzzyMatch(tinp.value, [c.back]);
           tinp.classList.add(ok ? "correct" : "wrong");
           if (!flipped) flip();
-          toast(ok ? "✓ Close enough — you recalled it" : "Not quite — check the answer");
+          toast(ok ? "✓ Close enough, you recalled it" : "Not quite, check the answer");
         };
       }
 
@@ -613,7 +613,7 @@
       big.appendChild(el("div", "score", ready + "%"));
       big.appendChild(el("div", "lbl", "finals ready" + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
       mount.appendChild(big);
-      if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped — a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
+      if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped, a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
       else mount.appendChild(el("div", "panel center", "Nice momentum. The feed keeps adapting to exactly what you need next."));
       const bar = el("div", "qbar");
       const go = el("button", "btn primary", tired ? "Push on" : "Keep going");
@@ -791,7 +791,7 @@
       const subj = STUDY.byId[q.subjectId], topic = STUDY.topicIndex[q.topicId] ? STUDY.topicIndex[q.topicId].topic : null;
       if (subj) mount.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
       const cn = (cc[q.id] || 0);
-      if (cn > 0) mount.appendChild(el("div", "cram-badge", "✓ once — get it again to lock it"));
+      if (cn > 0) mount.appendChild(el("div", "cram-badge", "✓ once, get it again to lock it"));
       renderItem(q);
     }
 

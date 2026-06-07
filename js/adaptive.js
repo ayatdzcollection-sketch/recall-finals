@@ -1,9 +1,9 @@
 /* ============================================================
-   adaptive.js — the local, offline "For You" engine.
+   adaptive.js, the local, offline "For You" engine.
    After every answer it updates three models and re-plans:
-     • forgetting   — each item's memory stability → recall-probability now
-     • difficulty   — each item's Elo rating (rises when strong students miss it)
-     • skill        — your Elo per subject (rises when you beat hard items)
+     • forgetting  , each item's memory stability → recall-probability now
+     • difficulty  , each item's Elo rating (rises when strong students miss it)
+     • skill       , your Elo per subject (rises when you beat hard items)
    next() scores every question by urgency × importance × weakness ×
    about-to-forget × coverage × difficulty-fit × variety, then samples.
    Nothing leaves the device.
@@ -115,7 +115,7 @@
   }
 
   // ---- pick the next item: (1) choose a subject by priority, (2) best item in it ----
-  // Two-stage so bank size never biases the mix — a weak/urgent subject wins
+  // Two-stage so bank size never biases the mix, a weak/urgent subject wins
   // even if another subject has 5× the questions.
   ADAPT.next = function (ctx) {
     ctx = ctx || { recent: [], lastTopic: null, lastSubject: null };
@@ -156,7 +156,7 @@
     return weightedPick(scored.slice(0, Math.min(25, scored.length))) || scored[0].v;
   };
 
-  // ---- readiness % — concept-based, so it climbs without acing all 739 items ----
+  // ---- readiness %, concept-based, so it climbs without acing all 739 items ----
   // Each topic is "ready" once you've mastered ~6 of its questions; a subject's
   // readiness is the average over its topics (untouched topics count as 0).
   ADAPT.readiness = function (subjectId) {

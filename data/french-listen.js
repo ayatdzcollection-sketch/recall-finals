@@ -1,4 +1,4 @@
-/* data/french-listen.js — realistic listening-comprehension questions.
+/* data/french-listen.js, realistic listening-comprehension questions.
    type:'listen' → the app SPEAKS `say` (fr-FR), hides the text, and asks an
    MC about it. Kept in STUDY.FR_LISTEN (not in topic.questions) so they only
    run in the Listening drill, never in silent practice or printed tests. */
@@ -20,10 +20,10 @@
     { say: "Est-ce qu'on pourrait aller à la mer ?", topicId: "fr-conditionnel", q: "What is being asked?", choices: ["Could we go to the sea? (a polite request)", "We went to the sea", "We will go to the sea", "I don't like the sea"], answer: 0 },
     { say: "Bien à vous", topicId: "fr-ecriture", q: "When would you hear this phrase?", choices: ["at the end of an email", "at the start of an email", "when ordering food", "when asking directions"], answer: 0 },
     // conjugation identification (tense by ear)
-    { say: "je parlerais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel — 'I would speak'", "futur — 'I will speak'", "passé — 'I spoke'", "présent — 'I speak'"], answer: 0 },
-    { say: "ils seront", topicId: "fr-futur", q: "Which tense did you hear?", choices: ["futur — 'they will be'", "conditionnel — 'they would be'", "présent — 'they are'", "imparfait — 'they were'"], answer: 0 },
-    { say: "tu ferais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel — 'you would do'", "futur — 'you will do'", "passé — 'you did'", "présent — 'you do'"], answer: 0 },
-    { say: "nous irons", topicId: "fr-futur", q: "Which form did you hear?", choices: ["futur — 'we will go'", "conditionnel — 'we would go'", "passé — 'we went'", "présent — 'we go'"], answer: 0 },
+    { say: "je parlerais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel, 'I would speak'", "futur, 'I will speak'", "passé, 'I spoke'", "présent, 'I speak'"], answer: 0 },
+    { say: "ils seront", topicId: "fr-futur", q: "Which tense did you hear?", choices: ["futur, 'they will be'", "conditionnel, 'they would be'", "présent, 'they are'", "imparfait, 'they were'"], answer: 0 },
+    { say: "tu ferais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel, 'you would do'", "futur, 'you will do'", "passé, 'you did'", "présent, 'you do'"], answer: 0 },
+    { say: "nous irons", topicId: "fr-futur", q: "Which form did you hear?", choices: ["futur, 'we will go'", "conditionnel, 'we would go'", "passé, 'we went'", "présent, 'we go'"], answer: 0 },
   ];
 
   STUDY.FR_LISTEN = L;

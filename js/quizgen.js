@@ -1,5 +1,5 @@
 /* ============================================================
-   quizgen.js — expands the question bank at load time so practice
+   quizgen.js, expands the question bank at load time so practice
    can't be pattern-memorised. Runs AFTER all data files (and
    data/extra.js) register, BEFORE quiz/test/app.
      1. Card → MC (every subject): self-contained questions whose

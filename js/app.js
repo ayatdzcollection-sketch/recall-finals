@@ -1,5 +1,5 @@
 /* ============================================================
-   app.js — router, screens, lesson & visual rendering
+   app.js, router, screens, lesson & visual rendering
    ============================================================ */
 (function (STUDY) {
   "use strict";
@@ -98,17 +98,17 @@
     actions.appendChild(actionCard("", "🧠", "Smart Study", "Interleaved new + due material", () => startSmart(null)));
     actions.appendChild(actionCard("", "🔥", "Cram Mode", "Blitz a subject before the exam", () => go("#/cram")));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
-    actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
+    actions.appendChild(actionCard("", "🔁", "Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
     actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
     actions.appendChild(actionCard("", "📥", "Check a Test", "Import weak spots from a graded test", () => go("#/import")));
     actions.appendChild(actionCard("", "⭐", "Starred", "Your bookmarked questions", () => go("#/starred")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
-    // work on these — items you flagged (Again/Hard) or missed
+    // work on these, items you flagged (Again/Hard) or missed
     const flagged = STUDY.wrongItems();
     if (flagged.length) {
-      app.appendChild(sectionH("Work on these", "flagged Again/Hard or missed — clear them by getting them right twice"));
+      app.appendChild(sectionH("Work on these", "flagged Again/Hard or missed, clear them by getting them right twice"));
       const card = el("div", "panel");
       const row = el("div", "row");
       row.appendChild(el("div", null, "<b>🎯 " + flagged.length + " item" + (flagged.length > 1 ? "s" : "") + " to work on</b>"));
@@ -318,7 +318,7 @@
         seg2.appendChild(b);
       });
       body.appendChild(seg2);
-      body.appendChild(el("p", "muted", lvl === "easy" ? "Easy: definitions & recall, balanced across every concept in the lesson." : lvl === "hard" ? "Hard: examples, discrimination & application — still covering every concept." : "A balanced mix across every concept in the lesson."));
+      body.appendChild(el("p", "muted", lvl === "easy" ? "Easy: definitions & recall, balanced across every concept in the lesson." : lvl === "hard" ? "Hard: examples, discrimination & application, still covering every concept." : "A balanced mix across every concept in the lesson."));
       const qmount = el("div"); body.appendChild(qmount);
       // concept-balanced set so every lesson idea is covered (not just the common ones)
       const set = STUDY.practiceSet(id, lvl);
@@ -514,7 +514,7 @@
       if (!qs.length) { mount.innerHTML = '<div class="empty">No questions available for this exam.</div>'; return; }
       const secs = qs.length * 45;
       const intro = el("div", "card");
-      intro.innerHTML = "<b>📝 Exam Mode — " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Your score and a full review come at the finish.</p>";
+      intro.innerHTML = "<b>📝 Exam Mode, " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Your score and a full review come at the finish.</p>";
       mount.appendChild(intro);
       const start = el("button", "btn primary full", "Start the exam →");
       start.onclick = function () {
@@ -532,7 +532,7 @@
     sessionScreen("🔊 French Listening", function (mount) {
       if (!QUIZ.canSpeak) { mount.innerHTML = '<div class="empty">Your browser doesn\'t support speech. Try Chrome or Safari, then come back.</div>'; return; }
       const intro = el("div", "card");
-      intro.innerHTML = "<b>🔊 Listening comprehension</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>You'll <b>hear French</b> (no text) and answer a question about what was said — vocab, sentences, and conjugations by ear. Tap 🔊 to replay. Real prep for the listening and oral sections.</p>";
+      intro.innerHTML = "<b>🔊 Listening comprehension</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>You'll <b>hear French</b> (no text) and answer a question about what was said, vocab, sentences, and conjugations by ear. Tap 🔊 to replay. Real prep for the listening and oral sections.</p>";
       mount.appendChild(intro);
       const seg = el("div", "row"); seg.style.margin = "10px 0 4px";
       const b1 = el("button", "btn primary", "Start listening quiz →");
@@ -554,7 +554,7 @@
   function renderLabelChooser() {
     clear(); app.appendChild(topbar());
     app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Biology", hash: "#/s/biology" }, { label: "Label It" }]));
-    app.appendChild(el("div", "hero", "<h1>🗺️ Label the Diagram</h1><p class='muted'>The labels are hidden — recall each part (typing is forgiving). Great for the heart, the nucleotide, and chromosome questions.</p>"));
+    app.appendChild(el("div", "hero", "<h1>🗺️ Label the Diagram</h1><p class='muted'>The labels are hidden, recall each part (typing is forgiving). Great for the heart, the nucleotide, and chromosome questions.</p>"));
     (STUDY.DIAGRAMS || []).forEach(function (d) {
       const row = el("div", "topic"); row.style.setProperty("--sub", (STUDY.byId[d.subjectId] || {}).accent || "#27c89b");
       row.onclick = () => startDiagram(d.id);
@@ -705,15 +705,15 @@
     app.appendChild(el("div", "hero", "<h1>📥 Find my weak spots</h1><p class='muted'>Turn a graded test into a targeted review list. Online Exam Mode does this automatically; for a paper or PDF test, use the steps below with any AI.</p>"));
 
     const c1 = el("div", "card");
-    c1.appendChild(el("div", "vcap", "Step 1 — copy this prompt"));
+    c1.appendChild(el("div", "vcap", "Step 1, copy this prompt"));
     c1.appendChild(el("p", "muted", "Then open Claude (or another AI), paste it, and attach a photo/PDF of your graded test."));
     const copyBtn = el("button", "btn primary", "📋 Copy the AI prompt");
-    copyBtn.onclick = function () { const p = STUDY.aiImportPrompt(); copyText(p, "Prompt copied — paste it into Claude with your test"); };
+    copyBtn.onclick = function () { const p = STUDY.aiImportPrompt(); copyText(p, "Prompt copied, paste it into Claude with your test"); };
     c1.appendChild(copyBtn);
     app.appendChild(c1);
 
     const c2 = el("div", "card");
-    c2.appendChild(el("div", "vcap", "Step 2 — paste the AI's reply here"));
+    c2.appendChild(el("div", "vcap", "Step 2, paste the AI's reply here"));
     c2.appendChild(el("p", "muted", "The AI replies with a RECALL-WEAK block. Paste the whole thing and import."));
     const ta = document.createElement("textarea");
     ta.placeholder = "RECALL-WEAK\nbio-mendel\nela-figurative\nEND";
@@ -732,7 +732,7 @@
     c2.appendChild(imp); c2.appendChild(out);
     app.appendChild(c2);
 
-    app.appendChild(el("div", "empty", "<div class='big'>💡</div>Tip: take a Practice Test from this app (it prints an answer key), grade it, then import — or just use Exam Mode on your phone and weak spots are tracked for you."));
+    app.appendChild(el("div", "empty", "<div class='big'>💡</div>Tip: take a Practice Test from this app (it prints an answer key), grade it, then import, or just use Exam Mode on your phone and weak spots are tracked for you."));
   }
 
   // ---- SEARCH ----
@@ -887,12 +887,12 @@
     });
     card.appendChild(el("hr", "div"));
 
-    // export / import — files
+    // export / import, files
     card.appendChild(el("div", null, "<b>Move progress to another device</b><div class='muted' style='font-size:.85rem'>Progress lives only in this browser. Use a file, or copy a code and paste it on the other device.</div>"));
     const er = el("div", "row wrap"); er.style.marginTop = "10px";
     const exp = el("button", "btn sm", "⬇️ Export file"); exp.onclick = exportProgress;
     const imp = el("button", "btn sm", "⬆️ Import file"); imp.onclick = importProgress;
-    const copyc = el("button", "btn sm", "📋 Copy code"); copyc.onclick = () => copyText(STUDY.exportData(), "Progress code copied — paste it on the other device");
+    const copyc = el("button", "btn sm", "📋 Copy code"); copyc.onclick = () => copyText(STUDY.exportData(), "Progress code copied, paste it on the other device");
     const pastec = el("button", "btn sm", "📥 Paste code");
     er.appendChild(exp); er.appendChild(imp); er.appendChild(copyc); er.appendChild(pastec); card.appendChild(er);
     const pasteWrap = el("div"); pasteWrap.style.display = "none"; pasteWrap.style.marginTop = "10px";
@@ -900,14 +900,14 @@
     pta.placeholder = "Paste your progress code here…";
     pta.style.cssText = "width:100%;min-height:90px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:11px;font-family:var(--mono);font-size:.78rem";
     const applyc = el("button", "btn sm good", "Apply code"); applyc.style.marginTop = "8px";
-    applyc.onclick = function () { if (STUDY.importData(pta.value.trim())) { QUIZ.toast("Progress imported"); go("#/home"); } else QUIZ.toast("That code didn't read — copy the whole thing"); };
+    applyc.onclick = function () { if (STUDY.importData(pta.value.trim())) { QUIZ.toast("Progress imported"); go("#/home"); } else QUIZ.toast("That code didn't read, copy the whole thing"); };
     pasteWrap.appendChild(pta); pasteWrap.appendChild(applyc); card.appendChild(pasteWrap);
     pastec.onclick = function () { pasteWrap.style.display = pasteWrap.style.display === "none" ? "block" : "none"; if (pasteWrap.style.display === "block") pta.focus(); };
     card.appendChild(el("hr", "div"));
 
     // study-data export (for your own analysis)
     const sd = STUDY.studyData();
-    card.appendChild(el("div", null, "<b>Study data</b><div class='muted' style='font-size:.85rem'>" + sd.totals.events + " events logged on this device — every answer's timestamp, subject/topic, right/wrong, speed and mode. Behaviour only, no personal info. Download it to analyze your own study.</div>"));
+    card.appendChild(el("div", null, "<b>Study data</b><div class='muted' style='font-size:.85rem'>" + sd.totals.events + " events logged on this device, every answer's timestamp, subject/topic, right/wrong, speed and mode. Behaviour only, no personal info. Download it to analyze your own study.</div>"));
     const dr = el("div", "row wrap"); dr.style.marginTop = "10px";
     const dj = el("button", "btn sm", "⬇️ Download JSON");
     dj.onclick = () => downloadFile(JSON.stringify(STUDY.studyData(), null, 2), "recall-study-data.json", "application/json");
@@ -916,7 +916,7 @@
     dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
     card.appendChild(el("hr", "div"));
 
-    // privacy & data (anonymous, opt-out) — mentioned only here
+    // privacy & data (anonymous, opt-out), mentioned only here
     const teleOn = STUDY.store().settings.telemetry !== false;
     const prow = el("div", "row");
     prow.appendChild(el("div", null, "<b>Privacy &amp; data</b><div class='muted' style='font-size:.85rem'>Recall shares <b>anonymous</b> usage &amp; study events (timestamps, subject/topic, right/wrong, speed, mode) to help improve the app. No name, account, location, or trackers. Turn it off anytime.</div>"));

@@ -1,4 +1,4 @@
-/* data/hard.js — a larger, HARDER question batch, tagged with concept + lvl
+/* data/hard.js, a larger, HARDER question batch, tagged with concept + lvl
    so the Easy/Hard practice toggle still covers every concept in each lesson.
    Heaviest where the pool was thin (euphemism, the rarer devices). */
 (function (STUDY) {
@@ -10,7 +10,7 @@
 
   /* ===== ELA · Figurative language (esp. euphemism) ===== */
   A("ela-figurative", [
-    // euphemism — the thin one, now well covered
+    // euphemism, the thin one, now well covered
     e("euphemism", "A euphemism is used to make something sound:", ["harsher and more shocking", "milder, softer, or more polite", "funnier and exaggerated", "more scientific"], 1, "A euphemism softens a harsh or blunt idea."),
     h("euphemism", "Which sentence contains a EUPHEMISM?", ["The wind screamed through the trees.", "Our dog had to be put to sleep last week.", "He runs as fast as lightning.", "The city never sleeps."], 1, "'Put to sleep' softens 'killed/euthanized.'"),
     h("euphemism", "Which sentence contains a EUPHEMISM?", ["She has a heart of gold.", "The company is letting twenty people go.", "Time is a thief.", "The stars danced overhead."], 1, "'Letting people go' softens 'firing/laying off.'"),
@@ -38,7 +38,7 @@
     h("allusion", "“He met his Waterloo on the final exam” is an ALLUSION to:", ["a sport", "Napoleon's famous defeat", "a river in Texas", "a song"], 1, "An allusion references a well-known event (Napoleon's defeat at Waterloo)."),
     h("pun", "“A bicycle can't stand on its own because it's two-tired.” This is a:", ["pun", "metaphor", "euphemism", "allusion"], 0, "Wordplay on 'too tired'/'two-tired' = pun."),
     h("symbolism", "In a story, a wilting flower that appears whenever a character loses hope is an example of:", ["alliteration", "symbolism", "a simile", "denotation"], 1),
-    h("foreshadowing", "An early line — “She had no idea it would be the last time she'd see the house” — is an example of:", ["flashback", "foreshadowing", "a pun", "imagery"], 1),
+    h("foreshadowing", "An early line, “She had no idea it would be the last time she'd see the house”, is an example of:", ["flashback", "foreshadowing", "a pun", "imagery"], 1),
     h("mood", "A graveyard at midnight with fog and distant howls mainly establishes the story's:", ["mood", "thesis", "rhyme scheme", "denotation"], 0, "The atmosphere/feeling for the reader = mood."),
     h("tone", "A reviewer writes about a film with biting sarcasm. 'Sarcastic' describes the:", ["mood", "tone", "setting", "plot"], 1, "The author's attitude = tone."),
   ]);
@@ -64,7 +64,7 @@
 
   /* ===== ELA · Nonfiction & rhetoric (harder) ===== */
   A("ela-nonfiction", [
-    h("ethos", "“Trust me — I've taught biology for 25 years.” This appeal is:", ["pathos", "logos", "ethos", "denotation"], 2),
+    h("ethos", "“Trust me, I've taught biology for 25 years.” This appeal is:", ["pathos", "logos", "ethos", "denotation"], 2),
     h("pathos", "“Every night, children in our town go to bed hungry.” This appeal is:", ["ethos", "logos", "pathos", "tone"], 2),
     h("logos", "“Recycling one ton of paper saves about 17 trees.” This appeal is:", ["ethos", "pathos", "logos", "mood"], 2),
     h("memoir", "An author writes a book reflecting on a few formative years of their own life. This is a:", ["biography", "memoir", "novel", "news article"], 1),
@@ -83,7 +83,7 @@
     h("coldwar", "Which event is considered the FIRST major US–USSR confrontation of the Cold War?", ["The Cuban Missile Crisis", "The Berlin Airlift", "The fall of the Berlin Wall", "The Korean War"], 1),
   ]);
   A("fr-conditionnel", [
-    h("conditionnel", "Which fully correct sentence uses the conditional to soften a request?", ["Je veux de l'eau.", "Je voudrais de l'eau, s'il vous plaît.", "J'ai voulu de l'eau.", "Je voudrai de l'eau."], 1, "voudrais (conditional) = 'I would like' — polite; voudrai is future."),
+    h("conditionnel", "Which fully correct sentence uses the conditional to soften a request?", ["Je veux de l'eau.", "Je voudrais de l'eau, s'il vous plaît.", "J'ai voulu de l'eau.", "Je voudrai de l'eau."], 1, "voudrais (conditional) = 'I would like', polite; voudrai is future."),
   ]);
 
   /* ============ BIOLOGY (Easy recall + Hard application per topic) ============ */
@@ -122,7 +122,7 @@
     h("industrial", "Labor unions of the era did NOT primarily fight for:", ["banning child labor", "better worker safety", "higher wages", "equal pay for men and women"], 3, "Equal pay was not a typical union goal at that time."),
   ]);
   A("his-nationalism", [
-    h("nationalism", "Bismarck and Cavour both unified their nations mainly through:", ["democracy and voting", "Realpolitik — practical power politics", "religious reform", "foreign aid"], 1),
+    h("nationalism", "Bismarck and Cavour both unified their nations mainly through:", ["democracy and voting", "Realpolitik, practical power politics", "religious reform", "foreign aid"], 1),
     h("nationalism", "Meiji Japan's modernization differed from the West's because it was:", ["slow and gradual", "fast and state-directed", "led by labor unions", "focused on farming only"], 1),
   ]);
   A("his-imperialism", [
@@ -188,7 +188,7 @@
     h("futur", "Which is the FUTUR (not conditional) of 'nous (aller)'?", ["nous irions", "nous irons", "nous allions", "nous irais"], 1, "irons = future; irions = conditional."),
   ]);
 
-  /* ============ ELA — remaining topics ============ */
+  /* ============ ELA, remaining topics ============ */
   A("ela-writing", [
     h("thesis", "Which is the strongest THESIS statement?", ["This essay is about Romeo and Juliet.", "Is fate to blame in Romeo and Juliet?", "Shakespeare shows that impulsive choices, not fate, drive the tragedy.", "Romeo and Juliet is a famous play."], 2, "A thesis is a debatable claim, not a topic or question."),
     h("citation", "Which is the correct MLA in-text citation for page 14 by author Lee?", ["(Lee, pg. 14)", "(Lee 14)", "(Harper Lee, 2020)", "Lee, page 14"], 1),

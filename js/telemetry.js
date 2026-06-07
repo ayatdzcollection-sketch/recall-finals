@@ -1,5 +1,5 @@
 /* ============================================================
-   telemetry.js — anonymous, opt-out usage & learning data.
+   telemetry.js, anonymous, opt-out usage & learning data.
    • No name/email/account, no third-party trackers, no fingerprinting.
    • Sends only the same study events you can export yourself, plus a daily
      heartbeat and a session-open ping (for active-user counts).

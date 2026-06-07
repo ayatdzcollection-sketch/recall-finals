@@ -423,33 +423,3 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   *{transition:none!important;animation:none!important}
   .flash .inner{transition:none}
 }
-
-/* ============================================================
-   PRINT — used by the "printable test" generator
-   ============================================================ */
-.print-only{display:none}
-@media print{
-  :root{--text:#000;--text-dim:#222;--line:#bbb;--line-strong:#888}
-  body{background:#fff!important;color:#000!important;padding:0}
-  #app,.toast,.no-print{display:none!important}
-  .print-only{display:block!important}
-  .print-doc{max-width:7.4in;margin:0 auto;padding:0 .3in;color:#000;font-size:11.5pt}
-  .print-doc h1{font-size:17pt;margin:0 0 2pt}
-  .print-doc h2{font-size:12.5pt;border-bottom:1.5px solid #000;padding-bottom:2px;margin:16pt 0 8pt}
-  .print-meta{display:flex;justify-content:space-between;border:1px solid #000;padding:6px 10px;font-size:10.5pt;margin:8pt 0 4pt}
-  .print-instr{font-size:10pt;font-style:italic;margin-bottom:10pt}
-  .pq{margin:0 0 11pt;break-inside:avoid}
-  .pq .stem{font-weight:600;margin-bottom:3pt}
-  .pq .pchoices{display:grid;grid-template-columns:1fr 1fr;gap:1pt 18pt;padding-left:14pt;font-size:10.7pt}
-  .pq .pchoice{break-inside:avoid}
-  .pq.free .answerspace{height:.95in;border-bottom:1px dotted #888}
-  .pwork{height:1.1in}
-  .pmatch{display:grid;grid-template-columns:1fr 1fr;gap:14pt}
-  .pmatch ol{margin:0;padding-left:20pt}
-  .pmatch .bank{border:1px solid #000;padding:6px 10px;font-size:10.3pt;column-count:1}
-  .pmatch li{margin:3pt 0}
-  .page-break{break-before:page}
-  .akey{font-size:10pt;columns:2;column-gap:24pt}
-  .akey div{break-inside:avoid;margin:1.5pt 0}
-  a[href]::after{content:""}
-}

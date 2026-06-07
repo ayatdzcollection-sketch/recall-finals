@@ -1,5 +1,5 @@
 /* ============================================================
-   srs.js — spaced repetition + interleaving
+   srs.js, spaced repetition + interleaving
    Leitner-style boxes, tuned for a multi-day final-exam window.
    Grades: 0 = Again/wrong, 1 = Hard, 2 = Good/correct, 3 = Easy
    ============================================================ */

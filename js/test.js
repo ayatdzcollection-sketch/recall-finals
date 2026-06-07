@@ -1,5 +1,5 @@
 /* ============================================================
-   test.js — randomized printable practice-test generator
+   test.js, randomized printable practice-test generator
    Builds a mock that mirrors each subject's real exam format,
    with a separate answer key. Re-roll = a brand-new test.
    ============================================================ */
@@ -16,7 +16,7 @@
   const rpick = (rng, a) => a[Math.floor(rng() * a.length)];
   function newSeed() { return Math.floor(Math.random() * 1e9).toString(36) + Math.floor(Math.random() * 1e9).toString(36); }
 
-  // exam blueprints — your finals are MULTIPLE CHOICE (scantron). Writing,
+  // exam blueprints, your finals are MULTIPLE CHOICE (scantron). Writing,
   // fill-in and listening stay in the practice modes for retention, not here.
   const BLUEPRINT = {
     history: { mc: 50, match: 20,
@@ -28,7 +28,7 @@
     french: { mc: 30,
       note: "All multiple choice (scantron): conjugation, Belgium &amp; vocab. Listening &amp; the written e-mail live in their own practice modes." },
     geometry: { mc: 30,
-      note: "All multiple choice (scantron) computation — area, volume, trig, circles, angles." },
+      note: "All multiple choice (scantron) computation, area, volume, trig, circles, angles." },
     all: { mc: 60, match: 12, note: "Cumulative scantron-style mock across all five subjects." },
   };
 
@@ -109,7 +109,7 @@
 
     // opened via a shared link → show the exact test immediately
     if (cfg.seed) {
-      const banner = el("div", "tip"); banner.innerHTML = "<span class='i'>🔗</span><div>Shared test — this is the same randomized test for everyone with this link.</div>";
+      const banner = el("div", "tip"); banner.innerHTML = "<span class='i'>🔗</span><div>Shared test, this is the same randomized test for everyone with this link.</div>";
       previewWrap.appendChild(banner);
       const m = TEST.generate(cfg);
       TEST.renderPreview(previewWrap, m, el);
@@ -118,8 +118,8 @@
 
   /* ---------------- generation ----------------
      When cfg.seed is set the test is built deterministically (same on any
-     device) from STATIC content only — authored/pool questions plus
-     seed-generated parametric Geometry/French — so share links reproduce
+     device) from STATIC content only, authored/pool questions plus
+     seed-generated parametric Geometry/French, so share links reproduce
      it exactly. Without a seed it draws from the full live pool. */
   function pools(subjectId, rng, deterministic) {
     const subjects = subjectId === "all" ? STUDY.subjects : [STUDY.byId[subjectId]];
@@ -203,7 +203,7 @@
       seed: cfg.seed || null, sections: sections, total: qno, stamp: new Date().toLocaleDateString() };
   };
 
-  /* flat question list for on-screen Exam Mode — MULTIPLE CHOICE only (scantron) */
+  /* flat question list for on-screen Exam Mode, MULTIPLE CHOICE only (scantron) */
   TEST.examQuestions = function (cfg) {
     const det = !!cfg.seed;
     const rng = det ? mulberry32(hashStr((cfg.seed || "") + "|exam|" + cfg.subjectId)) : Math.random;

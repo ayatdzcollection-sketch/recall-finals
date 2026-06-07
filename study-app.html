@@ -443,36 +443,6 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   .flash .inner{transition:none}
 }
 
-/* ============================================================
-   PRINT — used by the "printable test" generator
-   ============================================================ */
-.print-only{display:none}
-@media print{
-  :root{--text:#000;--text-dim:#222;--line:#bbb;--line-strong:#888}
-  body{background:#fff!important;color:#000!important;padding:0}
-  #app,.toast,.no-print{display:none!important}
-  .print-only{display:block!important}
-  .print-doc{max-width:7.4in;margin:0 auto;padding:0 .3in;color:#000;font-size:11.5pt}
-  .print-doc h1{font-size:17pt;margin:0 0 2pt}
-  .print-doc h2{font-size:12.5pt;border-bottom:1.5px solid #000;padding-bottom:2px;margin:16pt 0 8pt}
-  .print-meta{display:flex;justify-content:space-between;border:1px solid #000;padding:6px 10px;font-size:10.5pt;margin:8pt 0 4pt}
-  .print-instr{font-size:10pt;font-style:italic;margin-bottom:10pt}
-  .pq{margin:0 0 11pt;break-inside:avoid}
-  .pq .stem{font-weight:600;margin-bottom:3pt}
-  .pq .pchoices{display:grid;grid-template-columns:1fr 1fr;gap:1pt 18pt;padding-left:14pt;font-size:10.7pt}
-  .pq .pchoice{break-inside:avoid}
-  .pq.free .answerspace{height:.95in;border-bottom:1px dotted #888}
-  .pwork{height:1.1in}
-  .pmatch{display:grid;grid-template-columns:1fr 1fr;gap:14pt}
-  .pmatch ol{margin:0;padding-left:20pt}
-  .pmatch .bank{border:1px solid #000;padding:6px 10px;font-size:10.3pt;column-count:1}
-  .pmatch li{margin:3pt 0}
-  .page-break{break-before:page}
-  .akey{font-size:10pt;columns:2;column-gap:24pt}
-  .akey div{break-inside:avoid;margin:1.5pt 0}
-  a[href]::after{content:""}
-}
-
 </style>
 </head>
 <body>
@@ -484,7 +454,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   <!-- Engine -->
   <script>
 /* ============================================================
-   storage.js — global namespace, content registry, persistence
+   storage.js, global namespace, content registry, persistence
    ============================================================ */
 (function (global) {
   "use strict";
@@ -635,7 +605,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const acc = (o) => { Object.keys(o).forEach(k => o[k].accuracy = +(o[k].correct / Math.max(1, o[k].attempts)).toFixed(3)); return o; };
     return {
       generated: new Date().toISOString(),
-      note: "Local study-data export from Recall. Behavior events only — no personal information.",
+      note: "Local study-data export from Recall. Behavior events only, no personal information.",
       legend: { t: "timestamp(ms)", it: "itemId", tp: "topicId", s: "subjectId", g: "grade 0=again 1=hard 2=good 3=easy", ok: "correct(1/0)", rt: "responseTime(ms)", m: "mode", lv: "level 1=easy 2=hard" },
       totals: { events: log.length, days: Object.keys(byDay).length, avgResponseMs: rtN ? Math.round(totalRt / rtN) : null, streakBest: store.streak.best || 0 },
       bySubject: acc(bySubject), byTopic: acc(byTopic), byMode: acc(byMode), byDay: byDay,
@@ -926,7 +896,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     lines.push("TOPIC IDS (use these exact ids only):");
     STUDY.subjects.forEach(function (s) {
       lines.push("# " + s.name);
-      s.topics.forEach(function (t) { lines.push("  " + t.id + " — " + t.title); });
+      s.topics.forEach(function (t) { lines.push("  " + t.id + ", " + t.title); });
     });
     lines.push("");
     lines.push("OUTPUT RULES: reply with ONLY a single code block in exactly this format, one topic id per line, listing the topics I was weakest in (repeat an id once per wrong question so heavier misses appear more):");
@@ -1017,7 +987,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 </script>
   <script>
 /* ============================================================
-   srs.js — spaced repetition + interleaving
+   srs.js, spaced repetition + interleaving
    Leitner-style boxes, tuned for a multi-day final-exam window.
    Grades: 0 = Again/wrong, 1 = Hard, 2 = Good/correct, 3 = Easy
    ============================================================ */
@@ -1137,11 +1107,11 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 </script>
   <script>
 /* ============================================================
-   adaptive.js — the local, offline "For You" engine.
+   adaptive.js, the local, offline "For You" engine.
    After every answer it updates three models and re-plans:
-     • forgetting   — each item's memory stability → recall-probability now
-     • difficulty   — each item's Elo rating (rises when strong students miss it)
-     • skill        — your Elo per subject (rises when you beat hard items)
+     • forgetting  , each item's memory stability → recall-probability now
+     • difficulty  , each item's Elo rating (rises when strong students miss it)
+     • skill       , your Elo per subject (rises when you beat hard items)
    next() scores every question by urgency × importance × weakness ×
    about-to-forget × coverage × difficulty-fit × variety, then samples.
    Nothing leaves the device.
@@ -1253,7 +1223,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   }
 
   // ---- pick the next item: (1) choose a subject by priority, (2) best item in it ----
-  // Two-stage so bank size never biases the mix — a weak/urgent subject wins
+  // Two-stage so bank size never biases the mix, a weak/urgent subject wins
   // even if another subject has 5× the questions.
   ADAPT.next = function (ctx) {
     ctx = ctx || { recent: [], lastTopic: null, lastSubject: null };
@@ -1294,7 +1264,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     return weightedPick(scored.slice(0, Math.min(25, scored.length))) || scored[0].v;
   };
 
-  // ---- readiness % — concept-based, so it climbs without acing all 739 items ----
+  // ---- readiness %, concept-based, so it climbs without acing all 739 items ----
   // Each topic is "ready" once you've mastered ~6 of its questions; a subject's
   // readiness is the average over its topics (untouched topics count as 0).
   ADAPT.readiness = function (subjectId) {
@@ -1323,7 +1293,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 </script>
   <script>
 /* ============================================================
-   telemetry.js — anonymous, opt-out usage & learning data.
+   telemetry.js, anonymous, opt-out usage & learning data.
    • No name/email/account, no third-party trackers, no fingerprinting.
    • Sends only the same study events you can export yourself, plus a daily
      heartbeat and a session-open ping (for active-user counts).
@@ -1902,7 +1872,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             ["Gene", "A section of DNA with the info to make **one protein** (one gene = one protein)."],
           ] },
           { h: "Cancer & the p53 gene" },
-          { p: "**p53** is a gene whose job is to **check DNA after it's copied** (after replication) and **find and fix mistakes** (mutations). If p53 is **faulty/mutated** itself, it stops catching mutations. Those mutations build up — especially in the genes that **control how fast a cell divides** — so cells **divide too fast**, stop doing their job, and form **tumors**. That's cancer." },
+          { p: "**p53** is a gene whose job is to **check DNA after it's copied** (after replication) and **find and fix mistakes** (mutations). If p53 is **faulty/mutated** itself, it stops catching mutations. Those mutations build up, especially in the genes that **control how fast a cell divides**, so cells **divide too fast**, stop doing their job, and form **tumors**. That's cancer." },
           { p: "Cancer happens when **mutations** build up in dividing cells. **Taller** people have **more cells**, and **older** people's cells have **divided for longer**, both mean more chances for a harmful mutation, so higher cancer odds." },
           { tip: "Think of p53 as the cell's **'quality inspector'**, it halts a cell with damaged DNA before that damage can spread." },
         ],
@@ -1938,7 +1908,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         blurb: "Making gametes: 4 different haploid sex cells.",
         lesson: [
           { p: "**Meiosis** produces **gametes** (sex cells: sperm and egg). It makes **4 different haploid** cells, each with **half** the chromosomes, so that fertilization restores the full number." },
-          { tip: "**Teacher's big takeaway:** you do **not** need the steps of meiosis. Just know it makes **sex cells** with **half** the DNA, all **different** from each other — that's why siblings (even from the same parents) can look and act so differently." },
+          { tip: "**Teacher's big takeaway:** you do **not** need the steps of meiosis. Just know it makes **sex cells** with **half** the DNA, all **different** from each other, that's why siblings (even from the same parents) can look and act so differently." },
           { defs: [
             ["Mitosis → result", "**2 identical diploid** cells (two copies of each chromosome). Used for growth/repair of body cells."],
             ["Meiosis → result", "**4 genetically different haploid** cells (one copy of each chromosome). Used to make gametes."],
@@ -2054,7 +2024,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           { p: "Bases pair up: **A–T** and **G–C** (in RNA, A pairs with **U** instead of T). There are **5 bases total**: A, T, G, C, and **U** (which replaces T in RNA)." },
           { h: "DNA's three processes" },
           { defs: [
-            ["Replication", "Making a **perfect copy** of DNA. It happens **before a cell divides** so each new cell gets a full set. You don't need the steps — just what it does and when. **Errors in replication = mutations**, which can create new traits (the link to evolution)."],
+            ["Replication", "Making a **perfect copy** of DNA. It happens **before a cell divides** so each new cell gets a full set. You don't need the steps, just what it does and when. **Errors in replication = mutations**, which can create new traits (the link to evolution)."],
             ["Transcription", "Happens in the **nucleus**: DNA's information is copied into **mRNA**."],
             ["Translation", "Happens in the **cytoplasm** at the **ribosome**: it reads the mRNA, and **tRNA** brings the matching **amino acids** to build a protein."],
           ] },
@@ -2099,7 +2069,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         title: "Evolution & Natural Selection",
         blurb: "How populations change: variation, selection, adaptation. (The most-tested topic.)",
         lesson: [
-          { note: "**This section has the most questions on the final.** Don't just memorize the definition — understand how natural selection *works*." },
+          { note: "**This section has the most questions on the final.** Don't just memorize the definition, understand how natural selection *works*." },
           { defs: [
             ["Evolution", "The **gradual change in a species over time**, most often driven by natural selection."],
             ["Natural selection", "The environment, through **selection pressures**, 'picks' the **best traits**. Survivors reproduce and pass those traits on. Worked out by **Charles Darwin**."],
@@ -2109,14 +2079,14 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
             ["Founder effect", "A **few** individuals start a new population (e.g., an animal reaching an **island**); their offspring all descend from those few, so diversity is low. Also **not** driven by selection."],
           ] },
           { h: "The single most important idea" },
-          { p: "**Natural selection does NOT create new traits.** New traits appear **randomly through mutations**. Nature only **selects the best version of what already exists.** *Giraffes didn't grow longer necks because they needed to — some already had longer necks, those survived and reproduced, and mutations pushed them further.* Same with the **rats**: poison-resistance existed (by mutation) *before* the poison; once people added poison, the resistant ones survived and the trait spread." },
+          { p: "**Natural selection does NOT create new traits.** New traits appear **randomly through mutations**. Nature only **selects the best version of what already exists.** *Giraffes didn't grow longer necks because they needed to, some already had longer necks, those survived and reproduced, and mutations pushed them further.* Same with the **rats**: poison-resistance existed (by mutation) *before* the poison; once people added poison, the resistant ones survived and the trait spread." },
           { tip: "**Evolution is the OUTCOME; natural selection is the MECHANISM.** Natural selection does the work; evolution is the result." },
           { h: "The 4 requirements for natural selection" },
           { olist: [
-            "**Variation** — individuals differ (and the difference must *matter*: eye color is just blue/brown/green, so nature doesn't select for it).",
-            "**Inheritance** — those variations can be passed to offspring.",
-            "**Overproduction** — more offspring are born than can survive on the resources (the **sea-turtle** example).",
-            "**Differential survival** — the best-fit variations survive and reproduce more ('survival of the fittest').",
+            "**Variation**, individuals differ (and the difference must *matter*: eye color is just blue/brown/green, so nature doesn't select for it).",
+            "**Inheritance**, those variations can be passed to offspring.",
+            "**Overproduction**, more offspring are born than can survive on the resources (the **sea-turtle** example).",
+            "**Differential survival**, the best-fit variations survive and reproduce more ('survival of the fittest').",
           ] },
           { tip: "Know the **3 case studies** and their pressure → outcome: **hawksbeard** (habitat fragmentation → heavier seeds that drop straight down), **juncos** (cities/people → boldness), **rats** (poison → resistance). There are for-sure questions on these, plus a reading passage with questions." },
         ],
@@ -2523,7 +2493,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
 </script>
   <script>
-/* data/french-listen.js — realistic listening-comprehension questions.
+/* data/french-listen.js, realistic listening-comprehension questions.
    type:'listen' → the app SPEAKS `say` (fr-FR), hides the text, and asks an
    MC about it. Kept in STUDY.FR_LISTEN (not in topic.questions) so they only
    run in the Listening drill, never in silent practice or printed tests. */
@@ -2545,10 +2515,10 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     { say: "Est-ce qu'on pourrait aller à la mer ?", topicId: "fr-conditionnel", q: "What is being asked?", choices: ["Could we go to the sea? (a polite request)", "We went to the sea", "We will go to the sea", "I don't like the sea"], answer: 0 },
     { say: "Bien à vous", topicId: "fr-ecriture", q: "When would you hear this phrase?", choices: ["at the end of an email", "at the start of an email", "when ordering food", "when asking directions"], answer: 0 },
     // conjugation identification (tense by ear)
-    { say: "je parlerais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel — 'I would speak'", "futur — 'I will speak'", "passé — 'I spoke'", "présent — 'I speak'"], answer: 0 },
-    { say: "ils seront", topicId: "fr-futur", q: "Which tense did you hear?", choices: ["futur — 'they will be'", "conditionnel — 'they would be'", "présent — 'they are'", "imparfait — 'they were'"], answer: 0 },
-    { say: "tu ferais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel — 'you would do'", "futur — 'you will do'", "passé — 'you did'", "présent — 'you do'"], answer: 0 },
-    { say: "nous irons", topicId: "fr-futur", q: "Which form did you hear?", choices: ["futur — 'we will go'", "conditionnel — 'we would go'", "passé — 'we went'", "présent — 'we go'"], answer: 0 },
+    { say: "je parlerais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel, 'I would speak'", "futur, 'I will speak'", "passé, 'I spoke'", "présent, 'I speak'"], answer: 0 },
+    { say: "ils seront", topicId: "fr-futur", q: "Which tense did you hear?", choices: ["futur, 'they will be'", "conditionnel, 'they would be'", "présent, 'they are'", "imparfait, 'they were'"], answer: 0 },
+    { say: "tu ferais", topicId: "fr-conditionnel", q: "Which form did you hear?", choices: ["conditionnel, 'you would do'", "futur, 'you will do'", "passé, 'you did'", "présent, 'you do'"], answer: 0 },
+    { say: "nous irons", topicId: "fr-futur", q: "Which form did you hear?", choices: ["futur, 'we will go'", "conditionnel, 'we would go'", "passé, 'we went'", "présent, 'we go'"], answer: 0 },
   ];
 
   STUDY.FR_LISTEN = L;
@@ -3270,7 +3240,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
 </script>
   <script>
-/* data/history-timeline.js — chronological events for the interactive
+/* data/history-timeline.js, chronological events for the interactive
    History timeline + "put them in order" challenge. Dates/events come from
    the Semester 2 World History study guide. */
 (function (STUDY) {
@@ -3278,15 +3248,15 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   STUDY.TIMELINE = [
     { year: 1760, label: "Industrial Revolution begins", era: "Industrial Age", text: "Starts in Great Britain (resources, geography, capital). Urbanization, the steam engine (James Watt), factories, pollution, and labor unions." },
     { year: 1857, label: "Sepoy Rebellion (India)", era: "Imperialism", text: "An uprising against British rule, sparked when rifle cartridges greased with animal fat offended Hindu and Muslim soldiers." },
-    { year: 1868, label: "Meiji Restoration (Japan)", era: "Nationalism & Imperialism", text: "Japan rapidly modernizes its military and legal systems after Western models — fast and state-directed." },
+    { year: 1868, label: "Meiji Restoration (Japan)", era: "Nationalism & Imperialism", text: "Japan rapidly modernizes its military and legal systems after Western models, fast and state-directed." },
     { year: 1871, label: "Germany unified", era: "Nationalism", text: "Otto von Bismarck unifies Germany using Realpolitik ('blood and iron'). Germany becomes an industrial giant." },
     { year: 1884, label: "Berlin Conference", era: "Imperialism", text: "European powers carve up Africa with no African input. Ethiopia (and Liberia) resist colonization." },
     { year: 1914, label: "World War I begins", era: "World War I", text: "Sparked by the assassination of Archduke Franz Ferdinand. M-A-I-N causes: Militarism, Alliances, Imperialism, Nationalism. Trench warfare & No Man's Land." },
-    { year: 1917, label: "Russian Revolution", era: "World War I", text: "Military losses, food/fuel shortages, and anger at the Czar push Russia into revolt — and out of WWI." },
+    { year: 1917, label: "Russian Revolution", era: "World War I", text: "Military losses, food/fuel shortages, and anger at the Czar push Russia into revolt, and out of WWI." },
     { year: 1919, label: "Treaty of Versailles", era: "Interwar", text: "Ends WWI; Germans saw its reparations and territorial losses as harsh and humiliating. League of Nations created." },
-    { year: 1929, label: "Great Depression begins", era: "Interwar", text: "Worldwide economic collapse — mass unemployment. Economic chaos + wounded pride let dictators (Hitler, Mussolini) rise." },
+    { year: 1929, label: "Great Depression begins", era: "Interwar", text: "Worldwide economic collapse, mass unemployment. Economic chaos + wounded pride let dictators (Hitler, Mussolini) rise." },
     { year: 1939, label: "World War II begins", era: "World War II", text: "Appeasement let Hitler seize lands unchecked. Germany's central location forced a multi-front war. Lend-Lease aided the Allies." },
-    { year: 1941, label: "The Holocaust / Final Solution", era: "World War II", text: "Hitler's state-sponsored plan to systematically murder Europe's Jews — the genocide known as the Holocaust." },
+    { year: 1941, label: "The Holocaust / Final Solution", era: "World War II", text: "Hitler's state-sponsored plan to systematically murder Europe's Jews, the genocide known as the Holocaust." },
     { year: 1945, label: "WWII ends · UN founded", era: "Cold War", text: "The US and USSR emerge as superpowers. The United Nations is established to keep the peace." },
     { year: 1947, label: "Partition of India", era: "Decolonization", text: "Britain divides the region into India and Pakistan over Hindu–Muslim conflict. Gandhi's nonviolence had driven independence." },
     { year: 1948, label: "Marshall Plan & Berlin Airlift", era: "Cold War", text: "US aid rebuilds Western Europe (Greece & Turkey too). The Berlin Airlift is the first major US–USSR confrontation." },
@@ -3295,7 +3265,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     { year: 1955, label: "Warsaw Pact", era: "Cold War", text: "Framed as a defense against NATO; really kept Soviet troops in satellite states under Moscow's control." },
     { year: 1960, label: "Year of Africa", era: "Decolonization", text: "Seventeen African nations gain independence in this single year." },
     { year: 1961, label: "Berlin Wall built", era: "Cold War", text: "East Germany builds it to stop citizens fleeing to capitalist West Berlin. The Iron Curtain (Churchill's term) divides Europe." },
-    { year: 1965, label: "Vietnam War escalates", era: "Cold War", text: "The Domino Theory — if one nation falls to communism its neighbors follow — justifies US intervention." },
+    { year: 1965, label: "Vietnam War escalates", era: "Cold War", text: "The Domino Theory, if one nation falls to communism its neighbors follow, justifies US intervention." },
     { year: 1991, label: "USSR collapses", era: "End of the Cold War", text: "Gorbachev's glasnost (openness) and perestroika (restructuring) weaken state control; communism and the USSR collapse." },
     { year: 1994, label: "Rwandan Genocide · Apartheid ends", era: "Modern Conflicts", text: "Hutu extremists slaughter the Tutsi minority. In South Africa, apartheid ends; Mandela (like Gandhi) used nonviolent protest." },
   ];
@@ -3304,7 +3274,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 </script>
   <!-- Authored variety questions layered onto existing topics -->
   <script>
-/* data/extra.js — authored VARIETY questions added on top of the originals.
+/* data/extra.js, authored VARIETY questions added on top of the originals.
    These reword concepts and add application/example items so the practice
    pool isn't just the memorised guide/Blooket wording. Nothing is removed;
    these are mixed in everywhere (topic practice, mixed, smart, cram, tests). */
@@ -3418,7 +3388,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     fill("Transcription copies DNA into ______ inside the nucleus.", ["mRNA", "messenger rna", "rna"]),
   ]);
   A("bio-evolution", [
-    mc("Which statement about natural selection is TRUE?", ["It creates brand-new traits when organisms need them", "It selects the best version of traits that already exist", "It only happens to plants", "It stops mutations from occurring"], 1, "Natural selection does NOT create traits — mutations do; nature selects from what exists."),
+    mc("Which statement about natural selection is TRUE?", ["It creates brand-new traits when organisms need them", "It selects the best version of traits that already exist", "It only happens to plants", "It stops mutations from occurring"], 1, "Natural selection does NOT create traits, mutations do; nature selects from what exists."),
     mc("Where do the NEW traits that natural selection acts on come from?", ["random mutations", "the organism's effort", "the environment directly", "natural selection itself"], 0),
     mc("'Evolution is the outcome; natural selection is the ______.'", ["mistake", "mechanism", "opposite", "definition"], 1, "Natural selection is the mechanism; evolution is the result."),
     mc("The Florida Panther losing genetic diversity after its habitat shrank to one small area is an example of a:", ["founder effect", "population bottleneck", "selection pressure", "mutation"], 1),
@@ -3493,7 +3463,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 </script>
   <!-- Harder, concept-tagged questions (Easy/Hard practice) -->
   <script>
-/* data/hard.js — a larger, HARDER question batch, tagged with concept + lvl
+/* data/hard.js, a larger, HARDER question batch, tagged with concept + lvl
    so the Easy/Hard practice toggle still covers every concept in each lesson.
    Heaviest where the pool was thin (euphemism, the rarer devices). */
 (function (STUDY) {
@@ -3505,7 +3475,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
   /* ===== ELA · Figurative language (esp. euphemism) ===== */
   A("ela-figurative", [
-    // euphemism — the thin one, now well covered
+    // euphemism, the thin one, now well covered
     e("euphemism", "A euphemism is used to make something sound:", ["harsher and more shocking", "milder, softer, or more polite", "funnier and exaggerated", "more scientific"], 1, "A euphemism softens a harsh or blunt idea."),
     h("euphemism", "Which sentence contains a EUPHEMISM?", ["The wind screamed through the trees.", "Our dog had to be put to sleep last week.", "He runs as fast as lightning.", "The city never sleeps."], 1, "'Put to sleep' softens 'killed/euthanized.'"),
     h("euphemism", "Which sentence contains a EUPHEMISM?", ["She has a heart of gold.", "The company is letting twenty people go.", "Time is a thief.", "The stars danced overhead."], 1, "'Letting people go' softens 'firing/laying off.'"),
@@ -3533,7 +3503,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     h("allusion", "“He met his Waterloo on the final exam” is an ALLUSION to:", ["a sport", "Napoleon's famous defeat", "a river in Texas", "a song"], 1, "An allusion references a well-known event (Napoleon's defeat at Waterloo)."),
     h("pun", "“A bicycle can't stand on its own because it's two-tired.” This is a:", ["pun", "metaphor", "euphemism", "allusion"], 0, "Wordplay on 'too tired'/'two-tired' = pun."),
     h("symbolism", "In a story, a wilting flower that appears whenever a character loses hope is an example of:", ["alliteration", "symbolism", "a simile", "denotation"], 1),
-    h("foreshadowing", "An early line — “She had no idea it would be the last time she'd see the house” — is an example of:", ["flashback", "foreshadowing", "a pun", "imagery"], 1),
+    h("foreshadowing", "An early line, “She had no idea it would be the last time she'd see the house”, is an example of:", ["flashback", "foreshadowing", "a pun", "imagery"], 1),
     h("mood", "A graveyard at midnight with fog and distant howls mainly establishes the story's:", ["mood", "thesis", "rhyme scheme", "denotation"], 0, "The atmosphere/feeling for the reader = mood."),
     h("tone", "A reviewer writes about a film with biting sarcasm. 'Sarcastic' describes the:", ["mood", "tone", "setting", "plot"], 1, "The author's attitude = tone."),
   ]);
@@ -3559,7 +3529,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
   /* ===== ELA · Nonfiction & rhetoric (harder) ===== */
   A("ela-nonfiction", [
-    h("ethos", "“Trust me — I've taught biology for 25 years.” This appeal is:", ["pathos", "logos", "ethos", "denotation"], 2),
+    h("ethos", "“Trust me, I've taught biology for 25 years.” This appeal is:", ["pathos", "logos", "ethos", "denotation"], 2),
     h("pathos", "“Every night, children in our town go to bed hungry.” This appeal is:", ["ethos", "logos", "pathos", "tone"], 2),
     h("logos", "“Recycling one ton of paper saves about 17 trees.” This appeal is:", ["ethos", "pathos", "logos", "mood"], 2),
     h("memoir", "An author writes a book reflecting on a few formative years of their own life. This is a:", ["biography", "memoir", "novel", "news article"], 1),
@@ -3578,7 +3548,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     h("coldwar", "Which event is considered the FIRST major US–USSR confrontation of the Cold War?", ["The Cuban Missile Crisis", "The Berlin Airlift", "The fall of the Berlin Wall", "The Korean War"], 1),
   ]);
   A("fr-conditionnel", [
-    h("conditionnel", "Which fully correct sentence uses the conditional to soften a request?", ["Je veux de l'eau.", "Je voudrais de l'eau, s'il vous plaît.", "J'ai voulu de l'eau.", "Je voudrai de l'eau."], 1, "voudrais (conditional) = 'I would like' — polite; voudrai is future."),
+    h("conditionnel", "Which fully correct sentence uses the conditional to soften a request?", ["Je veux de l'eau.", "Je voudrais de l'eau, s'il vous plaît.", "J'ai voulu de l'eau.", "Je voudrai de l'eau."], 1, "voudrais (conditional) = 'I would like', polite; voudrai is future."),
   ]);
 
   /* ============ BIOLOGY (Easy recall + Hard application per topic) ============ */
@@ -3617,7 +3587,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     h("industrial", "Labor unions of the era did NOT primarily fight for:", ["banning child labor", "better worker safety", "higher wages", "equal pay for men and women"], 3, "Equal pay was not a typical union goal at that time."),
   ]);
   A("his-nationalism", [
-    h("nationalism", "Bismarck and Cavour both unified their nations mainly through:", ["democracy and voting", "Realpolitik — practical power politics", "religious reform", "foreign aid"], 1),
+    h("nationalism", "Bismarck and Cavour both unified their nations mainly through:", ["democracy and voting", "Realpolitik, practical power politics", "religious reform", "foreign aid"], 1),
     h("nationalism", "Meiji Japan's modernization differed from the West's because it was:", ["slow and gradual", "fast and state-directed", "led by labor unions", "focused on farming only"], 1),
   ]);
   A("his-imperialism", [
@@ -3683,7 +3653,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     h("futur", "Which is the FUTUR (not conditional) of 'nous (aller)'?", ["nous irions", "nous irons", "nous allions", "nous irais"], 1, "irons = future; irions = conditional."),
   ]);
 
-  /* ============ ELA — remaining topics ============ */
+  /* ============ ELA, remaining topics ============ */
   A("ela-writing", [
     h("thesis", "Which is the strongest THESIS statement?", ["This essay is about Romeo and Juliet.", "Is fate to blame in Romeo and Juliet?", "Shakespeare shows that impulsive choices, not fate, drive the tragedy.", "Romeo and Juliet is a famous play."], 2, "A thesis is a debatable claim, not a topic or question."),
     h("citation", "Which is the correct MLA in-text citation for page 14 by author Lee?", ["(Lee, pg. 14)", "(Lee 14)", "(Harper Lee, 2020)", "Lee, page 14"], 1),
@@ -3711,7 +3681,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 </script>
   <!-- Image-occlusion diagrams -->
   <script>
-/* data/diagrams.js — image-occlusion diagrams (label-the-part recall).
+/* data/diagrams.js, image-occlusion diagrams (label-the-part recall).
    Detailed, original textbook-style SVGs (color-coded). Each part has x/y as
    % of the SVG box. Used by QUIZ.runDiagram (Biology "Label It"). */
 (function (STUDY) {
@@ -3746,7 +3716,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       "</svg>",
     parts: [
       { x: 27, y: 13, label: "superior vena cava", aliases: ["svc", "vena cava"], note: " Returns oxygen-poor blood from the upper body to the right atrium." },
-      { x: 38, y: 13, label: "aorta", aliases: [], note: " The largest artery — carries oxygen-rich blood out to the body." },
+      { x: 38, y: 13, label: "aorta", aliases: [], note: " The largest artery, carries oxygen-rich blood out to the body." },
       { x: 64, y: 15, label: "pulmonary artery", aliases: ["pulmonary trunk"], note: " Carries oxygen-poor blood from the right ventricle to the lungs." },
       { x: 78, y: 33, label: "pulmonary vein", aliases: ["pulmonary veins"], note: " Brings oxygen-rich blood from the lungs to the left atrium." },
       { x: 37, y: 37, label: "right atrium", aliases: ["ra"], note: " Receives blood from the body (it's on your left as you look at the diagram)." },
@@ -3781,7 +3751,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     parts: [
       { x: 19, y: 43, label: "phosphate", aliases: ["phosphate group", "po4"], note: " Part of the DNA backbone." },
       { x: 49, y: 60, label: "sugar", aliases: ["deoxyribose", "5-carbon sugar"], note: " The 5-carbon sugar (deoxyribose) links the phosphate and base." },
-      { x: 80, y: 49, label: "nitrogen base", aliases: ["base", "nitrogenous base"], note: " A, T, G, or C — this carries the genetic code." },
+      { x: 80, y: 49, label: "nitrogen base", aliases: ["base", "nitrogenous base"], note: " A, T, G, or C, this carries the genetic code." },
     ],
   });
 
@@ -3840,7 +3810,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   <!-- Question-bank expansion (card→MC + parametric generators) -->
   <script>
 /* ============================================================
-   quizgen.js — expands the question bank at load time so practice
+   quizgen.js, expands the question bank at load time so practice
    can't be pattern-memorised. Runs AFTER all data files (and
    data/extra.js) register, BEFORE quiz/test/app.
      1. Card → MC (every subject): self-contained questions whose
@@ -4027,7 +3997,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   <!-- UI -->
   <script>
 /* ============================================================
-   quiz.js — interactive question + flashcard runner
+   quiz.js, interactive question + flashcard runner
    Question shapes:
      {type:'mc',   q, choices:[...], answer:<index>, explain}
      {type:'fill', q, answers:['accepted', ...], explain, placeholder}
@@ -4545,7 +4515,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       });
       mount.appendChild(rate);
 
-      // optional typed recall (lenient: typos / wording OK) — type then it flips
+      // optional typed recall (lenient: typos / wording OK), type then it flips
       if (!opts.audio) {
         const typeRow = el("div", "fill-in"); typeRow.style.marginTop = "10px";
         const tinp = el("input"); tinp.type = "text"; tinp.autocomplete = "off"; tinp.spellcheck = false; tinp.placeholder = "Optional: type your answer, press Enter";
@@ -4556,7 +4526,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
           const ok = QUIZ.fuzzyMatch(tinp.value, [c.back]);
           tinp.classList.add(ok ? "correct" : "wrong");
           if (!flipped) flip();
-          toast(ok ? "✓ Close enough — you recalled it" : "Not quite — check the answer");
+          toast(ok ? "✓ Close enough, you recalled it" : "Not quite, check the answer");
         };
       }
 
@@ -4641,7 +4611,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       big.appendChild(el("div", "score", ready + "%"));
       big.appendChild(el("div", "lbl", "finals ready" + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
       mount.appendChild(big);
-      if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped — a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
+      if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped, a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
       else mount.appendChild(el("div", "panel center", "Nice momentum. The feed keeps adapting to exactly what you need next."));
       const bar = el("div", "qbar");
       const go = el("button", "btn primary", tired ? "Push on" : "Keep going");
@@ -4819,7 +4789,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       const subj = STUDY.byId[q.subjectId], topic = STUDY.topicIndex[q.topicId] ? STUDY.topicIndex[q.topicId].topic : null;
       if (subj) mount.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
       const cn = (cc[q.id] || 0);
-      if (cn > 0) mount.appendChild(el("div", "cram-badge", "✓ once — get it again to lock it"));
+      if (cn > 0) mount.appendChild(el("div", "cram-badge", "✓ once, get it again to lock it"));
       renderItem(q);
     }
 
@@ -4899,7 +4869,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 </script>
   <script>
 /* ============================================================
-   test.js — randomized printable practice-test generator
+   test.js, randomized printable practice-test generator
    Builds a mock that mirrors each subject's real exam format,
    with a separate answer key. Re-roll = a brand-new test.
    ============================================================ */
@@ -4916,7 +4886,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   const rpick = (rng, a) => a[Math.floor(rng() * a.length)];
   function newSeed() { return Math.floor(Math.random() * 1e9).toString(36) + Math.floor(Math.random() * 1e9).toString(36); }
 
-  // exam blueprints — your finals are MULTIPLE CHOICE (scantron). Writing,
+  // exam blueprints, your finals are MULTIPLE CHOICE (scantron). Writing,
   // fill-in and listening stay in the practice modes for retention, not here.
   const BLUEPRINT = {
     history: { mc: 50, match: 20,
@@ -4928,7 +4898,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     french: { mc: 30,
       note: "All multiple choice (scantron): conjugation, Belgium &amp; vocab. Listening &amp; the written e-mail live in their own practice modes." },
     geometry: { mc: 30,
-      note: "All multiple choice (scantron) computation — area, volume, trig, circles, angles." },
+      note: "All multiple choice (scantron) computation, area, volume, trig, circles, angles." },
     all: { mc: 60, match: 12, note: "Cumulative scantron-style mock across all five subjects." },
   };
 
@@ -5009,7 +4979,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
     // opened via a shared link → show the exact test immediately
     if (cfg.seed) {
-      const banner = el("div", "tip"); banner.innerHTML = "<span class='i'>🔗</span><div>Shared test — this is the same randomized test for everyone with this link.</div>";
+      const banner = el("div", "tip"); banner.innerHTML = "<span class='i'>🔗</span><div>Shared test, this is the same randomized test for everyone with this link.</div>";
       previewWrap.appendChild(banner);
       const m = TEST.generate(cfg);
       TEST.renderPreview(previewWrap, m, el);
@@ -5018,8 +4988,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
   /* ---------------- generation ----------------
      When cfg.seed is set the test is built deterministically (same on any
-     device) from STATIC content only — authored/pool questions plus
-     seed-generated parametric Geometry/French — so share links reproduce
+     device) from STATIC content only, authored/pool questions plus
+     seed-generated parametric Geometry/French, so share links reproduce
      it exactly. Without a seed it draws from the full live pool. */
   function pools(subjectId, rng, deterministic) {
     const subjects = subjectId === "all" ? STUDY.subjects : [STUDY.byId[subjectId]];
@@ -5103,7 +5073,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       seed: cfg.seed || null, sections: sections, total: qno, stamp: new Date().toLocaleDateString() };
   };
 
-  /* flat question list for on-screen Exam Mode — MULTIPLE CHOICE only (scantron) */
+  /* flat question list for on-screen Exam Mode, MULTIPLE CHOICE only (scantron) */
   TEST.examQuestions = function (cfg) {
     const det = !!cfg.seed;
     const rng = det ? mulberry32(hashStr((cfg.seed || "") + "|exam|" + cfg.subjectId)) : Math.random;
@@ -5296,7 +5266,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 </script>
   <script>
 /* ============================================================
-   app.js — router, screens, lesson & visual rendering
+   app.js, router, screens, lesson & visual rendering
    ============================================================ */
 (function (STUDY) {
   "use strict";
@@ -5395,17 +5365,17 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     actions.appendChild(actionCard("", "🧠", "Smart Study", "Interleaved new + due material", () => startSmart(null)));
     actions.appendChild(actionCard("", "🔥", "Cram Mode", "Blitz a subject before the exam", () => go("#/cram")));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
-    actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
+    actions.appendChild(actionCard("", "🔁", "Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
     actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
     actions.appendChild(actionCard("", "📥", "Check a Test", "Import weak spots from a graded test", () => go("#/import")));
     actions.appendChild(actionCard("", "⭐", "Starred", "Your bookmarked questions", () => go("#/starred")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
-    // work on these — items you flagged (Again/Hard) or missed
+    // work on these, items you flagged (Again/Hard) or missed
     const flagged = STUDY.wrongItems();
     if (flagged.length) {
-      app.appendChild(sectionH("Work on these", "flagged Again/Hard or missed — clear them by getting them right twice"));
+      app.appendChild(sectionH("Work on these", "flagged Again/Hard or missed, clear them by getting them right twice"));
       const card = el("div", "panel");
       const row = el("div", "row");
       row.appendChild(el("div", null, "<b>🎯 " + flagged.length + " item" + (flagged.length > 1 ? "s" : "") + " to work on</b>"));
@@ -5615,7 +5585,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
         seg2.appendChild(b);
       });
       body.appendChild(seg2);
-      body.appendChild(el("p", "muted", lvl === "easy" ? "Easy: definitions & recall, balanced across every concept in the lesson." : lvl === "hard" ? "Hard: examples, discrimination & application — still covering every concept." : "A balanced mix across every concept in the lesson."));
+      body.appendChild(el("p", "muted", lvl === "easy" ? "Easy: definitions & recall, balanced across every concept in the lesson." : lvl === "hard" ? "Hard: examples, discrimination & application, still covering every concept." : "A balanced mix across every concept in the lesson."));
       const qmount = el("div"); body.appendChild(qmount);
       // concept-balanced set so every lesson idea is covered (not just the common ones)
       const set = STUDY.practiceSet(id, lvl);
@@ -5811,7 +5781,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       if (!qs.length) { mount.innerHTML = '<div class="empty">No questions available for this exam.</div>'; return; }
       const secs = qs.length * 45;
       const intro = el("div", "card");
-      intro.innerHTML = "<b>📝 Exam Mode — " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Your score and a full review come at the finish.</p>";
+      intro.innerHTML = "<b>📝 Exam Mode, " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Your score and a full review come at the finish.</p>";
       mount.appendChild(intro);
       const start = el("button", "btn primary full", "Start the exam →");
       start.onclick = function () {
@@ -5829,7 +5799,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     sessionScreen("🔊 French Listening", function (mount) {
       if (!QUIZ.canSpeak) { mount.innerHTML = '<div class="empty">Your browser doesn\'t support speech. Try Chrome or Safari, then come back.</div>'; return; }
       const intro = el("div", "card");
-      intro.innerHTML = "<b>🔊 Listening comprehension</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>You'll <b>hear French</b> (no text) and answer a question about what was said — vocab, sentences, and conjugations by ear. Tap 🔊 to replay. Real prep for the listening and oral sections.</p>";
+      intro.innerHTML = "<b>🔊 Listening comprehension</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>You'll <b>hear French</b> (no text) and answer a question about what was said, vocab, sentences, and conjugations by ear. Tap 🔊 to replay. Real prep for the listening and oral sections.</p>";
       mount.appendChild(intro);
       const seg = el("div", "row"); seg.style.margin = "10px 0 4px";
       const b1 = el("button", "btn primary", "Start listening quiz →");
@@ -5851,7 +5821,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   function renderLabelChooser() {
     clear(); app.appendChild(topbar());
     app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Biology", hash: "#/s/biology" }, { label: "Label It" }]));
-    app.appendChild(el("div", "hero", "<h1>🗺️ Label the Diagram</h1><p class='muted'>The labels are hidden — recall each part (typing is forgiving). Great for the heart, the nucleotide, and chromosome questions.</p>"));
+    app.appendChild(el("div", "hero", "<h1>🗺️ Label the Diagram</h1><p class='muted'>The labels are hidden, recall each part (typing is forgiving). Great for the heart, the nucleotide, and chromosome questions.</p>"));
     (STUDY.DIAGRAMS || []).forEach(function (d) {
       const row = el("div", "topic"); row.style.setProperty("--sub", (STUDY.byId[d.subjectId] || {}).accent || "#27c89b");
       row.onclick = () => startDiagram(d.id);
@@ -6002,15 +5972,15 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     app.appendChild(el("div", "hero", "<h1>📥 Find my weak spots</h1><p class='muted'>Turn a graded test into a targeted review list. Online Exam Mode does this automatically; for a paper or PDF test, use the steps below with any AI.</p>"));
 
     const c1 = el("div", "card");
-    c1.appendChild(el("div", "vcap", "Step 1 — copy this prompt"));
+    c1.appendChild(el("div", "vcap", "Step 1, copy this prompt"));
     c1.appendChild(el("p", "muted", "Then open Claude (or another AI), paste it, and attach a photo/PDF of your graded test."));
     const copyBtn = el("button", "btn primary", "📋 Copy the AI prompt");
-    copyBtn.onclick = function () { const p = STUDY.aiImportPrompt(); copyText(p, "Prompt copied — paste it into Claude with your test"); };
+    copyBtn.onclick = function () { const p = STUDY.aiImportPrompt(); copyText(p, "Prompt copied, paste it into Claude with your test"); };
     c1.appendChild(copyBtn);
     app.appendChild(c1);
 
     const c2 = el("div", "card");
-    c2.appendChild(el("div", "vcap", "Step 2 — paste the AI's reply here"));
+    c2.appendChild(el("div", "vcap", "Step 2, paste the AI's reply here"));
     c2.appendChild(el("p", "muted", "The AI replies with a RECALL-WEAK block. Paste the whole thing and import."));
     const ta = document.createElement("textarea");
     ta.placeholder = "RECALL-WEAK\nbio-mendel\nela-figurative\nEND";
@@ -6029,7 +5999,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     c2.appendChild(imp); c2.appendChild(out);
     app.appendChild(c2);
 
-    app.appendChild(el("div", "empty", "<div class='big'>💡</div>Tip: take a Practice Test from this app (it prints an answer key), grade it, then import — or just use Exam Mode on your phone and weak spots are tracked for you."));
+    app.appendChild(el("div", "empty", "<div class='big'>💡</div>Tip: take a Practice Test from this app (it prints an answer key), grade it, then import, or just use Exam Mode on your phone and weak spots are tracked for you."));
   }
 
   // ---- SEARCH ----
@@ -6184,12 +6154,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     });
     card.appendChild(el("hr", "div"));
 
-    // export / import — files
+    // export / import, files
     card.appendChild(el("div", null, "<b>Move progress to another device</b><div class='muted' style='font-size:.85rem'>Progress lives only in this browser. Use a file, or copy a code and paste it on the other device.</div>"));
     const er = el("div", "row wrap"); er.style.marginTop = "10px";
     const exp = el("button", "btn sm", "⬇️ Export file"); exp.onclick = exportProgress;
     const imp = el("button", "btn sm", "⬆️ Import file"); imp.onclick = importProgress;
-    const copyc = el("button", "btn sm", "📋 Copy code"); copyc.onclick = () => copyText(STUDY.exportData(), "Progress code copied — paste it on the other device");
+    const copyc = el("button", "btn sm", "📋 Copy code"); copyc.onclick = () => copyText(STUDY.exportData(), "Progress code copied, paste it on the other device");
     const pastec = el("button", "btn sm", "📥 Paste code");
     er.appendChild(exp); er.appendChild(imp); er.appendChild(copyc); er.appendChild(pastec); card.appendChild(er);
     const pasteWrap = el("div"); pasteWrap.style.display = "none"; pasteWrap.style.marginTop = "10px";
@@ -6197,14 +6167,14 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     pta.placeholder = "Paste your progress code here…";
     pta.style.cssText = "width:100%;min-height:90px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:11px;font-family:var(--mono);font-size:.78rem";
     const applyc = el("button", "btn sm good", "Apply code"); applyc.style.marginTop = "8px";
-    applyc.onclick = function () { if (STUDY.importData(pta.value.trim())) { QUIZ.toast("Progress imported"); go("#/home"); } else QUIZ.toast("That code didn't read — copy the whole thing"); };
+    applyc.onclick = function () { if (STUDY.importData(pta.value.trim())) { QUIZ.toast("Progress imported"); go("#/home"); } else QUIZ.toast("That code didn't read, copy the whole thing"); };
     pasteWrap.appendChild(pta); pasteWrap.appendChild(applyc); card.appendChild(pasteWrap);
     pastec.onclick = function () { pasteWrap.style.display = pasteWrap.style.display === "none" ? "block" : "none"; if (pasteWrap.style.display === "block") pta.focus(); };
     card.appendChild(el("hr", "div"));
 
     // study-data export (for your own analysis)
     const sd = STUDY.studyData();
-    card.appendChild(el("div", null, "<b>Study data</b><div class='muted' style='font-size:.85rem'>" + sd.totals.events + " events logged on this device — every answer's timestamp, subject/topic, right/wrong, speed and mode. Behaviour only, no personal info. Download it to analyze your own study.</div>"));
+    card.appendChild(el("div", null, "<b>Study data</b><div class='muted' style='font-size:.85rem'>" + sd.totals.events + " events logged on this device, every answer's timestamp, subject/topic, right/wrong, speed and mode. Behaviour only, no personal info. Download it to analyze your own study.</div>"));
     const dr = el("div", "row wrap"); dr.style.marginTop = "10px";
     const dj = el("button", "btn sm", "⬇️ Download JSON");
     dj.onclick = () => downloadFile(JSON.stringify(STUDY.studyData(), null, 2), "recall-study-data.json", "application/json");
@@ -6213,7 +6183,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
     card.appendChild(el("hr", "div"));
 
-    // privacy & data (anonymous, opt-out) — mentioned only here
+    // privacy & data (anonymous, opt-out), mentioned only here
     const teleOn = STUDY.store().settings.telemetry !== false;
     const prow = el("div", "row");
     prow.appendChild(el("div", null, "<b>Privacy &amp; data</b><div class='muted' style='font-size:.85rem'>Recall shares <b>anonymous</b> usage &amp; study events (timestamps, subject/topic, right/wrong, speed, mode) to help improve the app. No name, account, location, or trackers. Turn it off anytime.</div>"));

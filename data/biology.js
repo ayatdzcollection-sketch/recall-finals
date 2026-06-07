@@ -68,7 +68,7 @@
             ["Gene", "A section of DNA with the info to make **one protein** (one gene = one protein)."],
           ] },
           { h: "Cancer & the p53 gene" },
-          { p: "**p53** is a gene whose job is to **check DNA after it's copied** (after replication) and **find and fix mistakes** (mutations). If p53 is **faulty/mutated** itself, it stops catching mutations. Those mutations build up — especially in the genes that **control how fast a cell divides** — so cells **divide too fast**, stop doing their job, and form **tumors**. That's cancer." },
+          { p: "**p53** is a gene whose job is to **check DNA after it's copied** (after replication) and **find and fix mistakes** (mutations). If p53 is **faulty/mutated** itself, it stops catching mutations. Those mutations build up, especially in the genes that **control how fast a cell divides**, so cells **divide too fast**, stop doing their job, and form **tumors**. That's cancer." },
           { p: "Cancer happens when **mutations** build up in dividing cells. **Taller** people have **more cells**, and **older** people's cells have **divided for longer**, both mean more chances for a harmful mutation, so higher cancer odds." },
           { tip: "Think of p53 as the cell's **'quality inspector'**, it halts a cell with damaged DNA before that damage can spread." },
         ],
@@ -104,7 +104,7 @@
         blurb: "Making gametes: 4 different haploid sex cells.",
         lesson: [
           { p: "**Meiosis** produces **gametes** (sex cells: sperm and egg). It makes **4 different haploid** cells, each with **half** the chromosomes, so that fertilization restores the full number." },
-          { tip: "**Teacher's big takeaway:** you do **not** need the steps of meiosis. Just know it makes **sex cells** with **half** the DNA, all **different** from each other — that's why siblings (even from the same parents) can look and act so differently." },
+          { tip: "**Teacher's big takeaway:** you do **not** need the steps of meiosis. Just know it makes **sex cells** with **half** the DNA, all **different** from each other, that's why siblings (even from the same parents) can look and act so differently." },
           { defs: [
             ["Mitosis → result", "**2 identical diploid** cells (two copies of each chromosome). Used for growth/repair of body cells."],
             ["Meiosis → result", "**4 genetically different haploid** cells (one copy of each chromosome). Used to make gametes."],
@@ -220,7 +220,7 @@
           { p: "Bases pair up: **A–T** and **G–C** (in RNA, A pairs with **U** instead of T). There are **5 bases total**: A, T, G, C, and **U** (which replaces T in RNA)." },
           { h: "DNA's three processes" },
           { defs: [
-            ["Replication", "Making a **perfect copy** of DNA. It happens **before a cell divides** so each new cell gets a full set. You don't need the steps — just what it does and when. **Errors in replication = mutations**, which can create new traits (the link to evolution)."],
+            ["Replication", "Making a **perfect copy** of DNA. It happens **before a cell divides** so each new cell gets a full set. You don't need the steps, just what it does and when. **Errors in replication = mutations**, which can create new traits (the link to evolution)."],
             ["Transcription", "Happens in the **nucleus**: DNA's information is copied into **mRNA**."],
             ["Translation", "Happens in the **cytoplasm** at the **ribosome**: it reads the mRNA, and **tRNA** brings the matching **amino acids** to build a protein."],
           ] },
@@ -265,7 +265,7 @@
         title: "Evolution & Natural Selection",
         blurb: "How populations change: variation, selection, adaptation. (The most-tested topic.)",
         lesson: [
-          { note: "**This section has the most questions on the final.** Don't just memorize the definition — understand how natural selection *works*." },
+          { note: "**This section has the most questions on the final.** Don't just memorize the definition, understand how natural selection *works*." },
           { defs: [
             ["Evolution", "The **gradual change in a species over time**, most often driven by natural selection."],
             ["Natural selection", "The environment, through **selection pressures**, 'picks' the **best traits**. Survivors reproduce and pass those traits on. Worked out by **Charles Darwin**."],
@@ -275,14 +275,14 @@
             ["Founder effect", "A **few** individuals start a new population (e.g., an animal reaching an **island**); their offspring all descend from those few, so diversity is low. Also **not** driven by selection."],
           ] },
           { h: "The single most important idea" },
-          { p: "**Natural selection does NOT create new traits.** New traits appear **randomly through mutations**. Nature only **selects the best version of what already exists.** *Giraffes didn't grow longer necks because they needed to — some already had longer necks, those survived and reproduced, and mutations pushed them further.* Same with the **rats**: poison-resistance existed (by mutation) *before* the poison; once people added poison, the resistant ones survived and the trait spread." },
+          { p: "**Natural selection does NOT create new traits.** New traits appear **randomly through mutations**. Nature only **selects the best version of what already exists.** *Giraffes didn't grow longer necks because they needed to, some already had longer necks, those survived and reproduced, and mutations pushed them further.* Same with the **rats**: poison-resistance existed (by mutation) *before* the poison; once people added poison, the resistant ones survived and the trait spread." },
           { tip: "**Evolution is the OUTCOME; natural selection is the MECHANISM.** Natural selection does the work; evolution is the result." },
           { h: "The 4 requirements for natural selection" },
           { olist: [
-            "**Variation** — individuals differ (and the difference must *matter*: eye color is just blue/brown/green, so nature doesn't select for it).",
-            "**Inheritance** — those variations can be passed to offspring.",
-            "**Overproduction** — more offspring are born than can survive on the resources (the **sea-turtle** example).",
-            "**Differential survival** — the best-fit variations survive and reproduce more ('survival of the fittest').",
+            "**Variation**, individuals differ (and the difference must *matter*: eye color is just blue/brown/green, so nature doesn't select for it).",
+            "**Inheritance**, those variations can be passed to offspring.",
+            "**Overproduction**, more offspring are born than can survive on the resources (the **sea-turtle** example).",
+            "**Differential survival**, the best-fit variations survive and reproduce more ('survival of the fittest').",
           ] },
           { tip: "Know the **3 case studies** and their pressure → outcome: **hawksbeard** (habitat fragmentation → heavier seeds that drop straight down), **juncos** (cities/people → boldness), **rats** (poison → resistance). There are for-sure questions on these, plus a reading passage with questions." },
         ],

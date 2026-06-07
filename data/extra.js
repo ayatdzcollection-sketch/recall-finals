@@ -1,4 +1,4 @@
-/* data/extra.js — authored VARIETY questions added on top of the originals.
+/* data/extra.js, authored VARIETY questions added on top of the originals.
    These reword concepts and add application/example items so the practice
    pool isn't just the memorised guide/Blooket wording. Nothing is removed;
    these are mixed in everywhere (topic practice, mixed, smart, cram, tests). */
@@ -112,7 +112,7 @@
     fill("Transcription copies DNA into ______ inside the nucleus.", ["mRNA", "messenger rna", "rna"]),
   ]);
   A("bio-evolution", [
-    mc("Which statement about natural selection is TRUE?", ["It creates brand-new traits when organisms need them", "It selects the best version of traits that already exist", "It only happens to plants", "It stops mutations from occurring"], 1, "Natural selection does NOT create traits — mutations do; nature selects from what exists."),
+    mc("Which statement about natural selection is TRUE?", ["It creates brand-new traits when organisms need them", "It selects the best version of traits that already exist", "It only happens to plants", "It stops mutations from occurring"], 1, "Natural selection does NOT create traits, mutations do; nature selects from what exists."),
     mc("Where do the NEW traits that natural selection acts on come from?", ["random mutations", "the organism's effort", "the environment directly", "natural selection itself"], 0),
     mc("'Evolution is the outcome; natural selection is the ______.'", ["mistake", "mechanism", "opposite", "definition"], 1, "Natural selection is the mechanism; evolution is the result."),
     mc("The Florida Panther losing genetic diversity after its habitat shrank to one small area is an example of a:", ["founder effect", "population bottleneck", "selection pressure", "mutation"], 1),
