@@ -202,8 +202,45 @@
     h("fragment", "Which is a sentence FRAGMENT?", ["She left early.", "Running through the rain without an umbrella.", "We won.", "They cheered loudly."], 1),
   ]);
   A("ela-rj", [
-    h("character", "Which character secretly marries Romeo and Juliet?", ["The Prince", "Friar Laurence", "Mercutio", "Tybalt"], 1),
-    h("character", "Mercutio and Benvolio are best described as:", ["Capulets", "allies/friends of Romeo (Montague side)", "Juliet's parents", "rival suitors"], 1),
+    // ----- plot / sequence of events -----
+    e("plot", "Before he falls for Juliet, Romeo is lovesick over another girl named:", ["Rosaline", "Beatrice", "Ophelia", "Helena"], 0, "Romeo pines for Rosaline until he sees Juliet at the Capulet ball."),
+    h("plot", "Order these events correctly: (1) balcony scene, (2) Capulet ball, (3) secret marriage.", ["3 → 2 → 1", "2 → 1 → 3", "1 → 2 → 3", "2 → 3 → 1"], 1, "Romeo meets Juliet at the ball, woos her on the balcony that night, and they marry the next day."),
+    h("plot", "The turning point (climax) of the play is usually identified as the moment Romeo:", ["first sees Juliet", "kills Tybalt", "drinks the poison", "marries Juliet"], 1, "Killing Tybalt gets Romeo banished and sets the tragedy racing toward its end."),
+    h("plot", "After Romeo kills Tybalt, Prince Escalus punishes him with:", ["execution", "banishment to Mantua", "a heavy fine", "house arrest in Verona"], 1, "Romeo is exiled, not killed, 'banishèd.'"),
+    h("plot", "Friar Laurence's plan is for Juliet to drink a potion that will:", ["poison Paris", "make her love Paris", "make her appear dead for about 42 hours", "erase her memory of Romeo"], 2, "She fakes death so she can later slip away to Romeo in Mantua."),
+    h("plot", "Romeo wrongly believes Juliet is dead because:", ["he watches her drink poison", "the Friar's letter never reaches him and Balthasar reports her death", "Paris tells him", "the Nurse lies to him"], 1, "Friar John is quarantined, so the message fails; Balthasar brings the false news."),
+    h("plot", "Where does Romeo get the poison he drinks?", ["from Friar Laurence", "from an apothecary in Mantua", "from the Nurse", "from Paris"], 1, "He buys it from a poor apothecary in Mantua."),
+    h("plot", "Whom does Romeo kill at the Capulet tomb just before taking his own life?", ["Tybalt", "Paris", "Benvolio", "Lord Capulet"], 1, "Paris is mourning at the tomb and challenges Romeo."),
+    h("plot", "Juliet ultimately dies by:", ["drinking leftover poison", "stabbing herself with Romeo's dagger", "the sleeping potion", "Tybalt's sword"], 1, "Finding no poison left, she uses Romeo's dagger."),
+    e("plot", "What finally ends the Montague-Capulet feud?", ["a new law from the Prince", "the deaths of Romeo and Juliet", "Tybalt's death", "Friar Laurence's sermon"], 1, "Grief over their children reconciles the families."),
+    // ----- character / foils -----
+    e("character", "Mercutio is a kinsman of which figure, making him an outsider to BOTH feuding houses?", ["Friar Laurence", "Prince Escalus", "Lord Capulet", "Lord Montague"], 1, "Mercutio is related to the Prince, neither Montague nor Capulet."),
+    h("character", "Mercutio's long, fanciful speech about a tiny fairy who brings dreams is the:", ["'Tomorrow' speech", "Queen Mab speech", "'Seven Ages' speech", "'Quality of Mercy' speech"], 1, "The Queen Mab speech shows his wit and his cynicism about dreams and love."),
+    h("character", "A FOIL highlights another character by contrast. Paris functions mainly as a foil to:", ["Tybalt", "Romeo", "Benvolio", "the Friar"], 1, "Paris is the 'approved' suitor, contrasting Romeo's passionate, secret love."),
+    h("character", "The Nurse loses Juliet's trust when she advises Juliet to:", ["run away to Mantua", "forget Romeo and marry Paris", "drink the Friar's potion", "confront Tybalt"], 1, "After championing Romeo, the Nurse's switch feels like a betrayal."),
+    h("character", "When Juliet refuses to marry Paris, Lord Capulet:", ["calmly agrees to wait", "flies into a rage and threatens to disown her", "asks the Friar to decide", "sends her to a convent"], 1, "His fury pushes Juliet toward the Friar's risky plan."),
+    e("character", "Friar Laurence agrees to marry Romeo and Juliet mainly because he hopes it will:", ["make him rich", "end the families' feud", "punish the Capulets", "impress the Prince"], 1, "He gambles that their love can reconcile the households."),
+    h("character", "Tybalt, 'the fiery Tybalt,' is best described as:", ["a calm peacemaker", "a hot-tempered Capulet eager to fight", "Juliet's father", "Romeo's servant"], 1, "His aggression triggers the fatal duel."),
+    // ----- theme -----
+    e("theme", "Calling the couple 'star-crossed lovers' suggests their relationship is controlled by:", ["money", "fate / the stars", "their parents alone", "free choice"], 1, "'Star-crossed' = doomed by fate."),
+    h("theme", "Which pair of opposing forces best captures the play's central thematic tension?", ["wealth vs. poverty", "love vs. hate", "city vs. country", "faith vs. science"], 1, "The lovers' love collides with their families' hatred."),
+    h("theme", "Friar Laurence's warning 'Wisely and slow; they stumble that run fast' develops the theme of:", ["greed", "the danger of haste", "religious doubt", "class conflict"], 1, "Impulsiveness and rushing drive the tragedy."),
+    h("theme", "'These violent delights have violent ends' warns that:", ["a war is coming", "intense, hasty passion can lead to destruction", "Juliet will betray Romeo", "the Nurse cannot be trusted"], 1, "The Friar foreshadows that fierce love may end in ruin."),
+    // ----- literary devices in the text -----
+    e("device", "'O brawling love, O loving hate' joins two contradictory ideas. This device is a(n):", ["simile", "oxymoron", "onomatopoeia", "alliteration"], 1, "Contradictory terms placed together = oxymoron."),
+    h("device", "'Parting is such sweet sorrow' is an example of:", ["hyperbole", "oxymoron", "allusion", "pun"], 1, "'Sweet sorrow' pairs opposite ideas."),
+    h("device", "The audience knows Juliet is only drugged while Romeo believes she is dead. This is:", ["verbal irony", "situational irony", "dramatic irony", "foreshadowing"], 2, "The audience knows more than the character = dramatic irony."),
+    h("device", "'It is the east, and Juliet is the sun' compares Juliet to the sun with no 'like' or 'as.' This is a:", ["simile", "metaphor", "pun", "allusion"], 1, "A direct comparison = metaphor."),
+    h("device", "A speech a character delivers ALONE on stage to reveal inner thoughts (like Juliet's balcony lines) is a:", ["aside", "dialogue", "soliloquy", "prologue"], 2, "Alone + inner thoughts = soliloquy."),
+    h("device", "Mercutio's dying line, 'ask for me tomorrow and you shall find me a grave man,' relies on a:", ["pun", "simile", "euphemism", "metaphor"], 0, "'Grave' means both serious and a burial grave, a pun."),
+    h("device", "References to Cupid, Phoebus, and Echo in the play are:", ["puns", "allusions to mythology", "stage directions", "soliloquies"], 1, "An allusion is a reference to well-known myth or history."),
+    h("device", "In 'wherefore art thou Romeo?', the word 'wherefore' means:", ["where", "why", "when", "whether"], 1, "Juliet asks WHY he must be a Montague, not where he is."),
+    // ----- structure / quotes -----
+    e("structure", "The Prologue, spoken by the Chorus, is written in the 14-line form of a:", ["limerick", "sonnet", "ballad", "haiku"], 1, "A Shakespearean sonnet opens the play."),
+    h("structure", "By revealing in the Prologue that the lovers will die, Shakespeare creates:", ["comic relief", "suspense about who survives", "dramatic irony / foreshadowing", "a flashback"], 2, "We watch the whole play already knowing the doomed ending."),
+    h("quote", "'A plague o' both your houses!' is cried by which dying character, blaming both families?", ["Tybalt", "Mercutio", "Paris", "Benvolio"], 1, "Mercutio curses the feud as he dies."),
+    h("quote", "The closing lines, 'For never was a story of more woe / Than this of Juliet and her Romeo,' are spoken by:", ["Friar Laurence", "Prince Escalus", "Lord Montague", "the Nurse"], 1, "The Prince ends the play."),
+    h("quote", "'My only love sprung from my only hate!' Juliet says this when she realizes that Romeo:", ["loves Rosaline", "is a Montague, her family's enemy", "killed Tybalt", "is leaving for Mantua"], 1, "Her beloved belongs to the hated house."),
   ]);
   A("ela-poems", [
     h("poem", "In “The Road Not Taken,” the two roads are a metaphor for:", ["a real forest", "life's choices", "two friends", "the seasons"], 1),

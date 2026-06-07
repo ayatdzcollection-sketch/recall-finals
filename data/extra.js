@@ -62,6 +62,14 @@
   A("ela-rj", [
     mc("Romeo and Juliet is best classified as a:", ["comedy", "tragedy", "history", "sonnet sequence"], 1),
     mc("Which two families feud in the play?", ["Montagues and Capulets", "Tudors and Stuarts", "Hatfields and McCoys", "Capulets and Escalus"], 0),
+    mc("Roughly how long does the action of the play take place over?", ["a single afternoon", "about four to five days", "several months", "ten years"], 1, "The whole tragedy unfolds in under a week."),
+    mc("'But soft! What light through yonder window breaks?' is spoken during the balcony scene by:", ["Juliet", "Romeo", "Mercutio", "Friar Laurence"], 1, "Romeo speaks it as he watches Juliet at her window."),
+    mc("Comic relief in the play comes mainly from:", ["the Prince and Paris", "the Nurse and Mercutio", "Lord and Lady Capulet", "Benvolio and Balthasar"], 1, "The Nurse's bawdy humor and Mercutio's wit lighten the tragedy."),
+    tf("Romeo is in love with Juliet from the very first scene of the play.", false, "He is pining over Rosaline until he meets Juliet at the ball."),
+    tf("The deaths of Romeo and Juliet finally end the feud between the families.", true, "Both fathers reconcile over their children's bodies."),
+    fill("The young lovers are called a pair of '______-crossed lovers,' meaning fate is against them.", ["star"], "'Star-crossed' = doomed by the stars/fate."),
+    fill("The priest who secretly marries the couple is Friar ______.", ["Laurence", "Lawrence"], "Friar Laurence."),
+    fill("Romeo is exiled to the nearby city of ______ after killing Tybalt.", ["Mantua"], "He is banished to Mantua."),
   ]);
   A("ela-poems", [
     mc("In “The Road Not Taken,” the diverging roads are a metaphor for:", ["a literal forest walk", "life's choices and their consequences", "the four seasons", "two friends arguing"], 1),
