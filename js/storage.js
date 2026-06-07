@@ -91,6 +91,7 @@
       log: [],        // study-data event log (local, for your own export)
       tele: {},       // anonymous telemetry state (anon id, last ping day)
       teleQueue: [],  // outbound anonymous events awaiting upload
+      miss: {},       // subjectId -> [{it, c:chosenText, a:answerText, cc:concept, t}] (misconception radar)
       settings: { theme: "dark" },
     };
   };
@@ -104,7 +105,7 @@
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -151,7 +152,7 @@
     return {
       generated: new Date().toISOString(),
       note: "Local study-data export from Recall. Behavior events only, no personal information.",
-      legend: { t: "timestamp(ms)", it: "itemId", tp: "topicId", s: "subjectId", g: "grade 0=again 1=hard 2=good 3=easy", ok: "correct(1/0)", rt: "responseTime(ms)", m: "mode", lv: "level 1=easy 2=hard" },
+      legend: { t: "timestamp(ms)", it: "itemId", tp: "topicId", s: "subjectId", g: "grade 0=again 1=hard 2=good 3=easy", ok: "correct(1/0)", rt: "responseTime(ms)", m: "mode", lv: "level 1=easy 2=hard", ch: "chosen distractor index (wrong MC picks)" },
       totals: { events: log.length, days: Object.keys(byDay).length, avgResponseMs: rtN ? Math.round(totalRt / rtN) : null, streakBest: store.streak.best || 0 },
       bySubject: acc(bySubject), byTopic: acc(byTopic), byMode: acc(byMode), byDay: byDay,
       events: log,
@@ -257,6 +258,41 @@
     return gradeStability(seedStability(st), grade, recallNow(st, Date.now()));
   };
 
+  /* ---------- honest mastery (passive Bayesian Knowledge Tracing) ----------
+     No extra taps: we infer "did you really know it" from the answer + how fast
+     you answered + how guessable the item was (a 4-choice MC correct is weak
+     evidence; a fast correct on a hard item is strong). st.kn = P(you know it). */
+  function guessProb(ref) {
+    if (!ref) return 0.12;                                  // flashcard (self-graded) / unknown
+    if (ref.type === "mc" && ref.choices) return 1 / ref.choices.length;
+    if (ref.type === "tf") return 0.5;
+    if (ref.type === "fill") return 0.05;
+    return 0.12;
+  }
+  // Bayesian update of P(known) given one graded attempt.
+  function bktUpdate(prior, grade, g) {
+    const p = (prior == null) ? 0.12 : prior;              // fresh item: mostly unknown
+    const slip = grade >= 3 ? 0.05 : grade === 2 ? 0.10 : grade === 1 ? 0.12 : 0.14;
+    // effective guess prob: a flagged/Hard correct is weak; a fast correct is strong
+    let ge = grade === 1 ? Math.max(g, 0.6) : grade === 3 ? g * 0.55 : g;
+    ge = clampN(ge, 0.02, 0.85);
+    const correct = grade >= 1;                            // 0 = wrong, >=1 = (some) recall
+    let post;
+    if (correct) post = (p * (1 - slip)) / (p * (1 - slip) + (1 - p) * ge);
+    else post = (p * slip) / (p * slip + (1 - p) * (1 - ge));
+    const pT = correct ? 0.08 : 0.04;                      // practice itself teaches a little
+    return clampN(post + (1 - post) * pT, 0, 0.999);
+  }
+  function captureMiss(id, grade, ref, chosen, indexed) {
+    if (grade !== 0 || !ref || ref.type !== "mc" || !ref.choices) return;
+    if (typeof chosen !== "number" || chosen === ref.answer || chosen < 0 || chosen >= ref.choices.length) return;
+    if (!store.miss) store.miss = {};
+    const sid = indexed && indexed.subject ? indexed.subject.id : "";
+    const arr = store.miss[sid] || (store.miss[sid] = []);
+    arr.push({ it: id, c: String(ref.choices[chosen]), a: String(ref.choices[ref.answer]), cc: ref.concept || "", t: Date.now() });
+    if (arr.length > 400) arr.splice(0, arr.length - 400);
+  }
+
   // record an attempt on an item (question or card)
   // grade: 0=again/wrong, 1=hard, 2=good/correct, 3=easy
   // meta (optional): { rt, mode, level } for the study-data log
@@ -271,6 +307,11 @@
     // forgetting-based scheduling overrides the Leitner due
     st.stability = gradeStability(seedS, grade, pBefore);
     st.due = now + Math.round(st.stability * HOUR);
+
+    // honest mastery: passively update P(you really know it) + log misconceptions
+    const ix0 = STUDY.itemIndex[id], ref0 = ix0 && ix0.ref;
+    st.kn = bktUpdate(st.kn, grade, guessProb(ref0));
+    if (meta && typeof meta.chosen === "number") captureMiss(id, grade, ref0, meta.chosen, ix0);
 
     // "work on" list: Again (0) and Hard (1) both flag; Good/Easy clear it
     if (grade <= 1) { store.wrong[id] = true; if (grade === 0) st.lapses++; }
@@ -298,6 +339,7 @@
       t: Date.now(), it: id, tp: tid || "", s: indexed ? indexed.subject.id : "",
       g: grade, ok: grade >= 2 ? 1 : 0, rt: m.rt || 0, m: m.mode || "", lv: m.level || 0,
     };
+    if (typeof m.chosen === "number") ev.ch = m.chosen;   // which distractor (misconception radar)
     store.log.push(ev);                                  // local copy (for your own export)
     if (store.log.length > 6000) store.log.splice(0, store.log.length - 6000);
     // queue an anonymous copy for upload (default on; opt-out in Settings)
@@ -325,13 +367,36 @@
   STUDY.topicDone = function (topicId) { return store.done[topicId] || {}; };
 
   /* ---------- progress queries ---------- */
-  // mastery of an item: based on box (0..5). returns 0..1
+  // mastery of an item: P(you really know it) from the honest-mastery model,
+  // discounted by current recall so it fades if you haven't seen it in a while.
+  // Falls back to the legacy box proxy for items answered before kn existed.
   function itemMastery(id) {
     const st = store.srs[id];
     if (!st) return 0;
-    return Math.min(1, st.box / 4);   // box 4+ = mastered
+    const kn = (typeof st.kn === "number") ? st.kn : Math.min(1, (st.box || 0) / 4);
+    const r = recallNow(st, Date.now());                 // 0..1, decays over time
+    return clampN(kn * (0.55 + 0.45 * r), 0, 1);          // known, gently tempered by retention
   }
   STUDY.itemMastery = itemMastery;
+  STUDY.itemKnown = function (id) { const st = store.srs[id]; return st && typeof st.kn === "number" ? st.kn : (st ? Math.min(1, (st.box || 0) / 4) : 0); };
+
+  // misconception radar: most common wrong picks for a subject (or all)
+  STUDY.topMixups = function (subjectId, limit) {
+    const lists = [];
+    if (subjectId) { if (store.miss[subjectId]) lists.push(store.miss[subjectId]); }
+    else Object.keys(store.miss || {}).forEach(function (k) { lists.push(store.miss[k]); });
+    const agg = {};
+    lists.forEach(function (arr) {
+      arr.forEach(function (m) {
+        const key = m.c + " → " + m.a;               // chosen → answer
+        const e = agg[key] || (agg[key] = { chosen: m.c, answer: m.a, n: 0, last: 0 });
+        e.n++; if (m.t > e.last) e.last = m.t;
+      });
+    });
+    return Object.keys(agg).map(function (k) { return agg[k]; })
+      .sort(function (a, b) { return b.n - a.n || b.last - a.last; })
+      .slice(0, limit || 5);
+  };
 
   STUDY.topicProgress = function (topicId) {
     const entry = STUDY.topicIndex[topicId];

@@ -36,7 +36,8 @@
 
   // ---- update after one answer ----
   // correct: bool, rtMs: response time, guess: user flagged "lucky guess", mode: log label
-  ADAPT.update = function (q, correct, rtMs, guess, mode) {
+  // chosen: original index of the option picked (for misconception radar; optional)
+  ADAPT.update = function (q, correct, rtMs, guess, mode, chosen) {
     const store = STUDY.store(), now = Date.now();
     const fast = rtMs && rtMs < (FAST[q.type] || 5000);
     // response-time + confidence → an effective grade (drives spacing)
@@ -47,7 +48,9 @@
     else grade = 2;
 
     let st = store.srs[q.id];
-    STUDY.recordItem(q.id, grade, q.topicId, { mode: mode || "feed", rt: rtMs || 0 });   // scheduling (box+stability+due) + log
+    const meta = { mode: mode || "feed", rt: rtMs || 0 };
+    if (typeof chosen === "number") meta.chosen = chosen;
+    STUDY.recordItem(q.id, grade, q.topicId, meta);   // scheduling + honest mastery + log
     st = store.srs[q.id];                           // now exists
     st.rt = rtMs || st.rt || 0;
 
@@ -168,6 +171,111 @@
     let s = 0, n = 0;
     STUDY.subjects.forEach(function (subj) { s += ADAPT.readiness(subj.id); n++; });
     return n ? Math.round(s / n) : 0;
+  };
+
+  /* ============================================================
+     EXAM-DAY FORECASTER + STUDY PLANNER
+     Projects each item's recall forward to exam day and rolls it up into a
+     predicted score per subject, then allocates your study minutes to where
+     they'll lift that score the most (importance × urgency × gap).
+     ============================================================ */
+  function guessFloor(q) {
+    if (q.type === "mc" && q.choices) return 1 / q.choices.length;
+    if (q.type === "tf") return 0.5;
+    if (q.type === "fill") return 0.05;
+    return 0.2;
+  }
+  // probability you'd answer q correctly ON exam day (no further study)
+  function pExamAt(q, examMs) {
+    const store = STUDY.store();
+    const st = store.srs[q.id];
+    const skill = store.subjectSkill[q.subjectId] || 1500;
+    const diff = st ? (st.diff || 1500) : 1500;
+    const expct = 1 / (1 + Math.pow(10, (diff - skill) / 400));
+    const g = guessFloor(q);
+    if (!st) return g + (1 - g) * expct * 0.45;          // unseen: a little credit for reasoning
+    const r = recall(st, examMs);                         // projected retention at exam time
+    const know = (typeof st.kn === "number") ? st.kn : Math.min(1, (st.box || 0) / 4);
+    const skillP = expct * r;                             // performance from skill + retention
+    const knowP = know * r;                               // honest-mastery view, also decays
+    const p = 0.5 * skillP + 0.5 * knowP;
+    return clamp(g + (1 - g) * p, 0, 1);                  // floor at guess level
+  }
+  function examMsFor(subjectId) {
+    const days = STUDY.daysToExam(subjectId);
+    return Date.now() + Math.max(0, days) * DAY;
+  }
+  // predicted exam score for a subject.
+  // topicScore = prior + (how well you know what you studied − prior) × coverage,
+  // where coverage saturates after ~8 studied items/topic (the exam samples, it
+  // doesn't test all 300+ items), so studying actually moves the number, and
+  // pExamAt already decays studied items toward exam day (cramming-then-forgetting
+  // is penalised). Topic-balanced so a big question bank can't skew it.
+  const UNSEEN_PRIOR = 0.33;        // cold: ~guess + a little elimination
+  ADAPT.forecast = function (subjectId) {
+    const subj = STUDY.byId[subjectId]; if (!subj) return 0;
+    const store = STUDY.store(), examMs = examMsFor(subjectId);
+    let sum = 0, n = 0;
+    subj.topics.forEach(function (t) {
+      const items = (t.questions || []).filter(q => q.type !== "match");
+      if (!items.length) return;
+      let acc = 0, studied = 0;
+      items.forEach(function (q) { if (store.srs[q.id]) { acc += pExamAt(q, examMs); studied++; } });
+      const studiedAcc = studied ? acc / studied : UNSEEN_PRIOR;
+      const coverage = clamp(studied / Math.min(items.length, 8), 0, 1);
+      sum += UNSEEN_PRIOR + (studiedAcc - UNSEEN_PRIOR) * coverage; n++;
+    });
+    return n ? Math.round(sum / n * 100) : 0;
+  };
+  ADAPT.overallForecast = function () {
+    let s = 0, w = 0;
+    STUDY.subjects.forEach(function (subj) { const wt = subj.weight || 1; s += ADAPT.forecast(subj.id) * wt; w += wt; });
+    return w ? Math.round(s / w) : 0;
+  };
+  // count of seen items predicted to be shaky (below thresh) at exam time
+  ADAPT.shakyCount = function (subjectId, thresh) {
+    const subj = STUDY.byId[subjectId]; if (!subj) return 0;
+    const store = STUDY.store(), examMs = examMsFor(subjectId), th = thresh || 0.6;
+    let c = 0;
+    subj.topics.forEach(function (t) {
+      (t.questions || []).forEach(function (q) {
+        if (q.type === "match") return;
+        if (store.srs[q.id] && pExamAt(q, examMs) < th) c++;
+      });
+    });
+    return c;
+  };
+  // the shakiest SEEN items in a subject (for a last-day rescue session)
+  ADAPT.shakyItems = function (subjectId, limit) {
+    const subj = STUDY.byId[subjectId]; if (!subj) return [];
+    const store = STUDY.store(), examMs = examMsFor(subjectId), out = [];
+    subj.topics.forEach(function (t) {
+      (t.questions || []).forEach(function (q) {
+        if (q.type === "match" || !store.srs[q.id]) return;
+        out.push({ q: q, p: pExamAt(q, examMs) });
+      });
+    });
+    out.sort((a, b) => a.p - b.p);
+    return out.slice(0, limit || 30).map(x => x.q);
+  };
+  // allocate `minutes` across subjects by importance × urgency × gap-to-target
+  ADAPT.studyPlan = function (minutes) {
+    const total = minutes || 60, target = 85;
+    let soonest = 99;
+    const rows = STUDY.subjects.map(function (s) {
+      const f = ADAPT.forecast(s.id);
+      const days = STUDY.daysToExam(s.id); if (days < soonest) soonest = days;
+      const gap = clamp((target - f) / target, 0, 1);
+      const urg = 1 + 3 / (1 + Math.max(0, days));
+      const imp = 0.6 + (s.weight || 1) * 0.12;
+      const priority = imp * urg * (0.12 + gap);
+      return { id: s.id, name: s.name, icon: s.icon, weight: s.weight, forecast: f, shaky: ADAPT.shakyCount(s.id), priority: priority, minutes: 0 };
+    });
+    const sum = rows.reduce((a, b) => a + b.priority, 0) || 1;
+    let used = 0;
+    rows.forEach(function (r) { r.minutes = Math.max(0, Math.round((r.priority / sum) * total / 5) * 5); used += r.minutes; });
+    rows.sort((a, b) => b.priority - a.priority);
+    return { minutes: total, mode: soonest <= 1 ? "final" : "build", soonest: soonest, overall: ADAPT.overallForecast(), rows: rows };
   };
 
   STUDY.ADAPT = ADAPT;

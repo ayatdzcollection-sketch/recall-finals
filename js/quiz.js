@@ -227,8 +227,10 @@
       if (bar) bar.style.width = ((state.i + 1) / state.list.length * 100) + "%";
     }
 
-    function commit(q, grade, ok) {
-      STUDY.recordItem(q.id, grade, q.topicId, { mode: opts.mode || "practice", level: opts.level || 0 });
+    function commit(q, grade, ok, chosen) {
+      const meta = { mode: opts.mode || "practice", level: opts.level || 0 };
+      if (typeof chosen === "number") meta.chosen = chosen;
+      STUDY.recordItem(q.id, grade, q.topicId, meta);
       state.answered++;
       if (ok) state.correct++;
       state.results.push({ q: q, ok: ok });
@@ -271,7 +273,7 @@
         document.onkeydown = null;
         if (!instant) {                    // exam mode: just mark the pick, no reveal
           node.classList.add("selected");
-          commit(q, ok ? 2 : 0, ok);
+          commit(q, ok ? 2 : 0, ok, origIdx);
           if (state.i + 1 < state.list.length) { setTimeout(function () { state.i++; render(); window.scrollTo(0, 0); }, 180); }
           else nextBar();
           return;
@@ -283,7 +285,7 @@
           else b.classList.add("dim");
         });
         mount.appendChild(feedbackBlock(ok, q.choices[q.answer], q));
-        commit(q, ok ? 2 : 0, ok);
+        commit(q, ok ? 2 : 0, ok, origIdx);
         nextBar();
       }
 
@@ -602,8 +604,8 @@
       renderItem(q, t0);
     }
 
-    function proceed(q, ok, rt, guessed) {
-      ADAPT.update(q, ok, rt, guessed, opts.subjectId ? "feed_subj" : "feed");
+    function proceed(q, ok, rt, guessed, chosen) {
+      ADAPT.update(q, ok, rt, guessed, opts.subjectId ? "feed_subj" : "feed", chosen);
       answered++; sinceMilestone++; if (ok) correct++;
       windowOk.push(ok ? 1 : 0); if (windowOk.length > 8) windowOk.shift();
       ctx.recent.push(q.id); if (ctx.recent.length > 8) ctx.recent.shift();
@@ -640,10 +642,10 @@
       }
       return row;
     }
-    function nextRow(q, ok, rt, rtState) {
+    function nextRow(q, ok, rt, rtState, chosen) {
       const bar = el("div", "qbar");
       const b = el("button", "btn primary", "Next →");
-      b.onclick = function () { document.onkeydown = null; proceed(q, ok, rt, rtState.guessed); };
+      b.onclick = function () { document.onkeydown = null; proceed(q, ok, rt, rtState.guessed, chosen); };
       bar.appendChild(b); mount.appendChild(bar); b.focus();
     }
 
@@ -682,7 +684,7 @@
           const correctText = q.type === "tf" ? (q.answer ? "True" : "False") : q.choices[q.answer];
           mount.appendChild(buildFeedback(ok, correctText, q));
           const a = actionsRow(q, ok, rtState); if (a.children.length) mount.appendChild(a);
-          nextRow(q, ok, rt, rtState); document.onkeydown = null;
+          nextRow(q, ok, rt, rtState, q.type === "tf" ? undefined : pair[1]); document.onkeydown = null;
         };
         wrap.appendChild(c); btns.push(c);
       });

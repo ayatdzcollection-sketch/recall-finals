@@ -87,6 +87,7 @@
     const st = STUDY.store();
     const chips = el("div", "chips");
     chips.appendChild(statChip("🚀", STUDY.ADAPT.overallReadiness() + "%", "finals ready"));
+    chips.appendChild(statChip("🔮", STUDY.ADAPT.overallForecast() + "%", "exam forecast"));
     chips.appendChild(statChip("🔥", st.streak.count, "day streak"));
     const due = STUDY.overallDue();
     chips.appendChild(statChip("🔁", due, "due to review"));
@@ -446,6 +447,22 @@
     });
   }
 
+  // ---- RESCUE DRILL: the items most likely to slip below passing by exam day ----
+  function startDrill(subjectId) {
+    sessionScreen("🎯 Rescue drill", function (mount) {
+      let list = [];
+      if (subjectId) list = STUDY.ADAPT.shakyItems(subjectId, 25);
+      else STUDY.subjects.forEach(function (s) { list = list.concat(STUDY.ADAPT.shakyItems(s.id, 8)); });
+      const back = () => go(subjectId ? "#/s/" + subjectId : "#/dash");
+      if (!list.length) {
+        mount.innerHTML = '<div class="empty"><div class="big">✅</div>No shaky items yet, answer some questions and the ones most likely to slip by exam day will collect here.</div>';
+        const bar = el("div", "qbar"); const b = el("button", "btn primary", "Start the For You feed"); b.onclick = () => startFeed(subjectId); bar.appendChild(b); mount.appendChild(bar);
+        return;
+      }
+      QUIZ.run(mount, SRS.interleave(list), { mode: "drill", onDone: back });
+    });
+  }
+
   // ---- FOR YOU: the adaptive feed (all subjects, or scoped to one) ----
   function startFeed(subjectId) {
     const nm = subjectId ? (STUDY.byId[subjectId] || {}).name : null;
@@ -776,6 +793,55 @@
   /* ====================================================
      DASHBOARD
      ==================================================== */
+  // exam-day forecast + study-time plan (powered by ADAPT.studyPlan)
+  function examForecastPanel() {
+    const A = STUDY.ADAPT, plan = A.studyPlan(60);
+    const box = el("div", "panel forecast");
+    const head = el("div", "row");
+    head.appendChild(el("div", null, "<b>🔮 Exam-day forecast</b>"));
+    head.appendChild(el("div", "spacer"));
+    head.appendChild(el("div", "fc-overall", plan.overall + "%"));
+    box.appendChild(head);
+    box.appendChild(el("div", "muted fc-sub", plan.mode === "final"
+      ? "Final stretch: predicted score for your next exam, after the forgetting between now and then."
+      : "Predicted score on exam day. It climbs as you study and space your reps."));
+    plan.rows.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0)).forEach(function (r) {
+      const row = el("div", "fc-row");
+      row.appendChild(el("span", "fc-ic", r.icon));
+      row.appendChild(el("span", "fc-nm", esc(r.name)));
+      const bw = el("div", "bar fc-bar"); bw.appendChild(el("i")).style.width = r.forecast + "%"; row.appendChild(bw);
+      row.appendChild(el("span", "fc-pct", r.forecast + "%"));
+      row.appendChild(el("span", "fc-min", r.minutes + "m"));
+      box.appendChild(row);
+    });
+    const alloc = plan.rows.filter(r => r.minutes > 0).map(r => r.minutes + "m " + r.name).join(" · ");
+    box.appendChild(el("div", "muted fc-plan", "📋 Best use of your next " + plan.minutes + " min: " + alloc));
+    const totalShaky = plan.rows.reduce((a, b) => a + b.shaky, 0);
+    if (totalShaky > 0) {
+      const bar = el("div", "qbar");
+      const b = el("button", "btn primary full", "🎯 Drill my " + totalShaky + " shakiest item" + (totalShaky > 1 ? "s" : ""));
+      b.onclick = () => startDrill(null);
+      bar.appendChild(b); box.appendChild(bar);
+    }
+    return box;
+  }
+  // misconception radar: the wrong answers you pick most
+  function mixupsPanel() {
+    const mx = STUDY.topMixups(null, 5);
+    if (!mx.length) return null;
+    const box = el("div", null);
+    box.appendChild(sectionH("Common mix-ups", "the wrong answers you pick most, watch for these"));
+    mx.forEach(function (m) {
+      const row = el("div", "panel mixup");
+      row.appendChild(el("span", "mx-c", esc(m.chosen)));
+      row.appendChild(el("span", "mx-arrow", "✗ should be"));
+      row.appendChild(el("span", "mx-a", esc(m.answer)));
+      if (m.n > 1) row.appendChild(el("span", "mx-n", "×" + m.n));
+      box.appendChild(row);
+    });
+    return box;
+  }
+
   function renderDashboard() {
     clear();
     app.appendChild(topbar());
@@ -790,6 +856,8 @@
     chips.appendChild(statChip("🔁", STUDY.overallDue(), "due now"));
     app.appendChild(chips);
 
+    app.appendChild(examForecastPanel());
+
     app.appendChild(heatmap());
     const spark = masterySpark(); if (spark) app.appendChild(spark);
 
@@ -801,7 +869,7 @@
       const row = el("div", "row");
       row.appendChild(el("div", null, "<b>" + s.icon + " " + esc(s.name) + "</b>"));
       row.appendChild(el("div", "spacer"));
-      row.appendChild(el("div", "muted", "🚀 " + STUDY.ADAPT.readiness(s.id) + "% · " + prog.studied + "/" + prog.items));
+      row.appendChild(el("div", "muted", "🚀 " + STUDY.ADAPT.readiness(s.id) + "% ready · 🔮 " + STUDY.ADAPT.forecast(s.id) + "%"));
       card.appendChild(row);
       const bar = el("div", "bar"); bar.style.setProperty("--sub", s.accent);
       bar.appendChild(el("i")).style.width = STUDY.ADAPT.readiness(s.id) + "%";
@@ -825,6 +893,8 @@
     } else {
       app.appendChild(el("div", "empty", "No data yet. Your weakest topics will show up here so you know exactly what to drill."));
     }
+
+    const mix = mixupsPanel(); if (mix) app.appendChild(mix);
 
     const bar = el("div", "qbar");
     const b = el("button", "btn primary full", "🔁 Review everything due (" + STUDY.overallDue() + ")");
