@@ -55,6 +55,89 @@
     try { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = function () { window.speechSynthesis.getVoices(); }; } catch (e) {}
   }
 
+  /* ---------------- lenient answer matching (typos & wording OK, offline) ---------------- */
+  function lev(a, b) {
+    a = a || ""; b = b || ""; const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    let prev = new Array(n + 1), cur = new Array(n + 1);
+    for (let j = 0; j <= n; j++) prev[j] = j;
+    for (let i = 1; i <= m; i++) {
+      cur[0] = i;
+      for (let j = 1; j <= n; j++) { const c = a[i - 1] === b[j - 1] ? 0 : 1; cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c); }
+      const t = prev; prev = cur; cur = t;
+    }
+    return prev[n];
+  }
+  function tokens(s) { return norm(s).split(" ").filter(w => w.length > 2); }
+  function fuzzyMatch(input, accepted) {
+    const v = norm(input); if (!v) return false;
+    return (accepted || []).map(norm).some(function (a) {
+      if (!a) return false;
+      if (a === v) return true;
+      if (a.length > 4 && (v.includes(a) || a.includes(v))) return true;
+      const tol = a.length <= 4 ? 1 : a.length <= 8 ? 2 : 3;          // typo tolerance
+      if (lev(v, a) <= tol) return true;
+      const A = new Set(tokens(a)), B = new Set(tokens(v));            // keyword overlap
+      if (A.size >= 2 && B.size) {
+        let i = 0; A.forEach(w => { if (B.has(w)) i++; });
+        if (i >= 2 && (i / A.size >= 0.5 || i / B.size >= 0.6)) return true; // your key words are mostly right
+      }
+      return false;
+    });
+  }
+  QUIZ.fuzzyMatch = fuzzyMatch;
+
+  /* ---------------- "explain why I'm wrong" (offline, from lesson content) ---------------- */
+  function topicDefs(topicId) {
+    const e = STUDY.topicIndex[topicId]; if (!e) return [];
+    const out = [];
+    (e.topic.lesson || []).forEach(function (b) {
+      if (b.term) out.push([b.term, b.def]);
+      else if (b.defs) b.defs.forEach(p => out.push([p[0], p[1]]));
+    });
+    return out;
+  }
+  function explainFor(q) {
+    if (!q) return null;
+    if (q.explain) return q.explain;
+    const ans = q.type === "mc" ? (q.choices ? q.choices[q.answer] : "") : (q.answers ? q.answers[0] : "");
+    const defs = topicDefs(q.topicId);
+    const stemN = norm(q.q || "");
+    for (let k = 0; k < defs.length; k++) { const t = defs[k][0], d = defs[k][1]; if (t && stemN.indexOf(norm(t)) >= 0) return t + ": " + String(d).replace(/\*\*/g, ""); }
+    if (ans) for (let k = 0; k < defs.length; k++) { const t = defs[k][0], d = defs[k][1]; if (d && norm(d).indexOf(norm(ans)) >= 0) return "Correct because this matches " + t + "."; }
+    return null;
+  }
+  QUIZ.explainFor = explainFor;
+
+  /* ---------------- shared feedback block (used by Practice & Cram) ---------------- */
+  function buildFeedback(ok, correctText, q, extraHtml) {
+    const fb = el("div", "explain " + (ok ? "ok" : "no"));
+    fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ Not quite"));
+    let body = "";
+    if (!ok && correctText) body += "<b>Answer:</b> " + esc(correctText) + "<br>";
+    const ex = explainFor(q);
+    if (ex) body += "<span class='why'>" + esc(ex) + "</span>";
+    if (extraHtml) body += (body ? "<br>" : "") + extraHtml;
+    if (body) fb.insertAdjacentHTML("beforeend", body);
+    if (q && q.subjectId === "french" && correctText && QUIZ.canSpeak) { fb.appendChild(document.createElement("br")); fb.appendChild(QUIZ.speakerBtn(correctText, "fr-FR")); }
+    if (q && (q.topicId && STUDY.topicIndex[q.topicId] || q.id)) {
+      const row = el("div", "row"); row.style.marginTop = "9px";
+      if (q.topicId && STUDY.topicIndex[q.topicId]) {
+        const lb = el("button", "btn sm ghost", "📖 Review lesson");
+        lb.onclick = function () { if (STUDY.go) STUDY.go("#/t/" + q.topicId + "/learn"); };
+        row.appendChild(lb);
+      }
+      if (q.id) {
+        const star = el("button", "btn sm ghost", STUDY.isStarred(q.id) ? "★ Starred" : "☆ Star");
+        star.onclick = function () { const on = STUDY.toggleStar(q.id); star.textContent = on ? "★ Starred" : "☆ Star"; };
+        row.appendChild(star);
+      }
+      fb.appendChild(row);
+    }
+    return fb;
+  }
+  QUIZ.buildFeedback = buildFeedback;
+
   /* ---------------- main quiz runner ---------------- */
   QUIZ.run = function (mount, questions, opts) {
     opts = opts || {};
@@ -103,24 +186,40 @@
       }
 
       if (q.type === "match") return renderMatch(q);
+      if (q.type === "listen") return renderListen(q);
       if (q.type === "fill") return renderFill(q);
       if (q.type === "tf") return renderTF(q);
       return renderMC(q);
     }
 
-    function feedbackBlock(ok, correctText, explain, q) {
-      const fb = el("div", "explain " + (ok ? "ok" : "no"));
-      fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ Not quite"));
-      let body = "";
-      if (!ok && correctText) body += "<b>Answer:</b> " + esc(correctText) + "<br>";
-      if (explain) body += esc(explain);
-      if (body) fb.insertAdjacentHTML("beforeend", body);
-      if (q && q.subjectId === "french" && correctText && QUIZ.canSpeak) {
-        const sp = QUIZ.speakerBtn(correctText, "fr-FR"); sp.style.marginTop = "8px";
-        fb.appendChild(document.createElement("br")); fb.appendChild(sp);
+    /* ----- listening comprehension (audio prompt, MC answer) ----- */
+    function renderListen(q) {
+      const bar = el("div", "row"); bar.style.cssText = "margin-bottom:14px;align-items:center;gap:11px";
+      bar.appendChild(QUIZ.speakerBtn(q.say, "fr-FR", "big"));
+      bar.appendChild(el("div", "muted", "🎧 Listen, then answer. Tap 🔊 to replay."));
+      mount.appendChild(bar);
+      if (QUIZ.canSpeak) setTimeout(function () { QUIZ.speak(q.say, "fr-FR"); }, 280);
+      mount.appendChild(el("h2", "q-stem", esc(q.q || "What did you hear?")));
+      const order = q._order || (q._order = SRS.shuffle(q.choices.map((_, i) => i)));
+      const wrap = el("div", "choices"); const btns = [];
+      order.forEach(function (oi, n) {
+        const c = el("button", "choice");
+        c.appendChild(el("span", "key", String.fromCharCode(65 + n)));
+        c.appendChild(el("span", "ct", esc(q.choices[oi])));
+        c.onclick = function () { choose(oi, c); };
+        wrap.appendChild(c); btns.push(c);
+      });
+      mount.appendChild(wrap);
+      function choose(oi, node) {
+        const ok = oi === q.answer; btns.forEach(b => b.disabled = true);
+        if (!instant) { node.classList.add("selected"); commit(q, ok ? 2 : 0, ok); if (state.i + 1 < state.list.length) setTimeout(function () { state.i++; render(); window.scrollTo(0, 0); }, 180); else nextBar(); return; }
+        btns.forEach(function (b, k) { if (order[k] === q.answer) b.classList.add("correct"); else if (b === node) b.classList.add("wrong"); else b.classList.add("dim"); });
+        mount.appendChild(feedbackBlock(ok, q.choices[q.answer], q));
+        commit(q, ok ? 2 : 0, ok); nextBar();
       }
-      return fb;
     }
+
+    const feedbackBlock = buildFeedback;   // (ok, correctText, q, extraHtml)
 
     function advanceBar() {
       // grow the top progress bar after answering
@@ -183,7 +282,7 @@
           else if (b === node) b.classList.add("wrong");
           else b.classList.add("dim");
         });
-        mount.appendChild(feedbackBlock(ok, q.choices[q.answer], q.explain, q));
+        mount.appendChild(feedbackBlock(ok, q.choices[q.answer], q));
         commit(q, ok ? 2 : 0, ok);
         nextBar();
       }
@@ -215,7 +314,7 @@
             return;
           }
           c.classList.add(ok ? "correct" : "wrong");
-          mount.appendChild(feedbackBlock(ok, q.answer ? "True" : "False", q.explain, q));
+          mount.appendChild(feedbackBlock(ok, q.answer ? "True" : "False", q));
           commit(q, ok ? 2 : 0, ok); nextBar();
         };
         wrap.appendChild(c);
@@ -240,8 +339,7 @@
         if (done) return;
         const val = norm(inp.value);
         if (!val) { inp.focus(); return; }
-        const accepted = (q.answers || []).map(norm);
-        const ok = accepted.some(function (a) { return a === val || (a.length > 4 && (val.includes(a) || a.includes(val))); });
+        const ok = fuzzyMatch(inp.value, q.answers);
         done = true; inp.disabled = true; go.disabled = true;
         if (!instant) {
           inp.classList.add("selected"); commit(q, ok ? 2 : 0, ok);
@@ -249,7 +347,7 @@
           return;
         }
         inp.classList.add(ok ? "correct" : "wrong");
-        mount.appendChild(feedbackBlock(ok, (q.answers || [])[0], q.explain, q));
+        mount.appendChild(feedbackBlock(ok, (q.answers || [])[0], q));
         commit(q, ok ? 2 : 0, ok);
         // let the user override self-grade (lenient subject matter)
         const extra = el("div", "row");
@@ -295,7 +393,7 @@
         });
         check.disabled = true;
         const detail = allOk ? "" : "Correct pairs:<br>" + q.pairs.map(p => "• " + esc(p.left) + " → " + esc(p.right)).join("<br>");
-        mount.appendChild(feedbackBlock(allOk, "", detail || q.explain));
+        mount.appendChild(feedbackBlock(allOk, "", q, detail));
         commit(q, allOk ? 2 : 0, allOk);
         nextBar();
       };
@@ -368,7 +466,11 @@
 
       const subj = STUDY.byId[c.subjectId];
       const topic = STUDY.topicIndex[c.topicId] ? STUDY.topicIndex[c.topicId].topic : null;
-      if (subj) mount.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
+      const krow = el("div", "row"); krow.style.alignItems = "center";
+      if (subj) krow.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
+      krow.appendChild(el("div", "spacer"));
+      if (c.id) { const star = el("button", "btn sm ghost", STUDY.isStarred(c.id) ? "★" : "☆"); star.title = "Bookmark"; star.onclick = function (e) { e.stopPropagation(); star.textContent = STUDY.toggleStar(c.id) ? "★" : "☆"; }; krow.appendChild(star); }
+      mount.appendChild(krow);
 
       const lang = c.subjectId === "french" ? "fr-FR" : "en-US";
       function addSpeaker(face, text) {
@@ -414,7 +516,23 @@
       });
       mount.appendChild(rate);
 
+      // optional typed recall (lenient: typos / wording OK) — type then it flips
+      if (!opts.audio) {
+        const typeRow = el("div", "fill-in"); typeRow.style.marginTop = "10px";
+        const tinp = el("input"); tinp.type = "text"; tinp.autocomplete = "off"; tinp.spellcheck = false; tinp.placeholder = "Optional: type your answer, press Enter";
+        typeRow.appendChild(tinp); mount.appendChild(typeRow);
+        tinp.onkeydown = function (e) {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          const ok = QUIZ.fuzzyMatch(tinp.value, [c.back]);
+          tinp.classList.add(ok ? "correct" : "wrong");
+          if (!flipped) flip();
+          toast(ok ? "✓ Close enough — you recalled it" : "Not quite — check the answer");
+        };
+      }
+
       document.onkeydown = function (e) {
+        if (e.target && e.target.tagName === "INPUT") return;
         if (e.code === "Space") { e.preventDefault(); flip(); }
         else if (flipped && e.key >= "1" && e.key <= "4") { rate.children[+e.key - 1].click(); }
       };
@@ -443,6 +561,70 @@
     if (ms < 86400000) return Math.round(ms / 3600000) + "h";
     return Math.round(ms / 86400000) + "d";
   }
+
+  /* ---------------- image-occlusion diagram runner ----------------
+     Shows a diagram with every label hidden; you recall each part
+     (typed, lenient) one at a time. */
+  QUIZ.runDiagram = function (mount, diagram, opts) {
+    opts = opts || {};
+    const order = SRS.shuffle(diagram.parts.map((_, i) => i));
+    const answered = {};
+    let pos = 0, correct = 0;
+
+    function markers(box, activeIdx) {
+      diagram.parts.forEach(function (p, idx) {
+        const m = el("div", "dmark");
+        m.style.left = p.x + "%"; m.style.top = p.y + "%";
+        if (answered[idx]) { m.classList.add("done", "lbl"); m.textContent = p.label; }
+        else if (idx === activeIdx) { m.classList.add("active"); m.textContent = "?"; }
+        else m.textContent = "•";
+        box.appendChild(m);
+      });
+    }
+    function render() {
+      if (pos >= order.length) return finish();
+      const idx = order[pos], part = diagram.parts[idx];
+      mount.innerHTML = "";
+      const top = el("div", "q-top"); const pr = el("div", "q-progress"); pr.appendChild(el("i")).style.width = (pos / order.length * 100) + "%";
+      top.appendChild(pr); top.appendChild(el("div", "q-count", (pos + 1) + " / " + order.length)); mount.appendChild(top);
+      mount.appendChild(el("div", "q-kicker", "🗺️ " + esc(diagram.title)));
+      const box = el("div", "diagram-box"); box.innerHTML = diagram.svg; markers(box, idx); mount.appendChild(box);
+      mount.appendChild(el("h2", "q-stem", "What is the highlighted (?) part?"));
+      const row = el("div", "fill-in"); const inp = el("input"); inp.type = "text"; inp.autocomplete = "off"; inp.spellcheck = false; inp.placeholder = "Type the part name…";
+      const go = el("button", "btn primary", "Check"); row.appendChild(inp); row.appendChild(go); mount.appendChild(row);
+      const rev = el("button", "btn sm ghost", "Reveal answer"); rev.style.marginTop = "8px"; mount.appendChild(rev);
+      inp.focus();
+      let done = false;
+      function settle(ok) {
+        if (done) return; done = true; inp.disabled = true; go.disabled = true; rev.disabled = true;
+        answered[idx] = part.label; if (ok) correct++;
+        STUDY.recordItem("diagram:" + diagram.id + "#" + idx, ok ? 2 : 0, diagram.topicId);
+        inp.classList.add(ok ? "correct" : "wrong");
+        const fb = el("div", "explain " + (ok ? "ok" : "no"));
+        fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ It's the " + part.label));
+        if (part.note) fb.insertAdjacentHTML("beforeend", esc(part.note));
+        mount.appendChild(fb);
+        const bar = el("div", "qbar"); const nb = el("button", "btn primary", pos + 1 < order.length ? "Next part →" : "See results");
+        nb.onclick = function () { pos++; render(); window.scrollTo(0, 0); }; bar.appendChild(nb); mount.appendChild(bar); nb.focus();
+      }
+      go.onclick = function () { if (!norm(inp.value)) return inp.focus(); settle(QUIZ.fuzzyMatch(inp.value, [part.label].concat(part.aliases || []))); };
+      rev.onclick = function () { settle(false); };
+      inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); if (!done) go.onclick(); } };
+    }
+    function finish() {
+      mount.innerHTML = "";
+      const pct = Math.round(correct / order.length * 100);
+      mount.appendChild(el("div", "result-big", "<div class='score'>" + pct + "%</div><div class='lbl'>" + correct + " of " + order.length + " labels recalled</div>"));
+      const box = el("div", "diagram-box"); box.innerHTML = diagram.svg;
+      diagram.parts.forEach(function (p) { const m = el("div", "dmark done lbl"); m.style.left = p.x + "%"; m.style.top = p.y + "%"; m.textContent = p.label; box.appendChild(m); });
+      mount.appendChild(box);
+      const bar = el("div", "qbar");
+      const again = el("button", "btn", "Label again"); again.onclick = function () { QUIZ.runDiagram(mount, diagram, opts); };
+      const done = el("button", "btn primary", opts.doneLabel || "Done"); done.onclick = function () { if (opts.onDone) opts.onDone(); };
+      bar.appendChild(again); bar.appendChild(done); mount.appendChild(bar);
+    }
+    render();
+  };
 
   /* ---------------- CRAM mode ----------------
      Research-backed last-minute drilling: massed RETRIEVAL practice with
@@ -490,16 +672,7 @@
       renderItem(q);
     }
 
-    function feedback(ok, correctText, explain, q) {
-      const fb = el("div", "explain " + (ok ? "ok" : "no"));
-      fb.appendChild(el("span", "v", ok ? "✓ Correct" : "✗ Not quite"));
-      let body = "";
-      if (!ok && correctText) body += "<b>Answer:</b> " + esc(correctText) + "<br>";
-      if (explain) body += esc(explain);
-      if (body) fb.insertAdjacentHTML("beforeend", body);
-      if (q && q.subjectId === "french" && correctText && QUIZ.canSpeak) { fb.appendChild(document.createElement("br")); fb.appendChild(QUIZ.speakerBtn(correctText, "fr-FR")); }
-      return fb;
-    }
+    const feedback = function (ok, correctText, q, extra) { return buildFeedback(ok, correctText, q, extra); };
     function nextBtn(q, ok) {
       const bar = el("div", "qbar");
       const b = el("button", "btn primary", "Next →");
@@ -519,7 +692,7 @@
           c.onclick = function () {
             const ok = oi === q.answer;
             btns.forEach(function (b, k) { b.disabled = true; if (order[k] === q.answer) b.classList.add("correct"); else if (b === c) b.classList.add("wrong"); else b.classList.add("dim"); });
-            mount.appendChild(feedback(ok, q.choices[q.answer], q.explain, q));
+            mount.appendChild(feedback(ok, q.choices[q.answer], q));
             nextBtn(q, ok); document.onkeydown = null;
           };
           wrap.appendChild(c); btns.push(c);
@@ -530,7 +703,7 @@
         const wrap = el("div", "choices");
         [["True", true], ["False", false]].forEach(function (pair) {
           const c = el("button", "choice"); c.appendChild(el("span", "ct", pair[0]));
-          c.onclick = function () { const ok = pair[1] === q.answer; Array.from(wrap.children).forEach(b => b.disabled = true); c.classList.add(ok ? "correct" : "wrong"); mount.appendChild(feedback(ok, q.answer ? "True" : "False", q.explain, q)); nextBtn(q, ok); };
+          c.onclick = function () { const ok = pair[1] === q.answer; Array.from(wrap.children).forEach(b => b.disabled = true); c.classList.add(ok ? "correct" : "wrong"); mount.appendChild(feedback(ok, q.answer ? "True" : "False", q)); nextBtn(q, ok); };
           wrap.appendChild(c);
         });
         mount.appendChild(wrap);
@@ -539,10 +712,10 @@
         const go = el("button", "btn primary", "Check"); row.appendChild(inp); row.appendChild(go); mount.appendChild(row); inp.focus();
         let done = false;
         function check() {
-          if (done) return; const val = norm(inp.value); if (!val) return inp.focus();
-          const ok = (q.answers || []).map(norm).some(a => a === val || (a.length > 4 && (val.includes(a) || a.includes(val))));
+          if (done) return; if (!norm(inp.value)) return inp.focus();
+          const ok = fuzzyMatch(inp.value, q.answers);
           done = true; inp.disabled = true; go.disabled = true; inp.classList.add(ok ? "correct" : "wrong");
-          mount.appendChild(feedback(ok, (q.answers || [])[0], q.explain, q));
+          mount.appendChild(feedback(ok, (q.answers || [])[0], q));
           const extra = el("div", "row");
           if (!ok) { const m = el("button", "btn sm good", "I was right →"); m.onclick = function () { m.remove(); after(q, true); }; extra.appendChild(m); }
           const bar = el("div", "qbar"); if (extra.children.length) bar.appendChild(extra);

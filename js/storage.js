@@ -82,6 +82,7 @@
       wrong: {},      // itemId -> true (needs review)
       seen: {},       // topicId -> last visited ts
       done: {},       // topicId -> {learn, cards, practice, practiceBest}
+      starred: {},    // itemId -> ts (bookmarks)
       streak: { count: 0, last: 0, best: 0 },
       activity: {},   // 'yyyy-mm-dd' -> count
       settings: { theme: "dark" },
@@ -97,7 +98,7 @@
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "activity"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -314,6 +315,80 @@
     });
     arr.sort(function (a, b) { return a.acc - b.acc; });
     return limit ? arr.slice(0, limit) : arr;
+  };
+
+  /* ---------- bookmarks / stars ---------- */
+  STUDY.toggleStar = function (id) {
+    if (store.starred[id]) delete store.starred[id]; else store.starred[id] = Date.now();
+    STUDY.save();
+    return !!store.starred[id];
+  };
+  STUDY.isStarred = function (id) { return !!store.starred[id]; };
+  STUDY.starred = function () {
+    const out = { questions: [], cards: [] };
+    Object.keys(store.starred).forEach(function (id) {
+      const m = STUDY.itemIndex[id]; if (!m) return;
+      if (m.type === "q") out.questions.push(m.ref); else out.cards.push(m.ref);
+    });
+    return out;
+  };
+
+  /* ---------- weak-spot import (from a graded test) ---------- */
+  // Flag every item in these topics as "needs review" and reset its schedule
+  // so Review + Cram surface them immediately.
+  STUDY.markTopicsWeak = function (topicIds) {
+    const now = Date.now(); let n = 0; const hit = [];
+    (topicIds || []).forEach(function (tid) {
+      const e = STUDY.topicIndex[tid]; if (!e) return;
+      hit.push(tid);
+      (e.topic.questions || []).forEach(function (q) {
+        store.wrong[q.id] = true;
+        const st = store.srs[q.id] || (store.srs[q.id] = { box: 0, due: now, last: 0, reps: 0, lapses: 0 });
+        st.box = 1; st.due = now; n++;
+      });
+      if (!store.seen[tid]) store.seen[tid] = now;
+    });
+    STUDY.save();
+    return { items: n, topics: hit };
+  };
+
+  // Build the prompt a student pastes into Claude (with their test PDF/photo)
+  STUDY.aiImportPrompt = function () {
+    let lines = [];
+    lines.push("You are helping a student find their weak spots from a graded exam.");
+    lines.push("I will give you my test (questions + my answers, or a marked PDF/photo).");
+    lines.push("Figure out which questions I got WRONG, then map each wrong question to the BEST-matching topic ID from the list below.");
+    lines.push("");
+    lines.push("TOPIC IDS (use these exact ids only):");
+    STUDY.subjects.forEach(function (s) {
+      lines.push("# " + s.name);
+      s.topics.forEach(function (t) { lines.push("  " + t.id + " — " + t.title); });
+    });
+    lines.push("");
+    lines.push("OUTPUT RULES: reply with ONLY a single code block in exactly this format, one topic id per line, listing the topics I was weakest in (repeat an id once per wrong question so heavier misses appear more):");
+    lines.push("```");
+    lines.push("RECALL-WEAK");
+    lines.push("bio-mendel");
+    lines.push("ela-figurative");
+    lines.push("END");
+    lines.push("```");
+    lines.push("Use only ids from the list. No other text.");
+    return lines.join("\n");
+  };
+
+  // Parse the AI's pasted block -> { topics:[id...], counts:{id:n} }
+  STUDY.parseWeakImport = function (text) {
+    const ids = Object.keys(STUDY.topicIndex);
+    const lower = String(text || "").toLowerCase();
+    const counts = {}, order = [];
+    ids.forEach(function (id) {
+      // whole-token match (so his-wwi doesn't match inside his-wwii)
+      let n = 0;
+      try { const m = lower.match(new RegExp("(?<![a-z0-9-])" + id + "(?![a-z0-9-])", "g")); n = m ? m.length : 0; }
+      catch (e) { const m = lower.match(new RegExp("(^|[^a-z0-9-])" + id + "([^a-z0-9-]|$)", "g")); n = m ? m.length : 0; }
+      if (n > 0) { counts[id] = n; order.push(id); }
+    });
+    return { topics: order, counts: counts };
   };
 
   global.STUDY = STUDY;

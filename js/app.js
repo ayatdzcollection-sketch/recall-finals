@@ -38,6 +38,9 @@
     brand.appendChild(document.createTextNode("Recall"));
     bar.appendChild(brand);
     bar.appendChild(el("div", "spacer"));
+    const search = el("button", "iconbtn"); search.title = "Search"; search.innerHTML = "🔍";
+    search.onclick = () => go("#/search");
+    bar.appendChild(search);
     const dash = el("button", "iconbtn"); dash.title = "Progress"; dash.innerHTML = "📊";
     dash.onclick = () => go("#/dash");
     const t = el("button", "iconbtn"); t.title = "Toggle theme"; t.innerHTML = STUDY.theme() === "dark" ? "🌙" : "☀️";
@@ -97,6 +100,8 @@
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
     actions.appendChild(actionCard("", due ? "" : "", "🔁 Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
     actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
+    actions.appendChild(actionCard("", "📥", "Check a Test", "Import weak spots from a graded test", () => go("#/import")));
+    actions.appendChild(actionCard("", "⭐", "Starred", "Your bookmarked questions", () => go("#/starred")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Mastery, weak spots & streak", () => go("#/dash")));
     app.appendChild(actions);
 
@@ -199,6 +204,7 @@
     actions.appendChild(actionCard("", "📝", "Exam Mode", "Timed & auto-graded", () => go("#/exam?s=" + s.id)));
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
     if (s.id === "french") actions.appendChild(actionCard("", "🔊", "Listening", "Hear & recall (oral prep)", () => startListening()));
+    if (s.id === "biology" && (STUDY.DIAGRAMS || []).length) actions.appendChild(actionCard("", "🗺️", "Label It", "Recall diagram parts", () => go("#/label")));
     app.appendChild(actions);
 
     app.appendChild(sectionH("Topics", "tap to learn, flip cards, then test yourself"));
@@ -459,19 +465,138 @@
     });
   }
 
-  // ---- LISTENING: French audio drill ----
+  // ---- LISTENING: French audio comprehension ----
   function startListening() {
     sessionScreen("🔊 French Listening", function (mount) {
-      if (!QUIZ.canSpeak) { mount.innerHTML = '<div class="empty">Your browser doesn\'t support speech. Try Chrome or Safari.</div>'; return; }
-      const cards = [];
-      STUDY.byId.french.topics.forEach(t => (t.cards || []).forEach(c => cards.push(c)));
+      if (!QUIZ.canSpeak) { mount.innerHTML = '<div class="empty">Your browser doesn\'t support speech. Try Chrome or Safari, then come back.</div>'; return; }
       const intro = el("div", "card");
-      intro.innerHTML = "<b>🔊 Listening practice</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>Each card reads the French aloud. Try to recall the meaning before you flip. Tap 🔊 to hear it again — great prep for the oral and listening sections.</p>";
+      intro.innerHTML = "<b>🔊 Listening comprehension</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>You'll <b>hear French</b> (no text) and answer a question about what was said — vocab, sentences, and conjugations by ear. Tap 🔊 to replay. Real prep for the listening and oral sections.</p>";
       mount.appendChild(intro);
-      const b = el("button", "btn primary full", "Start listening →");
-      b.onclick = () => QUIZ.runCards(mount, cards, { audio: true, doneLabel: "Back to French", onDone: () => go("#/s/french") });
-      mount.appendChild(b);
+      const seg = el("div", "row"); seg.style.margin = "10px 0 4px";
+      const b1 = el("button", "btn primary", "Start listening quiz →");
+      b1.onclick = () => QUIZ.run(mount, SRS.shuffle((STUDY.FR_LISTEN || []).slice()), { showTags: false, doneLabel: "Back to French", onDone: () => go("#/s/french") });
+      const b2 = el("button", "btn", "Just hear the vocab (flashcards)");
+      b2.onclick = function () { const cards = []; STUDY.byId.french.topics.forEach(t => (t.cards || []).forEach(c => cards.push(c))); QUIZ.runCards(mount, cards, { audio: true, doneLabel: "Back to French", onDone: () => go("#/s/french") }); };
+      seg.appendChild(b1); seg.appendChild(b2); mount.appendChild(seg);
     });
+  }
+
+  // ---- LABEL IT: image-occlusion diagrams ----
+  function startDiagram(id) {
+    const d = (STUDY.DIAGRAMS || []).find(x => x.id === id);
+    if (!d) return renderLabelChooser();
+    sessionScreen("🗺️ Label · " + d.title, function (mount) {
+      QUIZ.runDiagram(mount, d, { doneLabel: "More diagrams", onDone: () => go("#/label") });
+    });
+  }
+  function renderLabelChooser() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Biology", hash: "#/s/biology" }, { label: "Label It" }]));
+    app.appendChild(el("div", "hero", "<h1>🗺️ Label the Diagram</h1><p class='muted'>The labels are hidden — recall each part (typing is forgiving). Great for the heart, the nucleotide, and chromosome questions.</p>"));
+    (STUDY.DIAGRAMS || []).forEach(function (d) {
+      const row = el("div", "topic"); row.style.setProperty("--sub", (STUDY.byId[d.subjectId] || {}).accent || "#27c89b");
+      row.onclick = () => startDiagram(d.id);
+      row.appendChild(el("div", "n", "🗺️"));
+      const tt = el("div", "tt"); tt.appendChild(el("h4", null, esc(d.title))); tt.appendChild(el("p", null, d.parts.length + " parts to label"));
+      row.appendChild(tt); row.appendChild(el("div", "state", "→"));
+      app.appendChild(row);
+    });
+  }
+
+  // ---- STARRED: bookmarked items ----
+  function renderStarred() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Starred" }]));
+    app.appendChild(el("div", "hero", "<h1>⭐ Starred</h1><p class='muted'>Your bookmarked questions and cards. Star anything from the answer feedback or a flashcard.</p>"));
+    const st = STUDY.starred();
+    if (!st.questions.length && !st.cards.length) {
+      app.appendChild(el("div", "empty", "<div class='big'>☆</div>Nothing starred yet. Tap ☆ on a flashcard or in answer feedback to bookmark it."));
+      return;
+    }
+    const mount = el("div"); app.appendChild(mount);
+    const bar = el("div", "qbar");
+    if (st.questions.length) { const b = el("button", "btn primary", "Practice " + st.questions.length + " starred questions"); b.onclick = () => sessionScreen("⭐ Starred", m => QUIZ.run(m, SRS.shuffle(st.questions.slice()), { onDone: () => go("#/starred") })); bar.appendChild(b); }
+    if (st.cards.length) { const b = el("button", "btn", "Review " + st.cards.length + " starred cards"); b.onclick = () => sessionScreen("⭐ Starred cards", m => QUIZ.runCards(m, st.cards.slice(), { onDone: () => go("#/starred") })); bar.appendChild(b); }
+    app.appendChild(bar);
+  }
+
+  // ---- IMPORT weak spots from a graded test ----
+  function renderImport() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Import test results" }]));
+    app.appendChild(el("div", "hero", "<h1>📥 Find my weak spots</h1><p class='muted'>Turn a graded test into a targeted review list. Online Exam Mode does this automatically; for a paper or PDF test, use the steps below with any AI.</p>"));
+
+    const c1 = el("div", "card");
+    c1.appendChild(el("div", "vcap", "Step 1 — copy this prompt"));
+    c1.appendChild(el("p", "muted", "Then open Claude (or another AI), paste it, and attach a photo/PDF of your graded test."));
+    const copyBtn = el("button", "btn primary", "📋 Copy the AI prompt");
+    copyBtn.onclick = function () { const p = STUDY.aiImportPrompt(); copyText(p, "Prompt copied — paste it into Claude with your test"); };
+    c1.appendChild(copyBtn);
+    app.appendChild(c1);
+
+    const c2 = el("div", "card");
+    c2.appendChild(el("div", "vcap", "Step 2 — paste the AI's reply here"));
+    c2.appendChild(el("p", "muted", "The AI replies with a RECALL-WEAK block. Paste the whole thing and import."));
+    const ta = document.createElement("textarea");
+    ta.placeholder = "RECALL-WEAK\nbio-mendel\nela-figurative\nEND";
+    ta.style.cssText = "width:100%;min-height:120px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:12px;font-family:var(--mono);font-size:.85rem";
+    c2.appendChild(ta);
+    const imp = el("button", "btn primary full", "Import weak spots →"); imp.style.marginTop = "10px";
+    const out = el("div"); out.style.marginTop = "10px";
+    imp.onclick = function () {
+      const parsed = STUDY.parseWeakImport(ta.value);
+      if (!parsed.topics.length) { out.innerHTML = "<div class='explain no'><span class='v'>No topics found</span>Make sure you pasted the RECALL-WEAK block with topic IDs from the prompt.</div>"; return; }
+      const res = STUDY.markTopicsWeak(parsed.topics);
+      const names = parsed.topics.map(t => (STUDY.topicIndex[t] ? STUDY.topicIndex[t].topic.title : t));
+      out.innerHTML = "<div class='explain ok'><span class='v'>✓ Imported " + res.topics.length + " weak topics (" + res.items + " items queued for review)</span>" + names.map(esc).join(", ") + "</div>";
+      const go2 = el("div", "qbar"); const r = el("button", "btn primary", "Review them now"); r.onclick = () => startReview(null); const c = el("button", "btn", "Cram them"); c.onclick = () => go("#/cram"); go2.appendChild(r); go2.appendChild(c); out.appendChild(go2);
+    };
+    c2.appendChild(imp); c2.appendChild(out);
+    app.appendChild(c2);
+
+    app.appendChild(el("div", "empty", "<div class='big'>💡</div>Tip: take a Practice Test from this app (it prints an answer key), grade it, then import — or just use Exam Mode on your phone and weak spots are tracked for you."));
+  }
+
+  // ---- SEARCH ----
+  function renderSearch(params) {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Search" }]));
+    const head = el("div", "hero"); head.style.margin = "0 2px 12px"; head.appendChild(el("h1", null, "🔍 Search"));
+    app.appendChild(head);
+    const inp = el("input"); inp.type = "search"; inp.placeholder = "Search topics, terms, questions…";
+    inp.style.cssText = "width:100%;font-size:1.05rem;padding:13px 14px;border-radius:13px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text)";
+    inp.value = params.q || "";
+    app.appendChild(inp);
+    const results = el("div"); results.style.marginTop = "14px"; app.appendChild(results);
+    function run() {
+      const q = QUIZ.norm(inp.value);
+      results.innerHTML = "";
+      if (q.length < 2) { results.appendChild(el("div", "empty", "Type at least 2 letters.")); return; }
+      const hits = [];
+      STUDY.subjects.forEach(function (s) {
+        s.topics.forEach(function (t) {
+          if (QUIZ.norm(t.title + " " + (t.blurb || "")).indexOf(q) >= 0) hits.push({ kind: "topic", s: s, t: t, label: t.title, sub: s.name });
+          (t.cards || []).forEach(function (c) { if (QUIZ.norm(c.front + " " + c.back).indexOf(q) >= 0) hits.push({ kind: "card", s: s, t: t, label: c.front, sub: s.name + " · " + t.title }); });
+          (t.questions || []).forEach(function (qq) { if (QUIZ.norm(qq.q).indexOf(q) >= 0) hits.push({ kind: "q", s: s, t: t, label: qq.q, sub: s.name + " · " + t.title }); });
+        });
+      });
+      if (!hits.length) { results.appendChild(el("div", "empty", "No matches for “" + esc(inp.value) + "”.")); return; }
+      results.appendChild(el("div", "q-kicker", hits.length + " result" + (hits.length > 1 ? "s" : "")));
+      hits.slice(0, 60).forEach(function (h) {
+        const row = el("div", "topic"); row.style.setProperty("--sub", h.s.accent);
+        row.onclick = () => go("#/t/" + h.t.id + (h.kind === "card" ? "/cards" : h.kind === "q" ? "/practice" : "/learn"));
+        row.appendChild(el("div", "n", h.kind === "topic" ? "📂" : h.kind === "card" ? "🗂" : "✍️"));
+        const tt = el("div", "tt"); tt.appendChild(el("h4", null, esc(h.label.length > 70 ? h.label.slice(0, 70) + "…" : h.label))); tt.appendChild(el("p", null, esc(h.sub)));
+        row.appendChild(tt); row.appendChild(el("div", "state", "→"));
+        results.appendChild(row);
+      });
+    }
+    inp.oninput = run; inp.focus(); if (inp.value) run();
+  }
+
+  function copyText(text, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => QUIZ.toast(okMsg || "Copied"), () => prompt("Copy:", text));
+    else prompt("Copy:", text);
   }
 
   /* ====================================================
@@ -565,12 +690,22 @@
     card.appendChild(row);
     card.appendChild(el("hr", "div"));
 
-    // export / import
-    card.appendChild(el("div", null, "<b>Backup progress</b><div class='muted' style='font-size:.85rem'>Progress lives only in this browser. Export to move it to another device.</div>"));
-    const er = el("div", "row"); er.style.marginTop = "10px";
-    const exp = el("button", "btn sm", "⬇️ Export"); exp.onclick = exportProgress;
-    const imp = el("button", "btn sm", "⬆️ Import"); imp.onclick = importProgress;
-    er.appendChild(exp); er.appendChild(imp); card.appendChild(er);
+    // export / import — files
+    card.appendChild(el("div", null, "<b>Move progress to another device</b><div class='muted' style='font-size:.85rem'>Progress lives only in this browser. Use a file, or copy a code and paste it on the other device.</div>"));
+    const er = el("div", "row wrap"); er.style.marginTop = "10px";
+    const exp = el("button", "btn sm", "⬇️ Export file"); exp.onclick = exportProgress;
+    const imp = el("button", "btn sm", "⬆️ Import file"); imp.onclick = importProgress;
+    const copyc = el("button", "btn sm", "📋 Copy code"); copyc.onclick = () => copyText(STUDY.exportData(), "Progress code copied — paste it on the other device");
+    const pastec = el("button", "btn sm", "📥 Paste code");
+    er.appendChild(exp); er.appendChild(imp); er.appendChild(copyc); er.appendChild(pastec); card.appendChild(er);
+    const pasteWrap = el("div"); pasteWrap.style.display = "none"; pasteWrap.style.marginTop = "10px";
+    const pta = document.createElement("textarea");
+    pta.placeholder = "Paste your progress code here…";
+    pta.style.cssText = "width:100%;min-height:90px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:11px;font-family:var(--mono);font-size:.78rem";
+    const applyc = el("button", "btn sm good", "Apply code"); applyc.style.marginTop = "8px";
+    applyc.onclick = function () { if (STUDY.importData(pta.value.trim())) { QUIZ.toast("Progress imported"); go("#/home"); } else QUIZ.toast("That code didn't read — copy the whole thing"); };
+    pasteWrap.appendChild(pta); pasteWrap.appendChild(applyc); card.appendChild(pasteWrap);
+    pastec.onclick = function () { pasteWrap.style.display = pasteWrap.style.display === "none" ? "block" : "none"; if (pasteWrap.style.display === "block") pta.focus(); };
     card.appendChild(el("hr", "div"));
 
     // reset
@@ -622,6 +757,10 @@
     if (parts[0] === "test") return renderTestSetup(params);
     if (parts[0] === "exam") return startExam(params);
     if (parts[0] === "cram") return parts[1] ? startCram(parts[1]) : renderCramChooser();
+    if (parts[0] === "label") return parts[1] ? startDiagram(parts[1]) : renderLabelChooser();
+    if (parts[0] === "starred") return renderStarred();
+    if (parts[0] === "import") return renderImport();
+    if (parts[0] === "search") return renderSearch(params);
     if (parts[0] === "settings") return renderSettings();
     return renderHome();
   }
