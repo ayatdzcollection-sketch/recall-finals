@@ -1250,18 +1250,23 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const now = Date.now(), store = STUDY.store();
     const explore = Math.random() < 0.13;
 
-    // (1) subject priority
-    const subScores = STUDY.subjects.map(function (s) {
-      const ss = subjectStat(s);
-      const weakness = clamp(1.15 - ss.acc, 0.2, 1);          // low accuracy → high
-      const imp = 0.6 + s.weight * 0.12;                       // ELA(5)→1.2 … History(2)→0.84
-      const urg = urgency(s.id);                               // nearer exam → higher
-      let sc = imp * urg * (0.2 + 1.3 * weakness) * (1 + 0.3 * ss.coverage);
-      if (explore) sc = imp * (0.8 + Math.random());           // flatten for coverage
-      sc *= (s.id === ctx.lastSubject ? 0.55 : 1) * (0.7 + Math.random() * 0.6);
-      return { v: s, w: Math.max(0.0001, sc) };
-    });
-    const subj = weightedPick(subScores) || STUDY.subjects[0];
+    // (1) choose a subject — unless the feed is scoped to one (ctx.only)
+    let subj;
+    if (ctx.only) {
+      subj = STUDY.byId[ctx.only] || STUDY.subjects[0];
+    } else {
+      const subScores = STUDY.subjects.map(function (s) {
+        const ss = subjectStat(s);
+        const weakness = clamp(1.15 - ss.acc, 0.2, 1);          // low accuracy → high
+        const imp = 0.6 + s.weight * 0.12;                       // ELA(5)→1.2 … History(2)→0.84
+        const urg = urgency(s.id);                               // nearer exam → higher
+        let sc = imp * urg * (0.2 + 1.3 * weakness) * (1 + 0.3 * ss.coverage);
+        if (explore) sc = imp * (0.8 + Math.random());           // flatten for coverage
+        sc *= (s.id === ctx.lastSubject ? 0.55 : 1) * (0.7 + Math.random() * 0.6);
+        return { v: s, w: Math.max(0.0001, sc) };
+      });
+      subj = weightedPick(subScores) || STUDY.subjects[0];
+    }
 
     // (2) best item within that subject
     const cands = pool().filter(q => q.subjectId === subj.id && ctx.recent.indexOf(q.id) < 0);
@@ -4596,15 +4601,16 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   QUIZ.runFeed = function (mount, opts) {
     opts = opts || {};
     const ADAPT = STUDY.ADAPT;
-    const ctx = { recent: [], lastTopic: null, lastSubject: null };
-    const startReady = ADAPT.overallReadiness();
+    const ctx = { recent: [], lastTopic: null, lastSubject: null, only: opts.subjectId || null };
+    const subjName = opts.subjectId ? ((STUDY.byId[opts.subjectId] || {}).name || "") : "";
+    const ready = function () { return opts.subjectId ? ADAPT.readiness(opts.subjectId) : ADAPT.overallReadiness(); };
+    const startReady = ready();
     let answered = 0, correct = 0, sinceMilestone = 0;
     const windowOk = [];   // rolling accuracy for fatigue
 
     function statusBar() {
       const bar = el("div", "feed-status");
-      const ready = ADAPT.overallReadiness();
-      bar.innerHTML = "<span>🎯 <b>" + ready + "%</b> ready</span><span>🔥 " + STUDY.store().streak.count + "</span><span>" + answered + " done</span>";
+      bar.innerHTML = "<span>🎯 <b>" + ready() + "%</b> " + (subjName ? esc(subjName) + " ready" : "ready") + "</span><span>🔥 " + STUDY.store().streak.count + "</span><span>" + answered + " done</span>";
       return bar;
     }
 
@@ -4633,10 +4639,10 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     function milestone(tired) {
       sinceMilestone = 0;
       mount.innerHTML = "";
-      const ready = ADAPT.overallReadiness(), delta = ready - startReady;
+      const r = ready(), delta = r - startReady;
       const big = el("div", "result-big");
-      big.appendChild(el("div", "score", ready + "%"));
-      big.appendChild(el("div", "lbl", "finals ready" + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
+      big.appendChild(el("div", "score", r + "%"));
+      big.appendChild(el("div", "lbl", (subjName ? esc(subjName) + " ready" : "finals ready") + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
       mount.appendChild(big);
       if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped, a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
       else mount.appendChild(el("div", "panel center", "Nice momentum. The feed keeps adapting to exactly what you need next."));
@@ -5521,8 +5527,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     app.appendChild(chips);
 
     const actions = el("div", "actions");
-    actions.appendChild(actionCard("wide", "🔥", "Cram " + s.name, "Fast last-minute drilling of your weak + unseen items", () => startCram(s.id)));
-    actions.appendChild(actionCard("", "⚡", "Smart Study", "Interleaved smart mix", () => startSmart(s.id)));
+    actions.appendChild(actionCard("wide foryou", "⚡", "For You · " + s.name, "One-click binge to mastery: an adaptive feed that covers every topic and drills your weak + forgotten items", () => go("#/feed/" + s.id)));
+    actions.appendChild(actionCard("", "🔥", "Cram " + s.name, "Fast drilling to lock it in", () => startCram(s.id)));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "Random questions", () => startMixed(s.id, 15)));
     actions.appendChild(actionCard("", "📝", "Exam Mode", "Timed & auto-graded", () => go("#/exam?s=" + s.id)));
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
@@ -5746,10 +5752,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     });
   }
 
-  // ---- FOR YOU: the adaptive feed ----
-  function startFeed() {
-    sessionScreen("⚡ For You", function (mount) {
-      QUIZ.runFeed(mount, { onDone: () => go("#/home") });
+  // ---- FOR YOU: the adaptive feed (all subjects, or scoped to one) ----
+  function startFeed(subjectId) {
+    const nm = subjectId ? (STUDY.byId[subjectId] || {}).name : null;
+    if (subjectId && !STUDY.byId[subjectId]) return go("#/home");
+    sessionScreen(nm ? "⚡ For You · " + nm : "⚡ For You", function (mount) {
+      QUIZ.runFeed(mount, { subjectId: subjectId || null, onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
 
@@ -6273,7 +6281,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (parts[0] === "t") return renderTopic(parts[1], parts[2] || "learn");
     if (parts[0] === "dash") return renderDashboard();
     if (parts[0] === "test") return renderTestSetup(params);
-    if (parts[0] === "feed") return startFeed();
+    if (parts[0] === "feed") return startFeed(parts[1]);
     if (parts[0] === "exam") return startExam(params);
     if (parts[0] === "cram") return parts[1] ? startCram(parts[1]) : renderCramChooser();
     if (parts[0] === "label") return parts[1] ? startDiagram(parts[1]) : renderLabelChooser();

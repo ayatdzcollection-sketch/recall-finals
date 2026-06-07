@@ -108,18 +108,23 @@
     const now = Date.now(), store = STUDY.store();
     const explore = Math.random() < 0.13;
 
-    // (1) subject priority
-    const subScores = STUDY.subjects.map(function (s) {
-      const ss = subjectStat(s);
-      const weakness = clamp(1.15 - ss.acc, 0.2, 1);          // low accuracy → high
-      const imp = 0.6 + s.weight * 0.12;                       // ELA(5)→1.2 … History(2)→0.84
-      const urg = urgency(s.id);                               // nearer exam → higher
-      let sc = imp * urg * (0.2 + 1.3 * weakness) * (1 + 0.3 * ss.coverage);
-      if (explore) sc = imp * (0.8 + Math.random());           // flatten for coverage
-      sc *= (s.id === ctx.lastSubject ? 0.55 : 1) * (0.7 + Math.random() * 0.6);
-      return { v: s, w: Math.max(0.0001, sc) };
-    });
-    const subj = weightedPick(subScores) || STUDY.subjects[0];
+    // (1) choose a subject — unless the feed is scoped to one (ctx.only)
+    let subj;
+    if (ctx.only) {
+      subj = STUDY.byId[ctx.only] || STUDY.subjects[0];
+    } else {
+      const subScores = STUDY.subjects.map(function (s) {
+        const ss = subjectStat(s);
+        const weakness = clamp(1.15 - ss.acc, 0.2, 1);          // low accuracy → high
+        const imp = 0.6 + s.weight * 0.12;                       // ELA(5)→1.2 … History(2)→0.84
+        const urg = urgency(s.id);                               // nearer exam → higher
+        let sc = imp * urg * (0.2 + 1.3 * weakness) * (1 + 0.3 * ss.coverage);
+        if (explore) sc = imp * (0.8 + Math.random());           // flatten for coverage
+        sc *= (s.id === ctx.lastSubject ? 0.55 : 1) * (0.7 + Math.random() * 0.6);
+        return { v: s, w: Math.max(0.0001, sc) };
+      });
+      subj = weightedPick(subScores) || STUDY.subjects[0];
+    }
 
     // (2) best item within that subject
     const cands = pool().filter(q => q.subjectId === subj.id && ctx.recent.indexOf(q.id) < 0);

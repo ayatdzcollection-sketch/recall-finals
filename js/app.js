@@ -227,8 +227,8 @@
     app.appendChild(chips);
 
     const actions = el("div", "actions");
-    actions.appendChild(actionCard("wide", "🔥", "Cram " + s.name, "Fast last-minute drilling of your weak + unseen items", () => startCram(s.id)));
-    actions.appendChild(actionCard("", "⚡", "Smart Study", "Interleaved smart mix", () => startSmart(s.id)));
+    actions.appendChild(actionCard("wide foryou", "⚡", "For You · " + s.name, "One-click binge to mastery: an adaptive feed that covers every topic and drills your weak + forgotten items", () => go("#/feed/" + s.id)));
+    actions.appendChild(actionCard("", "🔥", "Cram " + s.name, "Fast drilling to lock it in", () => startCram(s.id)));
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "Random questions", () => startMixed(s.id, 15)));
     actions.appendChild(actionCard("", "📝", "Exam Mode", "Timed & auto-graded", () => go("#/exam?s=" + s.id)));
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
@@ -452,10 +452,12 @@
     });
   }
 
-  // ---- FOR YOU: the adaptive feed ----
-  function startFeed() {
-    sessionScreen("⚡ For You", function (mount) {
-      QUIZ.runFeed(mount, { onDone: () => go("#/home") });
+  // ---- FOR YOU: the adaptive feed (all subjects, or scoped to one) ----
+  function startFeed(subjectId) {
+    const nm = subjectId ? (STUDY.byId[subjectId] || {}).name : null;
+    if (subjectId && !STUDY.byId[subjectId]) return go("#/home");
+    sessionScreen(nm ? "⚡ For You · " + nm : "⚡ For You", function (mount) {
+      QUIZ.runFeed(mount, { subjectId: subjectId || null, onDone: () => go(subjectId ? "#/s/" + subjectId : "#/home") });
     });
   }
 
@@ -979,7 +981,7 @@
     if (parts[0] === "t") return renderTopic(parts[1], parts[2] || "learn");
     if (parts[0] === "dash") return renderDashboard();
     if (parts[0] === "test") return renderTestSetup(params);
-    if (parts[0] === "feed") return startFeed();
+    if (parts[0] === "feed") return startFeed(parts[1]);
     if (parts[0] === "exam") return startExam(params);
     if (parts[0] === "cram") return parts[1] ? startCram(parts[1]) : renderCramChooser();
     if (parts[0] === "label") return parts[1] ? startDiagram(parts[1]) : renderLabelChooser();

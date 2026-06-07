@@ -578,15 +578,16 @@
   QUIZ.runFeed = function (mount, opts) {
     opts = opts || {};
     const ADAPT = STUDY.ADAPT;
-    const ctx = { recent: [], lastTopic: null, lastSubject: null };
-    const startReady = ADAPT.overallReadiness();
+    const ctx = { recent: [], lastTopic: null, lastSubject: null, only: opts.subjectId || null };
+    const subjName = opts.subjectId ? ((STUDY.byId[opts.subjectId] || {}).name || "") : "";
+    const ready = function () { return opts.subjectId ? ADAPT.readiness(opts.subjectId) : ADAPT.overallReadiness(); };
+    const startReady = ready();
     let answered = 0, correct = 0, sinceMilestone = 0;
     const windowOk = [];   // rolling accuracy for fatigue
 
     function statusBar() {
       const bar = el("div", "feed-status");
-      const ready = ADAPT.overallReadiness();
-      bar.innerHTML = "<span>🎯 <b>" + ready + "%</b> ready</span><span>🔥 " + STUDY.store().streak.count + "</span><span>" + answered + " done</span>";
+      bar.innerHTML = "<span>🎯 <b>" + ready() + "%</b> " + (subjName ? esc(subjName) + " ready" : "ready") + "</span><span>🔥 " + STUDY.store().streak.count + "</span><span>" + answered + " done</span>";
       return bar;
     }
 
@@ -615,10 +616,10 @@
     function milestone(tired) {
       sinceMilestone = 0;
       mount.innerHTML = "";
-      const ready = ADAPT.overallReadiness(), delta = ready - startReady;
+      const r = ready(), delta = r - startReady;
       const big = el("div", "result-big");
-      big.appendChild(el("div", "score", ready + "%"));
-      big.appendChild(el("div", "lbl", "finals ready" + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
+      big.appendChild(el("div", "score", r + "%"));
+      big.appendChild(el("div", "lbl", (subjName ? esc(subjName) + " ready" : "finals ready") + (delta > 0 ? "  ▲ +" + delta : "") + " · " + correct + "/" + answered + " this set"));
       mount.appendChild(big);
       if (tired) mount.appendChild(el("div", "panel center", "😮‍💨 Your accuracy dipped, a 2-minute breather actually helps memory stick. Keep going, or pick it up later?"));
       else mount.appendChild(el("div", "panel center", "Nice momentum. The feed keeps adapting to exactly what you need next."));
