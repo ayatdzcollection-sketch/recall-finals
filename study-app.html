@@ -455,6 +455,16 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 .mx-a{font-weight:700}
 .mx-n{margin-left:auto;font-size:.74rem;color:var(--text-dim);background:var(--surface-2);border-radius:999px;padding:1px 8px}
 
+/* inline lesson sheet (pulled up from a wrong answer, over the feed) */
+.sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;transition:opacity .2s}
+.sheet-back.on{opacity:1}
+.sheet{background:var(--surface);width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:none;box-shadow:0 -12px 44px rgba(0,0,0,.45);transform:translateY(16px);transition:transform .22s}
+.sheet-back.on .sheet{transform:translateY(0)}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 16px 10px;flex:1}
+.sheet-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+@media(min-width:560px){ .sheet-back{align-items:center} .sheet{border-radius:18px;border-bottom:1px solid var(--line)} }
+
 /* reduce motion */
 @media(prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
@@ -4518,8 +4528,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (q && (q.topicId && STUDY.topicIndex[q.topicId] || q.id)) {
       const row = el("div", "row"); row.style.marginTop = "9px";
       if (q.topicId && STUDY.topicIndex[q.topicId]) {
-        const lb = el("button", "btn sm ghost", "📖 Review lesson");
-        lb.onclick = function () { if (STUDY.go) STUDY.go("#/t/" + q.topicId + "/learn"); };
+        // wrong → nudge the lesson; right → keep it available but quiet
+        const lb = el("button", "btn sm" + (ok ? " ghost" : " good"), ok ? "📖 Review lesson" : "📖 Learn why");
+        lb.onclick = function () {
+          if (STUDY.showLesson) STUDY.showLesson(q.topicId);     // inline overlay, stays in the session
+          else if (STUDY.go) STUDY.go("#/t/" + q.topicId + "/learn");
+        };
         row.appendChild(lb);
       }
       if (q.id) {
@@ -6029,6 +6043,34 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (t.visual) wrap.appendChild(renderVisual(t.visual));
     mount.appendChild(wrap);
   }
+
+  // Inline lesson peek: overlays the lesson OVER the current screen (e.g. the For
+  // You feed) so a wrong answer can pull up the relevant lesson without tearing
+  // down the session. Two one-tap ways back, so you never lose your place.
+  STUDY.showLesson = function (topicId) {
+    const e = STUDY.topicIndex[topicId]; if (!e) return;
+    const t = e.topic, s = e.subject;
+    if (document.querySelector(".sheet-back")) return;            // one at a time
+    document.documentElement.style.setProperty("--accent", s.accent);
+    const back = el("div", "sheet-back");
+    const sheet = el("div", "sheet"); sheet.style.setProperty("--sub", s.accent);
+    const head = el("div", "sheet-head");
+    head.appendChild(el("div", null, "<b>" + s.icon + " " + esc(t.title) + "</b><div class='muted' style='font-size:.72rem'>Quick refresher, then back to your set</div>"));
+    const x = el("button", "btn sm", "✕ Back"); head.appendChild(x);
+    sheet.appendChild(head);
+    const body = el("div", "sheet-body"); renderLesson(body, t); sheet.appendChild(body);
+    const foot = el("div", "sheet-foot");
+    const cont = el("button", "btn primary full", "Got it, keep going →"); foot.appendChild(cont);
+    sheet.appendChild(foot);
+    back.appendChild(sheet); document.body.appendChild(back);
+    const close = function () { back.remove(); document.removeEventListener("keydown", onKey); };
+    function onKey(ev) { if (ev.key === "Escape") close(); }
+    document.addEventListener("keydown", onKey);
+    x.onclick = close; cont.onclick = close;
+    back.onclick = function (ev) { if (ev.target === back) close(); };
+    if (window.requestAnimationFrame) requestAnimationFrame(function () { back.classList.add("on"); }); else back.classList.add("on");
+    body.scrollTop = 0;
+  };
 
   function renderVisual(v) {
     const box = el("div", "visual");

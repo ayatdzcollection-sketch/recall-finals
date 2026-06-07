@@ -354,6 +354,34 @@
     mount.appendChild(wrap);
   }
 
+  // Inline lesson peek: overlays the lesson OVER the current screen (e.g. the For
+  // You feed) so a wrong answer can pull up the relevant lesson without tearing
+  // down the session. Two one-tap ways back, so you never lose your place.
+  STUDY.showLesson = function (topicId) {
+    const e = STUDY.topicIndex[topicId]; if (!e) return;
+    const t = e.topic, s = e.subject;
+    if (document.querySelector(".sheet-back")) return;            // one at a time
+    document.documentElement.style.setProperty("--accent", s.accent);
+    const back = el("div", "sheet-back");
+    const sheet = el("div", "sheet"); sheet.style.setProperty("--sub", s.accent);
+    const head = el("div", "sheet-head");
+    head.appendChild(el("div", null, "<b>" + s.icon + " " + esc(t.title) + "</b><div class='muted' style='font-size:.72rem'>Quick refresher, then back to your set</div>"));
+    const x = el("button", "btn sm", "✕ Back"); head.appendChild(x);
+    sheet.appendChild(head);
+    const body = el("div", "sheet-body"); renderLesson(body, t); sheet.appendChild(body);
+    const foot = el("div", "sheet-foot");
+    const cont = el("button", "btn primary full", "Got it, keep going →"); foot.appendChild(cont);
+    sheet.appendChild(foot);
+    back.appendChild(sheet); document.body.appendChild(back);
+    const close = function () { back.remove(); document.removeEventListener("keydown", onKey); };
+    function onKey(ev) { if (ev.key === "Escape") close(); }
+    document.addEventListener("keydown", onKey);
+    x.onclick = close; cont.onclick = close;
+    back.onclick = function (ev) { if (ev.target === back) close(); };
+    if (window.requestAnimationFrame) requestAnimationFrame(function () { back.classList.add("on"); }); else back.classList.add("on");
+    body.scrollTop = 0;
+  };
+
   function renderVisual(v) {
     const box = el("div", "visual");
     if (v.cap) box.appendChild(el("div", "vcap", esc(v.cap)));
