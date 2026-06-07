@@ -31,8 +31,38 @@
   function recall(st, now) { return STUDY.recallNow ? STUDY.recallNow(st, now) : (st && st.last ? Math.pow(2, -((now - st.last) / HOUR) / (st.stability || 1)) : 1); }
   ADAPT.recall = recall;
 
-  // fast-answer thresholds (ms) → "knew it cold"
+  // fast-answer thresholds (ms) → seed for the self-calibrated baseline
   const FAST = { mc: 4500, tf: 3500, fill: 9000, listen: 6500 };
+
+  /* ---- Glicko-style ability per subject (rating + uncertainty RD) ----
+     Replaces the old unbounded Elo skill. Updates scale with RD: large & fast
+     while uncertain (early), small & stable once confident. RD regrows slowly
+     over time (you may have forgotten), so estimates stay honest. */
+  const Q = Math.LN10 / 400;                 // ≈ 0.0057565
+  const RD_MAX = 350, RD_MIN = 30, RD_GROW = 16 / DAY;   // RD variance growth per ms
+  function gFactor(rd) { return 1 / Math.sqrt(1 + 3 * Q * Q * rd * rd / (Math.PI * Math.PI)); }
+  function glickoState(subjectId) {
+    const store = STUDY.store();
+    if (!store.glicko) store.glicko = {};
+    return store.glicko[subjectId] || (store.glicko[subjectId] = { r: 1500, rd: RD_MAX, t: 0 });
+  }
+  ADAPT.abilityOf = function (subjectId) { return glickoState(subjectId).r; };
+  ADAPT.rdOf = function (subjectId) { return glickoState(subjectId).rd; };
+  // one result s∈{0,0.5,1} against an item of rating oppRating; mutates + returns state
+  function glickoUpdate(subjectId, oppRating, s, now) {
+    const gl = glickoState(subjectId);
+    const dt = gl.t ? Math.max(0, now - gl.t) : 0;
+    let rd = Math.min(RD_MAX, Math.sqrt(gl.rd * gl.rd + RD_GROW * RD_GROW * dt));   // uncertainty grows with time
+    const g = gFactor(50);                     // item rating treated as fairly certain
+    const E = 1 / (1 + Math.pow(10, -g * (gl.r - oppRating) / 400));
+    const dInv = Q * Q * g * g * E * (1 - E);
+    const denom = 1 / (rd * rd) + dInv;
+    gl.r = clamp(gl.r + (Q / denom) * g * (s - E), 600, 2400);
+    gl.rd = clamp(Math.sqrt(1 / denom), RD_MIN, RD_MAX);
+    gl.t = now;
+    STUDY.store().subjectSkill[subjectId] = gl.r;   // keep mirror for any legacy reader
+    return gl;
+  }
 
   // ---- update after one answer ----
   // correct: bool, rtMs: response time, guess: user flagged "lucky guess", mode: log label
@@ -47,19 +77,23 @@
     // isn't over-credited. A baseline seeds near the old threshold, then adapts.
     store.rtBase = store.rtBase || {};
     const base = store.rtBase[type] || (FAST[type] || 5000) * 1.1;
+    const pre = store.srs[q.id];
+    const priorKn = pre && typeof pre.kn === "number" ? pre.kn : 0;
     let fluency = 0.5;
     if (rtMs) {
       fluency = clamp(1.25 - 0.75 * (rtMs / base), 0, 1);   // ~0.33×base→1, 1×→0.5, 1.67×→0
-      const floorMs = type === "fill" ? 1200 : 700;
-      if (rtMs < floorMs) fluency = Math.min(fluency, 0.35); // too quick to have read it → suspicious
-      if (rtMs >= floorMs && rtMs < 60000) store.rtBase[type] = base * 0.85 + rtMs * 0.15;
+      // content-aware "too fast" guard: only suspicious if you answered faster than
+      // you could plausibly READ it AND you haven't already proven you know it.
+      // (Position reshuffle + distractor variation already block pattern memorising,
+      //  so genuine fast recall on a known item gets full credit.)
+      if (rtMs < minReadMs(q) && priorKn < 0.7) fluency = Math.min(fluency, 0.4);
+      if (rtMs > 400 && rtMs < 60000) store.rtBase[type] = base * 0.85 + rtMs * 0.15;
     }
 
-    // --- Elo expectation: how likely you were EXPECTED to get this right ---
-    const skill = store.subjectSkill[q.subjectId] || 1500;
-    const pre = store.srs[q.id];
+    // --- expectation from your Glicko ability vs this item's difficulty ---
+    const ability = ADAPT.abilityOf(q.subjectId);
     const diff = pre && pre.diff ? pre.diff : 1500;
-    const expct = 1 / (1 + Math.pow(10, (diff - skill) / 400));
+    const expct = 1 / (1 + Math.pow(10, (diff - ability) / 400));
 
     // --- effective grade for spacing (fluency-based, with a guess flag) ---
     let grade;
@@ -74,22 +108,30 @@
     const st = store.srs[q.id];                        // now exists
     st.rt = rtMs || st.rt || 0;
 
-    // --- Elo: item difficulty + your subject skill ---
-    const actual = grade >= 2 ? 1 : grade === 1 ? 0.5 : 0;
-    st.diff = clamp(diff + 24 * (expct - actual), 600, 2400);
-    store.subjectSkill[q.subjectId] = clamp(skill + 28 * (actual - expct), 600, 2400);
+    // --- ratings: Glicko ability (uncertainty-aware) + item difficulty (Elo) ---
+    const s = grade >= 2 ? 1 : grade === 1 ? 0.5 : 0;
+    glickoUpdate(q.subjectId, diff, s, Date.now());
+    st.diff = clamp(diff + 22 * (expct - s), 600, 2400);
 
     STUDY.save();
     return { grade: grade, fast: fluency >= 0.62, fluency: fluency };
   };
 
+  // plausible minimum time to have actually read a question + skim its options
+  function minReadMs(q) {
+    const stem = (q.q || "").length;
+    let opt = 0; (q.choices || []).forEach(c => { opt += String(c).length; });
+    const chars = stem + opt * 0.5;          // you skim options, don't fully read all
+    return clamp(300 + chars * 11, 350, 7000);
+  }
+
   // ---- per-item "would you get this right on the exam, right now" ----
   function pCorrect(q, now) {
     const store = STUDY.store();
     const st = store.srs[q.id];
-    const skill = store.subjectSkill[q.subjectId] || 1500;
+    const ability = ADAPT.abilityOf(q.subjectId);
     const diff = st ? st.diff : 1500;
-    const expct = 1 / (1 + Math.pow(10, (diff - skill) / 400));
+    const expct = 1 / (1 + Math.pow(10, (diff - ability) / 400));
     if (!st) return { expct: expct, recall: 1, seen: false, ready: 0.0, p: expct };
     const r = recall(st, now);
     return { expct: expct, recall: r, seen: true, ready: clamp(expct * r, 0, 1), p: expct * r };
@@ -120,6 +162,26 @@
     return { acc: att > 0 ? cor / att : 0.5, attempts: att, coverage: total ? unseen / total : 0 };
   }
 
+  // ---- spaced-repetition due queue (overdue items, most-overdue first) ----
+  // For the global feed, overdue-ness is weighted by subject importance so a
+  // weak/heavy subject's reviews surface first; scoped feed = just that subject.
+  function dueQueue(only, recent, now) {
+    const store = STUDY.store(), out = [];
+    pool().forEach(function (q) {
+      if (only && q.subjectId !== only) return;
+      if (recent && recent.indexOf(q.id) >= 0) return;
+      const st = store.srs[q.id];
+      if (st && st.reps > 0 && st.due && st.due <= now) out.push({ q: q, over: now - st.due, sub: q.subjectId });
+    });
+    out.sort(function (a, b) {
+      const ia = only ? 1 : (0.6 + (STUDY.byId[a.sub].weight || 1) * 0.12);
+      const ib = only ? 1 : (0.6 + (STUDY.byId[b.sub].weight || 1) * 0.12);
+      return (b.over * ib) - (a.over * ia);
+    });
+    return out.map(x => x.q);
+  }
+  ADAPT.dueCount = function (only) { return dueQueue(only || null, null, Date.now()).length; };
+
   // ---- pick the next item: (1) choose a subject by priority, (2) best item in it ----
   // Two-stage so bank size never biases the mix, a weak/urgent subject wins
   // even if another subject has 5× the questions.
@@ -128,7 +190,16 @@
     const now = Date.now(), store = STUDY.store();
     const explore = Math.random() < 0.13;
 
-    // (1) choose a subject — unless the feed is scoped to one (ctx.only)
+    // (0) auto-include spaced-repetition: the bigger the overdue backlog, the more
+    // often the feed serves a review, so nothing rots in the queue. Interleaved
+    // (we pick among the most-overdue few) so it never feels like pure drilling.
+    const due = dueQueue(ctx.only, ctx.recent, now);
+    if (due.length && !explore && Math.random() < clamp(due.length / (due.length + 6), 0, 0.7)) {
+      const top = due.slice(0, Math.min(5, due.length));
+      return top[Math.floor(Math.random() * top.length)];
+    }
+
+    // (1) choose a subject, unless the feed is scoped to one (ctx.only)
     let subj;
     if (ctx.only) {
       subj = STUDY.byId[ctx.only] || STUDY.subjects[0];
@@ -202,21 +273,22 @@
     if (q.type === "fill") return 0.05;
     return 0.2;
   }
-  // probability you'd answer q correctly ON exam day (no further study)
+  // probability you'd answer q correctly ON exam day (no further study).
+  // Driven mainly by calibrated mastery (kn), with a Glicko-skill term and a
+  // GENTLE retention temper so well-learned material doesn't crater to guess level.
   function pExamAt(q, examMs) {
     const store = STUDY.store();
     const st = store.srs[q.id];
-    const skill = store.subjectSkill[q.subjectId] || 1500;
+    const ability = ADAPT.abilityOf(q.subjectId);
     const diff = st ? (st.diff || 1500) : 1500;
-    const expct = 1 / (1 + Math.pow(10, (diff - skill) / 400));
+    const pSkill = 1 / (1 + Math.pow(10, (diff - ability) / 400));
     const g = guessFloor(q);
-    if (!st) return g + (1 - g) * expct * 0.45;          // unseen: a little credit for reasoning
+    if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
     const r = recall(st, examMs);                         // projected retention at exam time
     const know = (typeof st.kn === "number") ? st.kn : Math.min(1, (st.box || 0) / 4);
-    const skillP = expct * r;                             // performance from skill + retention
-    const knowP = know * r;                               // honest-mastery view, also decays
-    const p = 0.5 * skillP + 0.5 * knowP;
-    return clamp(g + (1 - g) * p, 0, 1);                  // floor at guess level
+    const ability01 = 0.8 * know + 0.2 * pSkill;          // mastery-led, skill-calibrated
+    const temper = 0.55 + 0.45 * r;                       // gentle: a known item never drops below ~0.55×
+    return clamp(g + (1 - g) * temper * ability01, 0, 1); // floor at guess level
   }
   function examMsFor(subjectId) {
     const days = STUDY.daysToExam(subjectId);
@@ -248,6 +320,16 @@
     let s = 0, w = 0;
     STUDY.subjects.forEach(function (subj) { const wt = subj.weight || 1; s += ADAPT.forecast(subj.id) * wt; w += wt; });
     return w ? Math.round(s / w) : 0;
+  };
+  // ± confidence band on the forecast, from Glicko uncertainty (RD): the less the
+  // engine has seen of you in this subject, the wider the band.
+  ADAPT.forecastBand = function (subjectId) {
+    const rd = ADAPT.rdOf(subjectId);
+    return clamp(Math.round(3 + 17 * (rd - RD_MIN) / (RD_MAX - RD_MIN)), 3, 20);
+  };
+  ADAPT.overallBand = function () {
+    let s = 0, n = 0; STUDY.subjects.forEach(function (subj) { s += ADAPT.forecastBand(subj.id); n++; });
+    return n ? Math.round(s / n) : 0;
   };
   // count of seen items predicted to be shaky (below thresh) at exam time
   ADAPT.shakyCount = function (subjectId, thresh) {

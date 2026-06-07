@@ -86,7 +86,8 @@
       streak: { count: 0, last: 0, best: 0 },
       activity: {},   // 'yyyy-mm-dd' -> count
       masteryHist: {},// 'yyyy-mm-dd' -> overall mastery % (snapshot)
-      subjectSkill: {},// subjectId -> Elo skill rating (adaptive engine)
+      subjectSkill: {},// subjectId -> ability rating mirror (adaptive engine)
+      glicko: {},     // subjectId -> {r, rd, t} Glicko-style ability + uncertainty
       examDates: {},  // subjectId -> 'yyyy-mm-dd'
       log: [],        // study-data event log (local, for your own export)
       tele: {},       // anonymous telemetry state (anon id, last ping day)
@@ -285,9 +286,10 @@
       : (grade >= 3 ? 0.85 : grade === 2 ? 0.5 : grade === 1 ? 0.2 : 0.3);
     fl = clampN(fl, 0, 1);
     const pexp = clampN((typeof o.pexp === "number") ? o.pexp : 0.5, 0.05, 0.95);
-    // effective guess: base chance, LOWER when the item was hard for you (low pexp)
-    // and when you answered confidently; raised if you flagged it a guess.
-    let ge = g * (0.45 + 0.7 * pexp) * (1 - 0.4 * fl);
+    // effective guess: base chance, modestly LOWER when the item was hard for you
+    // (low pexp) and when you answered confidently. Kept gentle so a high global
+    // ability can't stall a per-item correct, so repeated wins converge to known.
+    let ge = g * (0.65 + 0.35 * pexp) * (1 - 0.3 * fl);
     if (weak) ge = Math.max(ge, 0.6);
     ge = clampN(ge, 0.02, 0.9);
     const slip = clampN(0.16 - 0.11 * fl, 0.03, 0.18);     // confident answers slip less

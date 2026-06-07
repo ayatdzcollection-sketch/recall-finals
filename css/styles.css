@@ -421,6 +421,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 /* exam-day forecast panel */
 .forecast{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface))}
 .fc-overall{font-weight:800;font-size:1.5rem;color:var(--accent);line-height:1}
+.fc-band{font-weight:600;font-size:.62em;color:var(--text-dim);opacity:.85}
 .fc-sub{font-size:.78rem;margin:2px 0 10px}
 .fc-row{display:flex;align-items:center;gap:9px;margin:7px 0}
 .fc-ic{font-size:1rem;width:1.2em;text-align:center}

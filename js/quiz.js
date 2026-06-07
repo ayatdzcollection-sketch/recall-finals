@@ -594,7 +594,10 @@
 
     function statusBar() {
       const bar = el("div", "feed-status");
-      bar.innerHTML = "<span>🎯 <b>" + ready() + "%</b> " + (subjName ? esc(subjName) + " ready" : "ready") + "</span><span>🔥 " + STUDY.store().streak.count + "</span><span>" + answered + " done</span>";
+      const due = ADAPT.dueCount ? ADAPT.dueCount(opts.subjectId || null) : 0;
+      bar.innerHTML = "<span>🎯 <b>" + ready() + "%</b> " + (subjName ? esc(subjName) + " ready" : "ready") + "</span>"
+        + (due > 0 ? "<span>🔁 " + due + " due</span>" : "")
+        + "<span>🔥 " + STUDY.store().streak.count + "</span><span>" + answered + " done</span>";
       return bar;
     }
 

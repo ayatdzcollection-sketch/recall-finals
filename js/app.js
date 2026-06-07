@@ -830,7 +830,7 @@
     const head = el("div", "row");
     head.appendChild(el("div", null, "<b>🔮 Exam-day forecast</b>"));
     head.appendChild(el("div", "spacer"));
-    head.appendChild(el("div", "fc-overall", plan.overall + "%"));
+    head.appendChild(el("div", "fc-overall", plan.overall + "%<span class='fc-band'> ±" + A.overallBand() + "</span>"));
     box.appendChild(head);
     box.appendChild(el("div", "muted fc-sub", plan.mode === "final"
       ? "Final stretch: predicted score for your next exam, after the forgetting between now and then."
@@ -840,7 +840,7 @@
       row.appendChild(el("span", "fc-ic", r.icon));
       row.appendChild(el("span", "fc-nm", esc(r.name)));
       const bw = el("div", "bar fc-bar"); bw.appendChild(el("i")).style.width = r.forecast + "%"; row.appendChild(bw);
-      row.appendChild(el("span", "fc-pct", r.forecast + "%"));
+      row.appendChild(el("span", "fc-pct", r.forecast + "<span class='fc-band'>±" + A.forecastBand(r.id) + "</span>"));
       row.appendChild(el("span", "fc-min", r.minutes + "m"));
       box.appendChild(row);
     });
