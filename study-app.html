@@ -582,6 +582,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       miss: {},       // subjectId -> [{it, c:chosenText, a:answerText, cc:concept, t}] (misconception radar)
       flagged: {},    // itemId -> {t, reason} reported-as-broken questions (suppressed)
       rtBase: {},     // questionType -> rolling baseline response time (self-calibrated fluency)
+      lastTest: null, // last generated test manifest (for entering results later)
       settings: { theme: "dark" },
     };
   };
@@ -741,6 +742,43 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     });
     return rows.map(r => r.map(c => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(",")).join("\n");
   };
+  /* ---------- enter results from a test (app-generated or external) ---------- */
+  // remember a generated test so you can grade it later (after a printed/online sitting)
+  STUDY.saveLastTest = function (m) {
+    if (!m || !m.sections) return;
+    const items = [];
+    m.sections.forEach(function (sec) {
+      if (sec.kind === "mc" || sec.kind === "free" || sec.kind === "fill") {
+        (sec.items || []).forEach(function (it) { if (it.id) items.push({ id: it.id, no: it.no, stem: String(it.stem || "").slice(0, 140) }); });
+      }
+    });
+    if (!items.length) return;
+    store.lastTest = { when: Date.now(), title: m.title || "Practice test", subjectId: m.subjectId || "", items: items };
+    STUDY.save();
+  };
+  STUDY.lastTest = function () { return store.lastTest || null; };
+  // apply per-question results: [{id, correct}] -> updates mastery exactly like a real session
+  STUDY.applyTestResults = function (results) {
+    let n = 0;
+    (results || []).forEach(function (r) {
+      const ix = STUDY.itemIndex[r.id]; if (!ix || ix.type !== "q" || !ix.ref) return;
+      STUDY.ADAPT.update(ix.ref, !!r.correct, 2000, false, "test", undefined, 0);   // exam retrieval = solid evidence
+      n++;
+    });
+    return n;
+  };
+  // generic per-topic logger for ANY test: marks `correct` of `total` items right
+  STUDY.applyTopicResult = function (topicId, correct, total) {
+    const e = STUDY.topicIndex[topicId]; if (!e) return 0;
+    const items = (e.topic.questions || []).filter(q => q.type !== "match");
+    if (!items.length) return 0;
+    total = Math.max(0, Math.min(total | 0, items.length));
+    correct = Math.max(0, Math.min(correct | 0, total));
+    const pick = STUDY.SRS.shuffle(items.slice()).slice(0, total);
+    pick.forEach(function (q, i) { STUDY.ADAPT.update(q, i < correct, 2000, false, "test", undefined, 0); });
+    return total;
+  };
+
   STUDY.importData = function (json) {
     const parsed = STUDY.unpackData(json);   // compressed code, bare blob, or raw JSON
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
@@ -1712,15 +1750,15 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const g = guessFloor(q);
     if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
     const r = recall(st, examMs);                         // projected retention at exam time
-    // take the BETTER of honest-mastery (kn) and the Leitner box (raw # of corrects):
-    // both signal real learning, and box isn't suppressed by missing response times.
-    const know = Math.max((typeof st.kn === "number") ? st.kn : 0, Math.min(1, (st.box || 0) / 5));
-    const ability01 = 0.8 * know + 0.2 * pSkill;          // mastery-led, skill-calibrated
-    // retention temper: tracks projected recall, but well-LEARNED items (high kn)
-    // get a durability floor: genuine mastery decays slower than raw stability
-    // (which massed/untimed practice suppresses) would suggest.
-    const temper = 0.5 + 0.5 * Math.max(r, 0.5 * know);
-    return clamp(g + (1 - g) * temper * ability01, 0, 1); // floor at guess level
+    // how well you know it: honest-mastery OR demonstrated Leitner box (whichever
+    // higher): both signal real learning, and box isn't suppressed by missing rt.
+    const know = Math.max((typeof st.kn === "number") ? st.kn : 0, Math.min(1, (st.box || 0) / 4));
+    // MASTERY-DOMINANT: the score is mostly "do you know it," lightly skill-blended,
+    // with only a MILD time-haircut. Meaningful material you've actually studied
+    // doesn't fall to near-zero over a few days the way raw stability implies.
+    const base = 0.85 * (0.45 + 0.55 * know) + 0.15 * pSkill;
+    const timeAdj = 0.7 + 0.3 * r;                        // forgetting shaves at most ~30%
+    return clamp(g + (1 - g) * base * timeAdj, 0, 1);     // floor at guess level
   }
   function examMsFor(subjectId) {
     const days = STUDY.daysToExam(subjectId);
@@ -5739,8 +5777,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     actions.appendChild(mkAction("📝", "Take it on screen", "Timed & auto-graded", function () {
       STUDY.go("#/exam?s=" + cfg.subjectId + "&len=" + cfg.length + (cfg.seed ? "&seed=" + encodeURIComponent(cfg.seed) : ""));
     }));
-    actions.appendChild(mkAction("🖨️", "Make printable test", "Print or Save as PDF ↗", function () { TEST.print(TEST.generate(cfg)); }));
-    actions.appendChild(mkAction("👀", "Preview on screen", "Read it, reveal answers", function () { const m = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, m, el); previewWrap.scrollIntoView({ behavior: "smooth" }); }));
+    actions.appendChild(mkAction("🖨️", "Make printable test", "Print or Save as PDF ↗", function () { const m = TEST.generate(cfg); if (STUDY.saveLastTest) STUDY.saveLastTest(m); TEST.print(m); }));
+    actions.appendChild(mkAction("👀", "Preview on screen", "Read it, reveal answers", function () { const m = TEST.generate(cfg); if (STUDY.saveLastTest) STUDY.saveLastTest(m); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, m, el); previewWrap.scrollIntoView({ behavior: "smooth" }); }));
     actions.appendChild(mkAction("🔗", "Share this test", "Same test for a classmate", function () {
       const seed = cfg.seed || newSeed(); cfg.seed = seed;
       const url = TEST.shareURL(cfg);
@@ -5805,9 +5843,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     const mcCount = Math.min(P.mc.length, Math.round((bp.mc || 0) * scale) || 0);
     if (mcCount > 0) {
       const items = sh(P.mc).slice(0, mcCount).map(function (q) {
-        if (q.type === "tf") return { no: ++qno, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
+        if (q.type === "tf") return { no: ++qno, id: q.id, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
         const order = sh(q.choices.map((_, i) => i));
-        return { no: ++qno, stem: q.q, choices: order.map(i => q.choices[i]), ans: order.indexOf(q.answer) };
+        return { no: ++qno, id: q.id, stem: q.q, choices: order.map(i => q.choices[i]), ans: order.indexOf(q.answer) };
       });
       sections.push({ kind: "mc", title: "Part I · Multiple Choice", instr: "Circle the letter of the best answer.", items: items });
     }
@@ -5816,14 +5854,14 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (freeCount > 0) {
       const items = sh(P.free).slice(0, freeCount).map(function (q) {
         const ans = q.answers ? q.answers[0] : (q.choices ? q.choices[q.answer] : "");
-        return { no: ++qno, stem: q.q, ans: ans, work: cfg.subjectId === "geometry" || q.subjectId === "geometry" };
+        return { no: ++qno, id: q.id, stem: q.q, ans: ans, work: cfg.subjectId === "geometry" || q.subjectId === "geometry" };
       });
       sections.push({ kind: "free", title: "Part II · Free Response (show your work)", instr: "Write your answer in the blank. Use radical or rounded form where the problem says to.", items: items });
     }
 
     const fillCount = Math.min(P.fill.length, Math.round((bp.fill || 0) * scale) || 0);
     if (fillCount > 0) {
-      const items = sh(P.fill).slice(0, fillCount).map(function (q) { return { no: ++qno, stem: q.q, ans: (q.answers || [])[0] || "" }; });
+      const items = sh(P.fill).slice(0, fillCount).map(function (q) { return { no: ++qno, id: q.id, stem: q.q, ans: (q.answers || [])[0] || "" }; });
       sections.push({ kind: "fill", title: "Part · Fill in the Blank", instr: "Write the correct word or phrase.", items: items });
     }
 
@@ -6144,6 +6182,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
     actions.appendChild(actionCard("", "🔁", "Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
     actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
+    actions.appendChild(actionCard("", "✍️", "Enter Test Results", "Grade any test, update your mastery", () => go("#/results")));
     actions.appendChild(actionCard("", "📥", "Check a Test", "Import weak spots from a graded test", () => go("#/import")));
     actions.appendChild(actionCard("", "⭐", "Starred", "Your bookmarked questions", () => go("#/starred")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Readiness, weak spots & streak", () => go("#/dash")));
@@ -6785,6 +6824,93 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   }
 
   // ---- IMPORT weak spots from a graded test ----
+  /* ====================================================
+     ENTER TEST RESULTS (grade any test → update mastery)
+     ==================================================== */
+  function renderTestResults() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Enter test results" }]));
+    app.appendChild(el("div", "hero", "<h1>✍️ Enter test results</h1><p class='muted'>Took a test on paper or online? Tell it what you got right and it updates your mastery, weak spots and exam forecast, just like answering in the app.</p>"));
+
+    // --- A) grade the last app-generated test, question by question ---
+    const lt = STUDY.lastTest();
+    app.appendChild(sectionH("Your last practice test", lt ? "tap a question to flip it to wrong" : "make one in Practice Test, take it, then come back"));
+    if (lt) {
+      const meta = el("div", "muted", esc(lt.title) + " · " + new Date(lt.when).toLocaleDateString() + " · " + lt.items.length + " questions");
+      meta.style.cssText = "font-size:.82rem;margin-bottom:8px"; app.appendChild(meta);
+      const results = {}; const paints = [];
+      lt.items.forEach(function (it) { results[it.id] = true; });
+      const quick = el("div", "row wrap"); quick.style.margin = "0 0 8px";
+      const repaint = function () { paints.forEach(function (p) { p(); }); };
+      const ar = el("button", "btn sm ghost", "Mark all right"); ar.onclick = function () { lt.items.forEach(it => results[it.id] = true); repaint(); };
+      const aw = el("button", "btn sm ghost", "Mark all wrong"); aw.onclick = function () { lt.items.forEach(it => results[it.id] = false); repaint(); };
+      quick.appendChild(ar); quick.appendChild(aw); app.appendChild(quick);
+      lt.items.forEach(function (it) {
+        const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;margin:6px 0";
+        const num = el("span", "muted", "Q" + it.no); num.style.cssText = "font-weight:700;flex:0 0 36px";
+        const stem = el("span", null, esc(it.stem.length > 72 ? it.stem.slice(0, 72) + "…" : it.stem)); stem.style.cssText = "flex:1;font-size:.84rem";
+        const mark = el("span", null, ""); mark.style.cssText = "flex:0 0 auto;font-weight:800;font-size:.82rem";
+        const paint = function () { const ok = results[it.id]; mark.textContent = ok ? "✓ right" : "✗ wrong"; mark.style.color = ok ? "var(--good)" : "var(--bad)"; row.style.opacity = ok ? "1" : ".72"; };
+        row.onclick = function () { results[it.id] = !results[it.id]; paint(); };
+        paint(); paints.push(paint);
+        row.appendChild(num); row.appendChild(stem); row.appendChild(mark); app.appendChild(row);
+      });
+      const bar = el("div", "qbar");
+      const apply = el("button", "btn primary full", "Apply " + lt.items.length + " answers to my mastery");
+      apply.onclick = function () {
+        const arr = lt.items.map(function (it) { return { id: it.id, correct: !!results[it.id] }; });
+        const n = STUDY.applyTestResults(arr);
+        const right = arr.filter(a => a.correct).length;
+        QUIZ.toast("Logged " + n + " questions (" + right + " right). Mastery updated.");
+        go("#/dash");
+      };
+      bar.appendChild(apply); app.appendChild(bar);
+    } else {
+      app.appendChild(el("div", "empty", "No app-made test yet. Open <b>Practice Test</b>, generate one (it's saved here), take it, then return to grade it."));
+    }
+
+    // --- B) log ANY other test (online/teacher) by topic ---
+    app.appendChild(sectionH("Any other test", "for an online or paper test from elsewhere, log how you did per topic"));
+    const pick = el("div", "seg"); pick.style.flexWrap = "wrap";
+    let curSub = STUDY.subjects[0].id;
+    const body = el("div");
+    STUDY.subjects.forEach(function (s) {
+      const b = el("button", s.id === curSub ? "on" : "", s.icon + " " + s.name);
+      b.onclick = function () { curSub = s.id; Array.from(pick.children).forEach(x => x.className = ""); b.className = "on"; renderTopicInputs(); };
+      pick.appendChild(b);
+    });
+    app.appendChild(pick); app.appendChild(body);
+    const inputs = {};   // topicId -> {c, t}
+    function renderTopicInputs() {
+      body.innerHTML = ""; for (const k in inputs) delete inputs[k];
+      const s = STUDY.byId[curSub];
+      s.topics.forEach(function (t) {
+        const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 12px;margin:6px 0";
+        row.appendChild(el("div", null, "<b>" + esc(t.title) + "</b>")).style.flex = "1";
+        const ci = document.createElement("input"); ci.type = "number"; ci.min = "0"; ci.placeholder = "right";
+        const ti = document.createElement("input"); ti.type = "number"; ti.min = "0"; ti.placeholder = "of";
+        [ci, ti].forEach(function (x) { x.style.cssText = "width:54px;border-radius:8px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:6px;font-size:.85rem;text-align:center"; });
+        inputs[t.id] = { c: ci, t: ti };
+        row.appendChild(ci); row.appendChild(el("span", "muted", "/")); row.appendChild(ti);
+        body.appendChild(row);
+      });
+      const bar = el("div", "qbar");
+      const apply = el("button", "btn primary full", "Log these results");
+      apply.onclick = function () {
+        let topics = 0, items = 0;
+        Object.keys(inputs).forEach(function (tid) {
+          const t = parseInt(inputs[tid].t.value, 10) || 0, c = parseInt(inputs[tid].c.value, 10) || 0;
+          if (t > 0) { items += STUDY.applyTopicResult(tid, c, t); topics++; }
+        });
+        if (!items) { QUIZ.toast("Enter at least one topic's score (right / of)"); return; }
+        QUIZ.toast("Logged " + items + " items across " + topics + " topics. Mastery updated.");
+        go("#/dash");
+      };
+      bar.appendChild(apply); body.appendChild(bar);
+    }
+    renderTopicInputs();
+  }
+
   function renderImport() {
     clear(); app.appendChild(topbar());
     app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Import test results" }]));
@@ -7158,6 +7284,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (parts[0] === "timeline") return renderTimeline();
     if (parts[0] === "starred") return renderStarred();
     if (parts[0] === "import") return renderImport();
+    if (parts[0] === "results") return renderTestResults();
     if (parts[0] === "search") return renderSearch(params);
     if (parts[0] === "settings") return renderSettings();
     return renderHome();

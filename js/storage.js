@@ -95,6 +95,7 @@
       miss: {},       // subjectId -> [{it, c:chosenText, a:answerText, cc:concept, t}] (misconception radar)
       flagged: {},    // itemId -> {t, reason} reported-as-broken questions (suppressed)
       rtBase: {},     // questionType -> rolling baseline response time (self-calibrated fluency)
+      lastTest: null, // last generated test manifest (for entering results later)
       settings: { theme: "dark" },
     };
   };
@@ -254,6 +255,43 @@
     });
     return rows.map(r => r.map(c => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(",")).join("\n");
   };
+  /* ---------- enter results from a test (app-generated or external) ---------- */
+  // remember a generated test so you can grade it later (after a printed/online sitting)
+  STUDY.saveLastTest = function (m) {
+    if (!m || !m.sections) return;
+    const items = [];
+    m.sections.forEach(function (sec) {
+      if (sec.kind === "mc" || sec.kind === "free" || sec.kind === "fill") {
+        (sec.items || []).forEach(function (it) { if (it.id) items.push({ id: it.id, no: it.no, stem: String(it.stem || "").slice(0, 140) }); });
+      }
+    });
+    if (!items.length) return;
+    store.lastTest = { when: Date.now(), title: m.title || "Practice test", subjectId: m.subjectId || "", items: items };
+    STUDY.save();
+  };
+  STUDY.lastTest = function () { return store.lastTest || null; };
+  // apply per-question results: [{id, correct}] -> updates mastery exactly like a real session
+  STUDY.applyTestResults = function (results) {
+    let n = 0;
+    (results || []).forEach(function (r) {
+      const ix = STUDY.itemIndex[r.id]; if (!ix || ix.type !== "q" || !ix.ref) return;
+      STUDY.ADAPT.update(ix.ref, !!r.correct, 2000, false, "test", undefined, 0);   // exam retrieval = solid evidence
+      n++;
+    });
+    return n;
+  };
+  // generic per-topic logger for ANY test: marks `correct` of `total` items right
+  STUDY.applyTopicResult = function (topicId, correct, total) {
+    const e = STUDY.topicIndex[topicId]; if (!e) return 0;
+    const items = (e.topic.questions || []).filter(q => q.type !== "match");
+    if (!items.length) return 0;
+    total = Math.max(0, Math.min(total | 0, items.length));
+    correct = Math.max(0, Math.min(correct | 0, total));
+    const pick = STUDY.SRS.shuffle(items.slice()).slice(0, total);
+    pick.forEach(function (q, i) { STUDY.ADAPT.update(q, i < correct, 2000, false, "test", undefined, 0); });
+    return total;
+  };
+
   STUDY.importData = function (json) {
     const parsed = STUDY.unpackData(json);   // compressed code, bare blob, or raw JSON
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;

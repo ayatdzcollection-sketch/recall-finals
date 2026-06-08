@@ -290,15 +290,15 @@
     const g = guessFloor(q);
     if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
     const r = recall(st, examMs);                         // projected retention at exam time
-    // take the BETTER of honest-mastery (kn) and the Leitner box (raw # of corrects):
-    // both signal real learning, and box isn't suppressed by missing response times.
-    const know = Math.max((typeof st.kn === "number") ? st.kn : 0, Math.min(1, (st.box || 0) / 5));
-    const ability01 = 0.8 * know + 0.2 * pSkill;          // mastery-led, skill-calibrated
-    // retention temper: tracks projected recall, but well-LEARNED items (high kn)
-    // get a durability floor: genuine mastery decays slower than raw stability
-    // (which massed/untimed practice suppresses) would suggest.
-    const temper = 0.5 + 0.5 * Math.max(r, 0.5 * know);
-    return clamp(g + (1 - g) * temper * ability01, 0, 1); // floor at guess level
+    // how well you know it: honest-mastery OR demonstrated Leitner box (whichever
+    // higher): both signal real learning, and box isn't suppressed by missing rt.
+    const know = Math.max((typeof st.kn === "number") ? st.kn : 0, Math.min(1, (st.box || 0) / 4));
+    // MASTERY-DOMINANT: the score is mostly "do you know it," lightly skill-blended,
+    // with only a MILD time-haircut. Meaningful material you've actually studied
+    // doesn't fall to near-zero over a few days the way raw stability implies.
+    const base = 0.85 * (0.45 + 0.55 * know) + 0.15 * pSkill;
+    const timeAdj = 0.7 + 0.3 * r;                        // forgetting shaves at most ~30%
+    return clamp(g + (1 - g) * base * timeAdj, 0, 1);     // floor at guess level
   }
   function examMsFor(subjectId) {
     const days = STUDY.daysToExam(subjectId);

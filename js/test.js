@@ -93,8 +93,8 @@
     actions.appendChild(mkAction("📝", "Take it on screen", "Timed & auto-graded", function () {
       STUDY.go("#/exam?s=" + cfg.subjectId + "&len=" + cfg.length + (cfg.seed ? "&seed=" + encodeURIComponent(cfg.seed) : ""));
     }));
-    actions.appendChild(mkAction("🖨️", "Make printable test", "Print or Save as PDF ↗", function () { TEST.print(TEST.generate(cfg)); }));
-    actions.appendChild(mkAction("👀", "Preview on screen", "Read it, reveal answers", function () { const m = TEST.generate(cfg); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, m, el); previewWrap.scrollIntoView({ behavior: "smooth" }); }));
+    actions.appendChild(mkAction("🖨️", "Make printable test", "Print or Save as PDF ↗", function () { const m = TEST.generate(cfg); if (STUDY.saveLastTest) STUDY.saveLastTest(m); TEST.print(m); }));
+    actions.appendChild(mkAction("👀", "Preview on screen", "Read it, reveal answers", function () { const m = TEST.generate(cfg); if (STUDY.saveLastTest) STUDY.saveLastTest(m); previewWrap.innerHTML = ""; TEST.renderPreview(previewWrap, m, el); previewWrap.scrollIntoView({ behavior: "smooth" }); }));
     actions.appendChild(mkAction("🔗", "Share this test", "Same test for a classmate", function () {
       const seed = cfg.seed || newSeed(); cfg.seed = seed;
       const url = TEST.shareURL(cfg);
@@ -159,9 +159,9 @@
     const mcCount = Math.min(P.mc.length, Math.round((bp.mc || 0) * scale) || 0);
     if (mcCount > 0) {
       const items = sh(P.mc).slice(0, mcCount).map(function (q) {
-        if (q.type === "tf") return { no: ++qno, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
+        if (q.type === "tf") return { no: ++qno, id: q.id, stem: q.q, choices: ["True", "False"], ans: q.answer ? 0 : 1 };
         const order = sh(q.choices.map((_, i) => i));
-        return { no: ++qno, stem: q.q, choices: order.map(i => q.choices[i]), ans: order.indexOf(q.answer) };
+        return { no: ++qno, id: q.id, stem: q.q, choices: order.map(i => q.choices[i]), ans: order.indexOf(q.answer) };
       });
       sections.push({ kind: "mc", title: "Part I · Multiple Choice", instr: "Circle the letter of the best answer.", items: items });
     }
@@ -170,14 +170,14 @@
     if (freeCount > 0) {
       const items = sh(P.free).slice(0, freeCount).map(function (q) {
         const ans = q.answers ? q.answers[0] : (q.choices ? q.choices[q.answer] : "");
-        return { no: ++qno, stem: q.q, ans: ans, work: cfg.subjectId === "geometry" || q.subjectId === "geometry" };
+        return { no: ++qno, id: q.id, stem: q.q, ans: ans, work: cfg.subjectId === "geometry" || q.subjectId === "geometry" };
       });
       sections.push({ kind: "free", title: "Part II · Free Response (show your work)", instr: "Write your answer in the blank. Use radical or rounded form where the problem says to.", items: items });
     }
 
     const fillCount = Math.min(P.fill.length, Math.round((bp.fill || 0) * scale) || 0);
     if (fillCount > 0) {
-      const items = sh(P.fill).slice(0, fillCount).map(function (q) { return { no: ++qno, stem: q.q, ans: (q.answers || [])[0] || "" }; });
+      const items = sh(P.fill).slice(0, fillCount).map(function (q) { return { no: ++qno, id: q.id, stem: q.q, ans: (q.answers || [])[0] || "" }; });
       sections.push({ kind: "fill", title: "Part · Fill in the Blank", instr: "Write the correct word or phrase.", items: items });
     }
 

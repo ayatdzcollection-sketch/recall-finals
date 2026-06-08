@@ -101,6 +101,7 @@
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "20 random questions, all subjects", () => startMixed(null, 20)));
     actions.appendChild(actionCard("", "🔁", "Review", due ? due + " items due now" : "Nothing due. Nice.", () => startReview(null)));
     actions.appendChild(actionCard("", "📝", "Practice Test", "Print or take a timed mock final", () => go("#/test")));
+    actions.appendChild(actionCard("", "✍️", "Enter Test Results", "Grade any test, update your mastery", () => go("#/results")));
     actions.appendChild(actionCard("", "📥", "Check a Test", "Import weak spots from a graded test", () => go("#/import")));
     actions.appendChild(actionCard("", "⭐", "Starred", "Your bookmarked questions", () => go("#/starred")));
     actions.appendChild(actionCard("", "📊", "My Progress", "Readiness, weak spots & streak", () => go("#/dash")));
@@ -742,6 +743,93 @@
   }
 
   // ---- IMPORT weak spots from a graded test ----
+  /* ====================================================
+     ENTER TEST RESULTS (grade any test → update mastery)
+     ==================================================== */
+  function renderTestResults() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Enter test results" }]));
+    app.appendChild(el("div", "hero", "<h1>✍️ Enter test results</h1><p class='muted'>Took a test on paper or online? Tell it what you got right and it updates your mastery, weak spots and exam forecast, just like answering in the app.</p>"));
+
+    // --- A) grade the last app-generated test, question by question ---
+    const lt = STUDY.lastTest();
+    app.appendChild(sectionH("Your last practice test", lt ? "tap a question to flip it to wrong" : "make one in Practice Test, take it, then come back"));
+    if (lt) {
+      const meta = el("div", "muted", esc(lt.title) + " · " + new Date(lt.when).toLocaleDateString() + " · " + lt.items.length + " questions");
+      meta.style.cssText = "font-size:.82rem;margin-bottom:8px"; app.appendChild(meta);
+      const results = {}; const paints = [];
+      lt.items.forEach(function (it) { results[it.id] = true; });
+      const quick = el("div", "row wrap"); quick.style.margin = "0 0 8px";
+      const repaint = function () { paints.forEach(function (p) { p(); }); };
+      const ar = el("button", "btn sm ghost", "Mark all right"); ar.onclick = function () { lt.items.forEach(it => results[it.id] = true); repaint(); };
+      const aw = el("button", "btn sm ghost", "Mark all wrong"); aw.onclick = function () { lt.items.forEach(it => results[it.id] = false); repaint(); };
+      quick.appendChild(ar); quick.appendChild(aw); app.appendChild(quick);
+      lt.items.forEach(function (it) {
+        const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;margin:6px 0";
+        const num = el("span", "muted", "Q" + it.no); num.style.cssText = "font-weight:700;flex:0 0 36px";
+        const stem = el("span", null, esc(it.stem.length > 72 ? it.stem.slice(0, 72) + "…" : it.stem)); stem.style.cssText = "flex:1;font-size:.84rem";
+        const mark = el("span", null, ""); mark.style.cssText = "flex:0 0 auto;font-weight:800;font-size:.82rem";
+        const paint = function () { const ok = results[it.id]; mark.textContent = ok ? "✓ right" : "✗ wrong"; mark.style.color = ok ? "var(--good)" : "var(--bad)"; row.style.opacity = ok ? "1" : ".72"; };
+        row.onclick = function () { results[it.id] = !results[it.id]; paint(); };
+        paint(); paints.push(paint);
+        row.appendChild(num); row.appendChild(stem); row.appendChild(mark); app.appendChild(row);
+      });
+      const bar = el("div", "qbar");
+      const apply = el("button", "btn primary full", "Apply " + lt.items.length + " answers to my mastery");
+      apply.onclick = function () {
+        const arr = lt.items.map(function (it) { return { id: it.id, correct: !!results[it.id] }; });
+        const n = STUDY.applyTestResults(arr);
+        const right = arr.filter(a => a.correct).length;
+        QUIZ.toast("Logged " + n + " questions (" + right + " right). Mastery updated.");
+        go("#/dash");
+      };
+      bar.appendChild(apply); app.appendChild(bar);
+    } else {
+      app.appendChild(el("div", "empty", "No app-made test yet. Open <b>Practice Test</b>, generate one (it's saved here), take it, then return to grade it."));
+    }
+
+    // --- B) log ANY other test (online/teacher) by topic ---
+    app.appendChild(sectionH("Any other test", "for an online or paper test from elsewhere, log how you did per topic"));
+    const pick = el("div", "seg"); pick.style.flexWrap = "wrap";
+    let curSub = STUDY.subjects[0].id;
+    const body = el("div");
+    STUDY.subjects.forEach(function (s) {
+      const b = el("button", s.id === curSub ? "on" : "", s.icon + " " + s.name);
+      b.onclick = function () { curSub = s.id; Array.from(pick.children).forEach(x => x.className = ""); b.className = "on"; renderTopicInputs(); };
+      pick.appendChild(b);
+    });
+    app.appendChild(pick); app.appendChild(body);
+    const inputs = {};   // topicId -> {c, t}
+    function renderTopicInputs() {
+      body.innerHTML = ""; for (const k in inputs) delete inputs[k];
+      const s = STUDY.byId[curSub];
+      s.topics.forEach(function (t) {
+        const row = el("div", "panel"); row.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 12px;margin:6px 0";
+        row.appendChild(el("div", null, "<b>" + esc(t.title) + "</b>")).style.flex = "1";
+        const ci = document.createElement("input"); ci.type = "number"; ci.min = "0"; ci.placeholder = "right";
+        const ti = document.createElement("input"); ti.type = "number"; ti.min = "0"; ti.placeholder = "of";
+        [ci, ti].forEach(function (x) { x.style.cssText = "width:54px;border-radius:8px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:6px;font-size:.85rem;text-align:center"; });
+        inputs[t.id] = { c: ci, t: ti };
+        row.appendChild(ci); row.appendChild(el("span", "muted", "/")); row.appendChild(ti);
+        body.appendChild(row);
+      });
+      const bar = el("div", "qbar");
+      const apply = el("button", "btn primary full", "Log these results");
+      apply.onclick = function () {
+        let topics = 0, items = 0;
+        Object.keys(inputs).forEach(function (tid) {
+          const t = parseInt(inputs[tid].t.value, 10) || 0, c = parseInt(inputs[tid].c.value, 10) || 0;
+          if (t > 0) { items += STUDY.applyTopicResult(tid, c, t); topics++; }
+        });
+        if (!items) { QUIZ.toast("Enter at least one topic's score (right / of)"); return; }
+        QUIZ.toast("Logged " + items + " items across " + topics + " topics. Mastery updated.");
+        go("#/dash");
+      };
+      bar.appendChild(apply); body.appendChild(bar);
+    }
+    renderTopicInputs();
+  }
+
   function renderImport() {
     clear(); app.appendChild(topbar());
     app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Import test results" }]));
@@ -1115,6 +1203,7 @@
     if (parts[0] === "timeline") return renderTimeline();
     if (parts[0] === "starred") return renderStarred();
     if (parts[0] === "import") return renderImport();
+    if (parts[0] === "results") return renderTestResults();
     if (parts[0] === "search") return renderSearch(params);
     if (parts[0] === "settings") return renderSettings();
     return renderHome();
