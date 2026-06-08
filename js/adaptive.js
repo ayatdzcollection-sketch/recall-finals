@@ -289,15 +289,18 @@
     const pSkill = 1 / (1 + Math.pow(10, (diff - ability) / 400));
     const g = guessFloor(q);
     if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
-    const r = recall(st, examMs);                         // projected retention at exam time
     // how well you know it: honest-mastery OR demonstrated Leitner box (whichever
     // higher): both signal real learning, and box isn't suppressed by missing rt.
     const know = Math.max((typeof st.kn === "number") ? st.kn : 0, Math.min(1, (st.box || 0) / 4));
-    // MASTERY-DOMINANT: the score is mostly "do you know it," lightly skill-blended,
-    // with only a MILD time-haircut. Meaningful material you've actually studied
-    // doesn't fall to near-zero over a few days the way raw stability implies.
-    const base = 0.85 * (0.45 + 0.55 * know) + 0.15 * pSkill;
-    const timeAdj = 0.7 + 0.3 * r;                        // forgetting shaves at most ~30%
+    // REALISTIC forgetting: well-learned material is DURABLE (multi-day), not the
+    // few-hours stability that massed/untimed practice produces. Floor the effective
+    // memory-stability by how well you know it, so the forecast only fades what you
+    // HAVEN'T cemented (low know decays fast; a long gap still decays even if known).
+    const elapsedH = Math.max(0, (examMs - (st.last || examMs)) / HOUR);
+    const effStab = Math.max(st.stability || 4, 18 + 90 * know);   // hours; known ≈ days
+    const r = Math.pow(2, -elapsedH / effStab);
+    const base = 0.85 * (0.45 + 0.55 * know) + 0.15 * pSkill;   // mastery-dominant, skill-blended
+    const timeAdj = 0.7 + 0.3 * r;
     return clamp(g + (1 - g) * base * timeAdj, 0, 1);     // floor at guess level
   }
   function examMsFor(subjectId) {
