@@ -1015,16 +1015,16 @@
     card.appendChild(el("hr", "div"));
 
     // export / import, files
-    card.appendChild(el("div", null, "<b>Move progress to another device</b><div class='muted' style='font-size:.85rem'>Progress lives only in this browser. Use a file, or copy a code and paste it on the other device.</div>"));
+    card.appendChild(el("div", null, "<b>Move or back up your data</b><div class='muted' style='font-size:.85rem'>Everything lives only in this browser. \"Copy everything\" packs your <b>entire</b> data (compressed, ~5× smaller) into one code you can paste back here or on another device.</div>"));
     const er = el("div", "row wrap"); er.style.marginTop = "10px";
     const exp = el("button", "btn sm", "⬇️ Export file"); exp.onclick = exportProgress;
     const imp = el("button", "btn sm", "⬆️ Import file"); imp.onclick = importProgress;
-    const copyc = el("button", "btn sm", "📋 Copy progress"); copyc.onclick = () => copyText(STUDY.exportProgress(), "Progress copied (compact). Paste it on the other device.");
-    const pastec = el("button", "btn sm", "📥 Paste progress");
+    const copyc = el("button", "btn sm", "📋 Copy everything"); copyc.onclick = () => copyText(STUDY.packData(), "Everything copied (compressed). Paste it to restore anywhere.");
+    const pastec = el("button", "btn sm", "📥 Paste");
     er.appendChild(exp); er.appendChild(imp); er.appendChild(copyc); er.appendChild(pastec); card.appendChild(er);
     const pasteWrap = el("div"); pasteWrap.style.display = "none"; pasteWrap.style.marginTop = "10px";
     const pta = document.createElement("textarea");
-    pta.placeholder = "Paste your progress code here…";
+    pta.placeholder = "Paste your code here (compressed or raw JSON)…";
     pta.style.cssText = "width:100%;min-height:90px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:11px;font-family:var(--mono);font-size:.78rem";
     const applyc = el("button", "btn sm good", "Apply code"); applyc.style.marginTop = "8px";
     applyc.onclick = function () { if (STUDY.importData(pta.value.trim())) { QUIZ.toast("Progress imported"); go("#/home"); } else QUIZ.toast("That code didn't read, copy the whole thing"); };
@@ -1040,8 +1040,8 @@
     dj.onclick = () => downloadFile(JSON.stringify(STUDY.studyData(), null, 2), "recall-study-data.json", "application/json");
     const dc = el("button", "btn sm", "⬇️ Download CSV");
     dc.onclick = () => downloadFile(STUDY.studyDataCSV(), "recall-study-data.csv", "text/csv");
-    const cf = el("button", "btn sm", "📋 Copy all data");
-    cf.onclick = () => copyText(STUDY.exportData(), "Full data copied (everything, including the log).");
+    const cf = el("button", "btn sm", "📋 Copy raw JSON");
+    cf.onclick = () => copyText(STUDY.exportData(), "Full raw JSON copied (uncompressed, human-readable).");
     dr.appendChild(dj); dr.appendChild(dc); dr.appendChild(cf); card.appendChild(dr);
     card.appendChild(el("hr", "div"));
 

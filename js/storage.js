@@ -138,11 +138,90 @@
 
   STUDY.exportData = function () { return JSON.stringify(store); };
   // compact copy-paste export: everything needed to RESTORE progress, minus the
-  // behavioral log + outbound queue (which are big and not needed to restore),
-  // so it fits in the clipboard. importData reads this or the full export.
+  // behavioral log + outbound queue (which are big and not needed to restore).
   STUDY.exportProgress = function () {
     const copy = {}; Object.keys(store).forEach(function (k) { if (k !== "log" && k !== "teleQueue") copy[k] = store[k]; });
     return JSON.stringify(copy);
+  };
+
+  /* ---- LZ string compression (pieroxy lz-string, base64 variant; public domain) ----
+     Lets a copy-paste code carry the ENTIRE store (log included) at ~1/5 the size,
+     synchronously (no async clipboard quirks) and fully offline. */
+  const LZ = (function () {
+    const keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    const rev = {}; for (let z = 0; z < keyStr.length; z++) rev[keyStr.charAt(z)] = z;
+    const f = String.fromCharCode;
+    function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+      if (uncompressed == null) return "";
+      let i, value, dict = {}, toCreate = {}, c = "", wc = "", w = "", enlargeIn = 2,
+        dictSize = 3, numBits = 2, data = [], dataVal = 0, dataPos = 0;
+      function push(v) { dataVal = (dataVal << 1) | v; if (dataPos == bitsPerChar - 1) { dataPos = 0; data.push(getCharFromInt(dataVal)); dataVal = 0; } else dataPos++; }
+      function emit(w) {
+        if (Object.prototype.hasOwnProperty.call(toCreate, w)) {
+          if (w.charCodeAt(0) < 256) { for (i = 0; i < numBits; i++) push(0); value = w.charCodeAt(0); for (i = 0; i < 8; i++) { push(value & 1); value >>= 1; } }
+          else { value = 1; for (i = 0; i < numBits; i++) { push(value); value = 0; } value = w.charCodeAt(0); for (i = 0; i < 16; i++) { push(value & 1); value >>= 1; } }
+          enlargeIn--; if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; } delete toCreate[w];
+        } else { value = dict[w]; for (i = 0; i < numBits; i++) { push(value & 1); value >>= 1; } }
+        enlargeIn--; if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+      }
+      for (let ii = 0; ii < uncompressed.length; ii++) {
+        c = uncompressed.charAt(ii);
+        if (!Object.prototype.hasOwnProperty.call(dict, c)) { dict[c] = dictSize++; toCreate[c] = true; }
+        wc = w + c;
+        if (Object.prototype.hasOwnProperty.call(dict, wc)) { w = wc; }
+        else { emit(w); dict[wc] = dictSize++; w = String(c); }
+      }
+      if (w !== "") emit(w);
+      value = 2; for (i = 0; i < numBits; i++) { push(value & 1); value >>= 1; }
+      while (true) { dataVal = (dataVal << 1); if (dataPos == bitsPerChar - 1) { data.push(getCharFromInt(dataVal)); break; } else dataPos++; }
+      return data.join("");
+    }
+    function _decompress(length, resetValue, getNextValue) {
+      let dictionary = [], enlargeIn = 4, dictSize = 4, numBits = 3, entry = "", result = [],
+        i, w, bits, resb, maxpower, power, c, data = { val: getNextValue(0), position: resetValue, index: 1 };
+      for (i = 0; i < 3; i++) dictionary[i] = i;
+      function readBits(n) { let b = 0, mp = Math.pow(2, n), p = 1; while (p != mp) { resb = data.val & data.position; data.position >>= 1; if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); } b |= (resb > 0 ? 1 : 0) * p; p <<= 1; } return b; }
+      let next = readBits(2);
+      switch (next) { case 0: c = f(readBits(8)); break; case 1: c = f(readBits(16)); break; case 2: return ""; }
+      dictionary[3] = c; w = c; result.push(c);
+      while (true) {
+        if (data.index > length) return "";
+        c = readBits(numBits);
+        switch (c) {
+          case 0: dictionary[dictSize++] = f(readBits(8)); c = dictSize - 1; enlargeIn--; break;
+          case 1: dictionary[dictSize++] = f(readBits(16)); c = dictSize - 1; enlargeIn--; break;
+          case 2: return result.join("");
+        }
+        if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+        if (dictionary[c]) entry = dictionary[c]; else { if (c === dictSize) entry = w + w.charAt(0); else return null; }
+        result.push(entry); dictionary[dictSize++] = w + entry.charAt(0); enlargeIn--; w = entry;
+        if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+      }
+    }
+    return {
+      compressToBase64: function (input) {
+        if (input == null) return "";
+        const res = _compress(input, 6, function (a) { return keyStr.charAt(a); });
+        switch (res.length % 4) { default: case 0: return res; case 1: return res + "==="; case 2: return res + "=="; case 3: return res + "="; }
+      },
+      decompressFromBase64: function (input) {
+        if (input == null) return ""; if (input === "") return null;
+        return _decompress(input.length, 32, function (index) { return rev[input.charAt(index)]; });
+      },
+    };
+  })();
+  STUDY.LZ = LZ;
+
+  // pack EVERYTHING (full store, log included) into a compact copy-paste code.
+  STUDY.packData = function () { return "RZ1:" + LZ.compressToBase64(JSON.stringify(store)); };
+  // accept anything: an RZ1 compressed code, a bare compressed blob, or raw JSON.
+  STUDY.unpackData = function (str) {
+    str = String(str == null ? "" : str).trim();
+    if (!str) return null;
+    if (str.indexOf("RZ1:") === 0) { try { return JSON.parse(LZ.decompressFromBase64(str.slice(4))); } catch (e) { return null; } }
+    if (str.charAt(0) === "{") { try { return JSON.parse(str); } catch (e) { return null; } }
+    try { const j = LZ.decompressFromBase64(str); if (j && j.charAt(0) === "{") return JSON.parse(j); } catch (e) { }   // marker stripped by a paste field
+    return null;
   };
 
   // --- study-data export (for your own analysis; local + private) ---
@@ -176,7 +255,9 @@
     return rows.map(r => r.map(c => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(",")).join("\n");
   };
   STUDY.importData = function (json) {
-    try { store = Object.assign(DEFAULT(), JSON.parse(json)); STUDY.save(); return true; }
+    const parsed = STUDY.unpackData(json);   // compressed code, bare blob, or raw JSON
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+    try { store = Object.assign(DEFAULT(), parsed); STUDY.save(); return true; }
     catch (e) { return false; }
   };
 
