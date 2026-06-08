@@ -639,12 +639,19 @@
     };
   };
 
+  // a class whose exam is marked done drops out of the GLOBAL due/review (not per-subject)
+  function examDoneLocal(sid) { return !!(store.exams && store.exams[sid] && store.exams[sid].done); }
+
   STUDY.overallDue = function () {
     const now = Date.now();
     let n = 0;
     for (const id in store.srs) {
       const st = store.srs[id];
-      if (st.box > 0 && st.due <= now) n++;
+      if (st.box > 0 && st.due <= now) {
+        const meta = STUDY.itemIndex[id];
+        if (meta && examDoneLocal(meta.subject.id)) continue;
+        n++;
+      }
     }
     return n;
   };
@@ -658,7 +665,8 @@
       if (st.box > 0 && st.due <= now) {
         const meta = STUDY.itemIndex[id];
         if (!meta) continue;
-        if (subjectId && meta.subject.id !== subjectId) continue;
+        if (subjectId) { if (meta.subject.id !== subjectId) continue; }
+        else if (examDoneLocal(meta.subject.id)) continue;   // global review skips finished classes
         out.push(meta.ref);                        // questions AND flashcards
       }
     }
@@ -672,7 +680,8 @@
     for (const id in store.wrong) {
       const meta = STUDY.itemIndex[id];
       if (!meta) continue;                          // questions AND flashcards
-      if (subjectId && meta.subject.id !== subjectId) continue;
+      if (subjectId) { if (meta.subject.id !== subjectId) continue; }
+      else if (examDoneLocal(meta.subject.id)) continue;     // global review skips finished classes
       out.push(meta.ref);
     }
     return out;

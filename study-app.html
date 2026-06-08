@@ -1127,12 +1127,19 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     };
   };
 
+  // a class whose exam is marked done drops out of the GLOBAL due/review (not per-subject)
+  function examDoneLocal(sid) { return !!(store.exams && store.exams[sid] && store.exams[sid].done); }
+
   STUDY.overallDue = function () {
     const now = Date.now();
     let n = 0;
     for (const id in store.srs) {
       const st = store.srs[id];
-      if (st.box > 0 && st.due <= now) n++;
+      if (st.box > 0 && st.due <= now) {
+        const meta = STUDY.itemIndex[id];
+        if (meta && examDoneLocal(meta.subject.id)) continue;
+        n++;
+      }
     }
     return n;
   };
@@ -1146,7 +1153,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       if (st.box > 0 && st.due <= now) {
         const meta = STUDY.itemIndex[id];
         if (!meta) continue;
-        if (subjectId && meta.subject.id !== subjectId) continue;
+        if (subjectId) { if (meta.subject.id !== subjectId) continue; }
+        else if (examDoneLocal(meta.subject.id)) continue;   // global review skips finished classes
         out.push(meta.ref);                        // questions AND flashcards
       }
     }
@@ -1160,7 +1168,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     for (const id in store.wrong) {
       const meta = STUDY.itemIndex[id];
       if (!meta) continue;                          // questions AND flashcards
-      if (subjectId && meta.subject.id !== subjectId) continue;
+      if (subjectId) { if (meta.subject.id !== subjectId) continue; }
+      else if (examDoneLocal(meta.subject.id)) continue;     // global review skips finished classes
       out.push(meta.ref);
     }
     return out;
@@ -1656,6 +1665,10 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     return { acc: att > 0 ? cor / att : 0.5, attempts: att, coverage: total ? unseen / total : 0 };
   }
 
+  // a class whose exam you've marked done is dropped from the mixed feed/reviews
+  function examDone(sid) { const r = STUDY.examRecord && STUDY.examRecord(sid); return !!(r && r.done); }
+  ADAPT.examDone = examDone;
+
   // ---- spaced-repetition due queue (overdue items, most-overdue first) ----
   // For the global feed, overdue-ness is weighted by subject importance so a
   // weak/heavy subject's reviews surface first; scoped feed = just that subject.
@@ -1663,6 +1676,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const store = STUDY.store(), out = [];
     pool().forEach(function (q) {
       if (only && q.subjectId !== only) return;
+      if (!only && examDone(q.subjectId)) return;        // skip finished classes in the mixed feed
       if (recent && recent.indexOf(q.id) >= 0) return;
       if (STUDY.isFlagged && STUDY.isFlagged(q.id)) return;
       const st = store.srs[q.id];
@@ -1699,9 +1713,13 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     // (1) choose a subject, unless the feed is scoped to one (ctx.only)
     let subj;
     if (ctx.only) {
-      subj = STUDY.byId[ctx.only] || STUDY.subjects[0];
+      subj = STUDY.byId[ctx.only] || STUDY.subjects[0];   // explicitly opened → serve it even if its exam is done
     } else {
-      const subScores = STUDY.subjects.map(function (s) {
+      // the mixed feed skips classes whose exam you've already taken, so your time
+      // goes to what's left. (Fall back to all if every exam is marked done.)
+      const live = STUDY.subjects.filter(s => !examDone(s.id));
+      const pool2 = live.length ? live : STUDY.subjects;
+      const subScores = pool2.map(function (s) {
         const ss = subjectStat(s);
         const weakness = clamp(1.15 - ss.acc, 0.2, 1);          // low accuracy → high
         const imp = 0.6 + s.weight * 0.12;                       // ELA(5)→1.2 … History(2)→0.84
@@ -1711,7 +1729,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
         sc *= (s.id === ctx.lastSubject ? 0.55 : 1) * (0.7 + Math.random() * 0.6);
         return { v: s, w: Math.max(0.0001, sc) };
       });
-      subj = weightedPick(subScores) || STUDY.subjects[0];
+      subj = weightedPick(subScores) || pool2[0];
     }
 
     // (2) best item within that subject (skip reported-broken questions)
