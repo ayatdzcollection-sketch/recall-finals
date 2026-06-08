@@ -624,6 +624,13 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   };
 
   STUDY.exportData = function () { return JSON.stringify(store); };
+  // compact copy-paste export: everything needed to RESTORE progress, minus the
+  // behavioral log + outbound queue (which are big and not needed to restore),
+  // so it fits in the clipboard. importData reads this or the full export.
+  STUDY.exportProgress = function () {
+    const copy = {}; Object.keys(store).forEach(function (k) { if (k !== "log" && k !== "teleQueue") copy[k] = store[k]; });
+    return JSON.stringify(copy);
+  };
 
   // --- study-data export (for your own analysis; local + private) ---
   STUDY.studyData = function () {
@@ -1402,7 +1409,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   // ---- update after one answer ----
   // correct: bool, rtMs: response time, guess: user flagged "lucky guess", mode: log label
   // chosen: original index of the option picked (for misconception radar; optional)
-  ADAPT.update = function (q, correct, rtMs, guess, mode, chosen) {
+  ADAPT.update = function (q, correct, rtMs, guess, mode, chosen, level) {
     const store = STUDY.store();
     const type = q.type || "mc";
 
@@ -1437,7 +1444,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     else if (fluency >= 0.62) grade = 3;
     else grade = 2;
 
-    const meta = { mode: mode || "feed", rt: rtMs || 0, fluency: fluency, pexp: expct };
+    const meta = { mode: mode || "feed", rt: rtMs || 0, fluency: fluency, pexp: expct, level: level || 0 };
     if (typeof chosen === "number") meta.chosen = chosen;
     STUDY.recordItem(q.id, grade, q.topicId, meta);   // scheduling + honest mastery + log
     const st = store.srs[q.id];                        // now exists
@@ -1624,9 +1631,14 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     const g = guessFloor(q);
     if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
     const r = recall(st, examMs);                         // projected retention at exam time
-    const know = (typeof st.kn === "number") ? st.kn : Math.min(1, (st.box || 0) / 4);
+    // take the BETTER of honest-mastery (kn) and the Leitner box (raw # of corrects):
+    // both signal real learning, and box isn't suppressed by missing response times.
+    const know = Math.max((typeof st.kn === "number") ? st.kn : 0, Math.min(1, (st.box || 0) / 5));
     const ability01 = 0.8 * know + 0.2 * pSkill;          // mastery-led, skill-calibrated
-    const temper = 0.55 + 0.45 * r;                       // gentle: a known item never drops below ~0.55×
+    // retention temper: tracks projected recall, but well-LEARNED items (high kn)
+    // get a durability floor: genuine mastery decays slower than raw stability
+    // (which massed/untimed practice suppresses) would suggest.
+    const temper = 0.5 + 0.5 * Math.max(r, 0.5 * know);
     return clamp(g + (1 - g) * temper * ability01, 0, 1); // floor at guess level
   }
   function examMsFor(subjectId) {
@@ -4825,6 +4837,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
 
     function render() {
       const q = state.list[state.i];
+      state.t0 = Date.now();                 // start the response-time clock for this question
       mount.innerHTML = "";
       // progress
       const top = el("div", "q-top");
@@ -4885,9 +4898,12 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     }
 
     function commit(q, grade, ok, chosen) {
-      const meta = { mode: opts.mode || "practice", level: opts.level || 0 };
-      if (typeof chosen === "number") meta.chosen = chosen;
-      STUDY.recordItem(q.id, grade, q.topicId, meta);
+      // Route through the same engine as the For You feed so practice/review/cram
+      // answers capture response time → fast/confident answers earn higher mastery
+      // AND higher memory-stability (better retention), instead of being capped at
+      // "good". Also updates your ability rating from practice, not just the feed.
+      const rt = state.t0 ? Math.max(0, Date.now() - state.t0) : 0;
+      STUDY.ADAPT.update(q, ok, rt, false, opts.mode || "practice", typeof chosen === "number" ? chosen : undefined, opts.level || 0);
       state.answered++;
       if (ok) state.correct++;
       state.results.push({ q: q, ok: ok });
@@ -6965,8 +6981,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     const er = el("div", "row wrap"); er.style.marginTop = "10px";
     const exp = el("button", "btn sm", "⬇️ Export file"); exp.onclick = exportProgress;
     const imp = el("button", "btn sm", "⬆️ Import file"); imp.onclick = importProgress;
-    const copyc = el("button", "btn sm", "📋 Copy code"); copyc.onclick = () => copyText(STUDY.exportData(), "Progress code copied, paste it on the other device");
-    const pastec = el("button", "btn sm", "📥 Paste code");
+    const copyc = el("button", "btn sm", "📋 Copy progress"); copyc.onclick = () => copyText(STUDY.exportProgress(), "Progress copied (compact). Paste it on the other device.");
+    const pastec = el("button", "btn sm", "📥 Paste progress");
     er.appendChild(exp); er.appendChild(imp); er.appendChild(copyc); er.appendChild(pastec); card.appendChild(er);
     const pasteWrap = el("div"); pasteWrap.style.display = "none"; pasteWrap.style.marginTop = "10px";
     const pta = document.createElement("textarea");
@@ -6986,7 +7002,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     dj.onclick = () => downloadFile(JSON.stringify(STUDY.studyData(), null, 2), "recall-study-data.json", "application/json");
     const dc = el("button", "btn sm", "⬇️ Download CSV");
     dc.onclick = () => downloadFile(STUDY.studyDataCSV(), "recall-study-data.csv", "text/csv");
-    dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
+    const cf = el("button", "btn sm", "📋 Copy all data");
+    cf.onclick = () => copyText(STUDY.exportData(), "Full data copied (everything, including the log).");
+    dr.appendChild(dj); dr.appendChild(dc); dr.appendChild(cf); card.appendChild(dr);
     card.appendChild(el("hr", "div"));
 
     // privacy & data (anonymous, opt-out), mentioned only here

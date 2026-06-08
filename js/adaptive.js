@@ -68,7 +68,7 @@
   // ---- update after one answer ----
   // correct: bool, rtMs: response time, guess: user flagged "lucky guess", mode: log label
   // chosen: original index of the option picked (for misconception radar; optional)
-  ADAPT.update = function (q, correct, rtMs, guess, mode, chosen) {
+  ADAPT.update = function (q, correct, rtMs, guess, mode, chosen, level) {
     const store = STUDY.store();
     const type = q.type || "mc";
 
@@ -103,7 +103,7 @@
     else if (fluency >= 0.62) grade = 3;
     else grade = 2;
 
-    const meta = { mode: mode || "feed", rt: rtMs || 0, fluency: fluency, pexp: expct };
+    const meta = { mode: mode || "feed", rt: rtMs || 0, fluency: fluency, pexp: expct, level: level || 0 };
     if (typeof chosen === "number") meta.chosen = chosen;
     STUDY.recordItem(q.id, grade, q.topicId, meta);   // scheduling + honest mastery + log
     const st = store.srs[q.id];                        // now exists
@@ -290,9 +290,14 @@
     const g = guessFloor(q);
     if (!st) return g + (1 - g) * pSkill * 0.45;         // unseen: a little credit for reasoning
     const r = recall(st, examMs);                         // projected retention at exam time
-    const know = (typeof st.kn === "number") ? st.kn : Math.min(1, (st.box || 0) / 4);
+    // take the BETTER of honest-mastery (kn) and the Leitner box (raw # of corrects):
+    // both signal real learning, and box isn't suppressed by missing response times.
+    const know = Math.max((typeof st.kn === "number") ? st.kn : 0, Math.min(1, (st.box || 0) / 5));
     const ability01 = 0.8 * know + 0.2 * pSkill;          // mastery-led, skill-calibrated
-    const temper = 0.55 + 0.45 * r;                       // gentle: a known item never drops below ~0.55×
+    // retention temper: tracks projected recall, but well-LEARNED items (high kn)
+    // get a durability floor: genuine mastery decays slower than raw stability
+    // (which massed/untimed practice suppresses) would suggest.
+    const temper = 0.5 + 0.5 * Math.max(r, 0.5 * know);
     return clamp(g + (1 - g) * temper * ability01, 0, 1); // floor at guess level
   }
   function examMsFor(subjectId) {

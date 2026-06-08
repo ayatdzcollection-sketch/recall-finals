@@ -1019,8 +1019,8 @@
     const er = el("div", "row wrap"); er.style.marginTop = "10px";
     const exp = el("button", "btn sm", "⬇️ Export file"); exp.onclick = exportProgress;
     const imp = el("button", "btn sm", "⬆️ Import file"); imp.onclick = importProgress;
-    const copyc = el("button", "btn sm", "📋 Copy code"); copyc.onclick = () => copyText(STUDY.exportData(), "Progress code copied, paste it on the other device");
-    const pastec = el("button", "btn sm", "📥 Paste code");
+    const copyc = el("button", "btn sm", "📋 Copy progress"); copyc.onclick = () => copyText(STUDY.exportProgress(), "Progress copied (compact). Paste it on the other device.");
+    const pastec = el("button", "btn sm", "📥 Paste progress");
     er.appendChild(exp); er.appendChild(imp); er.appendChild(copyc); er.appendChild(pastec); card.appendChild(er);
     const pasteWrap = el("div"); pasteWrap.style.display = "none"; pasteWrap.style.marginTop = "10px";
     const pta = document.createElement("textarea");
@@ -1040,7 +1040,9 @@
     dj.onclick = () => downloadFile(JSON.stringify(STUDY.studyData(), null, 2), "recall-study-data.json", "application/json");
     const dc = el("button", "btn sm", "⬇️ Download CSV");
     dc.onclick = () => downloadFile(STUDY.studyDataCSV(), "recall-study-data.csv", "text/csv");
-    dr.appendChild(dj); dr.appendChild(dc); card.appendChild(dr);
+    const cf = el("button", "btn sm", "📋 Copy all data");
+    cf.onclick = () => copyText(STUDY.exportData(), "Full data copied (everything, including the log).");
+    dr.appendChild(dj); dr.appendChild(dc); dr.appendChild(cf); card.appendChild(dr);
     card.appendChild(el("hr", "div"));
 
     // privacy & data (anonymous, opt-out), mentioned only here

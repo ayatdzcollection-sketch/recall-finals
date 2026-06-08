@@ -183,6 +183,7 @@
 
     function render() {
       const q = state.list[state.i];
+      state.t0 = Date.now();                 // start the response-time clock for this question
       mount.innerHTML = "";
       // progress
       const top = el("div", "q-top");
@@ -243,9 +244,12 @@
     }
 
     function commit(q, grade, ok, chosen) {
-      const meta = { mode: opts.mode || "practice", level: opts.level || 0 };
-      if (typeof chosen === "number") meta.chosen = chosen;
-      STUDY.recordItem(q.id, grade, q.topicId, meta);
+      // Route through the same engine as the For You feed so practice/review/cram
+      // answers capture response time → fast/confident answers earn higher mastery
+      // AND higher memory-stability (better retention), instead of being capped at
+      // "good". Also updates your ability rating from practice, not just the feed.
+      const rt = state.t0 ? Math.max(0, Date.now() - state.t0) : 0;
+      STUDY.ADAPT.update(q, ok, rt, false, opts.mode || "practice", typeof chosen === "number" ? chosen : undefined, opts.level || 0);
       state.answered++;
       if (ok) state.correct++;
       state.results.push({ q: q, ok: ok });

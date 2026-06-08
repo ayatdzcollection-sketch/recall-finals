@@ -137,6 +137,13 @@
   };
 
   STUDY.exportData = function () { return JSON.stringify(store); };
+  // compact copy-paste export: everything needed to RESTORE progress, minus the
+  // behavioral log + outbound queue (which are big and not needed to restore),
+  // so it fits in the clipboard. importData reads this or the full export.
+  STUDY.exportProgress = function () {
+    const copy = {}; Object.keys(store).forEach(function (k) { if (k !== "log" && k !== "teleQueue") copy[k] = store[k]; });
+    return JSON.stringify(copy);
+  };
 
   // --- study-data export (for your own analysis; local + private) ---
   STUDY.studyData = function () {
