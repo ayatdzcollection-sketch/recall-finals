@@ -204,6 +204,10 @@
         mount.appendChild(el("div", "q-kicker", esc(subj.name) + (topic ? " · " + esc(topic.title) : "")));
       }
 
+      // optional figure (e.g. a pedigree chart) shown above the stem. q.fig is
+      // trusted authored SVG markup, never user input.
+      if (q.fig) { const f = el("div", "q-fig"); f.innerHTML = q.fig; mount.appendChild(f); }
+
       if (q.type === "match") return renderMatch(q);
       if (q.type === "listen") return renderListen(q);
       if (q.type === "fill") return renderFill(q);

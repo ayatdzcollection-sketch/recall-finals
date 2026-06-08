@@ -251,6 +251,8 @@ table.vt tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 .q-count{font-size:.8rem;color:var(--text-dim);font-weight:600;white-space:nowrap}
 .q-kicker{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);font-weight:800;margin-bottom:6px}
 .q-stem{font-size:1.18rem;font-weight:650;letter-spacing:-.01em;margin:0 0 16px}
+.q-fig{margin:2px 0 14px;display:flex;justify-content:center}
+.q-fig svg{width:100%;max-width:300px;height:auto;display:block;border:1px solid var(--line,#e6e8f0);border-radius:14px;background:#f7f8fc}
 .choices{display:grid;gap:10px}
 .choice{
   text-align:left;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);
