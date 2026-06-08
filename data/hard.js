@@ -134,6 +134,61 @@
     h("heart", "Which path is correct for oxygen-poor blood heading to the lungs?", ["left ventricle → aorta", "right ventricle → pulmonary artery", "left atrium → pulmonary vein", "right atrium → aorta"], 1),
   ]);
 
+  /* ===== BIOLOGY depth layer (in-scope application questions for final prep) ===== */
+  A("bio-molecular", [
+    h("transcription", "A DNA strand reads C-T-C. The mRNA copied from it is:", ["GAG", "CTC", "GUG", "CAC"], 0, "Pair each DNA base to its mRNA partner: C→G, T→A, C→G = GAG."),
+    h("transcription", "A DNA strand reads T-A-C. The mRNA copied from it is:", ["AUG", "TAC", "ATG", "UAC"], 0, "T→A, A→U, C→G = AUG, which is the START codon."),
+    h("anticodon", "The mRNA codon is AUG. The tRNA anticodon that matches it is:", ["UAC", "TAC", "AUG", "GUA"], 0, "Codon and anticodon pair up: A↔U, U↔A, G↔C = UAC."),
+    h("codon", "The mRNA codon AUG codes for which amino acid, and what else does it signal?", ["Met, and it is the START signal", "a STOP", "Phe", "a tRNA"], 0, "AUG = methionine (Met) and it starts translation."),
+    h("location", "Transcription happens in the ___ ; translation happens at the ___.", ["ribosome ; nucleus", "nucleus ; ribosome", "cytoplasm ; nucleus", "nucleus ; mitochondria"], 1, "DNA is transcribed to mRNA in the nucleus; the mRNA is then translated at a ribosome."),
+    e("pairing", "In RNA, adenine (A) pairs with:", ["thymine (T)", "uracil (U)", "guanine (G)", "cytosine (C)"], 1, "RNA swaps T for U, so A pairs with U."),
+    h("replication", "DNA replication (copying) happens:", ["after the cell divides", "before a cell divides, so each new cell gets a full copy", "only at the ribosome", "only in gametes"], 1),
+    h("mutation", "An error while copying DNA is a mutation. Mutations matter for evolution because they:", ["always kill the cell", "can create new traits that natural selection can then act on", "only happen at the ribosome", "reverse evolution"], 1),
+  ]);
+  A("bio-pedigree", [
+    h("recessive", "Two parents who do NOT show a trait have a child who DOES. The trait must be:", ["dominant", "recessive, and both parents are carriers", "found only in males", "impossible"], 1, "Two unaffected parents plus an affected child means the trait is recessive and both parents are Tt carriers."),
+    h("carrier", "Those two unaffected parents who had an affected child must both be:", ["TT", "Tt (carriers)", "tt", "one TT and one tt"], 1),
+    h("probability", "Two carrier parents (Tt × Tt). What percent of their children are expected to SHOW the recessive trait?", ["0%", "25%", "50%", "75%"], 1, "Tt × Tt = 1 TT : 2 Tt : 1 tt, so 25% are tt and show the recessive trait."),
+    h("probability", "A carrier parent (Tt) and an affected parent (tt). Chance a child is affected (tt)?", ["0%", "25%", "50%", "100%"], 2, "Tt × tt = 2 Tt : 2 tt = 50% affected."),
+    h("symbols", "On a pedigree, an unshaded circle joined by a horizontal line to a shaded square shows:", ["two affected males", "an unaffected female mated with an affected male", "two children", "two carriers"], 1, "Circle = female, square = male, shaded = shows the trait, and the line = a mating pair."),
+  ]);
+  A("bio-lizards", [
+    h("isolation", "Volcanic lava trenches split one lizard population into two groups that became separate species. The trenches caused:", ["a mutation", "geographic isolation", "a population boom", "camouflage"], 1),
+    h("selection", "Dusk Anoles on the dark mountain ended up dark-skinned because:", ["they chose to change color", "dark skin camouflaged them on dark bark, so they survived and reproduced more", "the pale lizards taught them", "dark color is always dominant"], 1),
+    h("hybrid", "Hybrid lizards have patchy coloring. Natural selection works against them because they:", ["cannot find food", "are camouflaged on neither mountain, so predators spot them easily", "grow too large", "live too long"], 1),
+    h("barrier", "The two lizard species now have different dewlap (throat-flap) colors, so they no longer mate. This difference is a:", ["selection pressure", "reproductive barrier", "geographic isolation", "population bottleneck"], 1),
+    h("ancestor", "The two lizard species share about 98% of their DNA. The best conclusion is that they:", ["are unrelated", "recently diverged from a common ancestor", "are really one species", "were bred by humans"], 1),
+    h("discriminate", "A lava trench splitting a population is ___ ; different mating displays that stop two groups breeding is ___.", ["reproductive barrier ; geographic isolation", "geographic isolation ; reproductive barrier", "both mutations", "both bottlenecks"], 1),
+  ]);
+  A("bio-meiosis", [
+    h("compare", "A skin cell divides to heal a cut. Which process, and what result?", ["meiosis, making 4 different haploid cells", "mitosis, making 2 identical diploid cells", "meiosis, making 2 identical cells", "mitosis, making 4 haploid cells"], 1, "Body repair uses mitosis (2 identical diploid cells). Meiosis is only for making gametes."),
+    h("haploid", "A human body cell is diploid (2 sets of chromosomes). After meiosis, each gamete is:", ["diploid (2 sets)", "haploid (1 set), so fertilization restores the 2 sets", "triploid (3 sets)", "identical to the parent cell"], 1),
+    h("compare2", "Meiosis produces ___ ; mitosis produces ___ .", ["2 identical cells ; 4 different cells", "4 genetically different haploid cells ; 2 identical diploid cells", "gametes ; more gametes", "haploid cells ; haploid cells"], 1),
+  ]);
+  A("bio-evolution", [
+    h("mechanism", "Giraffes have long necks today. Natural selection explains this as:", ["giraffes stretched their necks and passed the stretch on", "some giraffes already had longer necks by chance, and they survived and reproduced more", "they needed longer necks, so they grew them", "the environment created the trait on demand"], 1, "Natural selection does NOT create traits; it selects the best version of variation that already exists."),
+    h("timing", "Rats became poison-resistant. When did the resistance trait first appear?", ["after the poison, in response to it", "by random mutation before the poison, then selection spread it", "the rats learned it during their lives", "parents taught it to their pups"], 1),
+    h("notselection", "Which scenario is NOT natural selection?", ["faster gazelles escape lions and survive", "a flood randomly kills most of a population and the survivors rebuild it", "poison-resistant rats survive and spread", "camouflaged lizards avoid predators"], 1, "Random culling (a population bottleneck) is not selection FOR a trait, so it is not natural selection."),
+  ]);
+  A("bio-mendel", [
+    h("ratio", "A single-trait cross gives about a 3:1 tall-to-short ratio in the offspring. The parents were most likely:", ["TT × tt", "Tt × Tt", "tt × tt", "TT × TT"], 1, "Tt × Tt = 3 showing the dominant trait : 1 showing the recessive trait (the classic 3:1)."),
+  ]);
+  A("bio-mitosis", [
+    h("interphase", "A cell spends most of its life in interphase. During interphase the cell:", ["splits into two", "grows and copies its DNA to get ready to divide", "makes gametes", "dies"], 1),
+    h("purpose", "Mitosis is used for:", ["making sex cells", "growth and repair, producing 2 identical body cells", "cutting the chromosome number in half", "creating genetic variety"], 1),
+  ]);
+  A("bio-chromosome", [
+    h("chromatin", "Most of the time a cell's DNA sits as loose ___ ; it winds up into tight ___ only for division.", ["chromosomes ; chromatin", "chromatin ; chromosomes", "genes ; alleles", "mRNA ; DNA"], 1),
+  ]);
+  A("bio-systems", [
+    h("teamwork", "Oxygen first enters the body at the ___ system, then the ___ system carries it to the cells.", ["circulatory ; respiratory", "respiratory ; circulatory", "excretory ; nervous", "digestive ; immune"], 1),
+  ]);
+  A("bio-heart", [
+    h("pulmonary", "The pulmonary artery is unusual because it carries:", ["oxygen-rich blood to the body", "oxygen-poor blood to the lungs", "urine to the bladder", "air to the heart"], 1, "Arteries carry blood away from the heart; the pulmonary artery carries deoxygenated blood to the lungs."),
+    h("return", "After picking up oxygen in the lungs, blood returns to the heart through the:", ["vena cava", "pulmonary vein", "aorta", "pulmonary artery"], 1, "Pulmonary vein leads into the left atrium."),
+    e("arteries", "Arteries always carry blood:", ["toward the heart", "away from the heart", "only to the lungs", "in a circle"], 1, "Arteries carry blood Away from the heart."),
+  ]);
+
   /* ============ HISTORY ============ */
   A("his-industrial", [
     h("industrial", "Why did the Industrial Revolution begin in Britain specifically?", ["it had no rivers", "abundant resources, capital, and geography", "it banned factories", "it had the smallest population"], 1),
