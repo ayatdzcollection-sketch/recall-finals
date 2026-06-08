@@ -163,6 +163,9 @@
     }
     const state = { i: 0, correct: 0, answered: 0, results: [], list: questions };
     const instant = opts.instant !== false;       // exam mode passes instant:false
+    // exam mode auto-feeds mastery; snapshot the forecast so we can show the lift
+    const examFc = function () { const A = STUDY.ADAPT; if (!A) return 0; return opts.examSubject && opts.examSubject !== "all" ? A.forecast(opts.examSubject) : A.overallForecast(); };
+    if (opts.mode === "exam") state.startFc = examFc();
     let remain = opts.timeLimit || 0, ticker = null, timerEl = null;
 
     function startTimer() {
@@ -437,6 +440,16 @@
       const g = el("div", "s-good"); g.style.flex = state.correct || 0.0001;
       const b = el("div", "s-bad"); b.style.flex = (state.list.length - state.correct) || 0.0001;
       bar.appendChild(g); bar.appendChild(b); mount.appendChild(bar);
+
+      // exam mode: confirm every answer fed your mastery, and show the forecast lift
+      if (opts.mode === "exam") {
+        const newFc = examFc(), d = newFc - (state.startFc != null ? state.startFc : newFc);
+        const sub = opts.examSubject && opts.examSubject !== "all" ? ((STUDY.byId[opts.examSubject] || {}).name || "subject") : "finals";
+        const fc = el("div", "feed-gain");
+        fc.innerHTML = "✓ Every answer was logged to your mastery. <b>🔮 " + esc(sub) + " forecast: " + newFc + "%</b>"
+          + (d > 0 ? " <span style='color:var(--good)'>▲ +" + d + "</span>" : d < 0 ? " <span class='muted'>" + d + "</span>" : "");
+        mount.appendChild(fc);
+      }
 
       // review wrong ones
       const wrong = state.results.filter(r => !r.ok);

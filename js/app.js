@@ -558,12 +558,12 @@
       if (!qs.length) { mount.innerHTML = '<div class="empty">No questions available for this exam.</div>'; return; }
       const secs = qs.length * 45;
       const intro = el("div", "card");
-      intro.innerHTML = "<b>📝 Exam Mode, " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Your score and a full review come at the finish.</p>";
+      intro.innerHTML = "<b>📝 Exam Mode, " + esc(name) + "</b><p class='muted' style='font-size:.9rem;margin:.4em 0 0'>" + qs.length + " questions · " + Math.round(secs / 60) + " min timer · no feedback until the end, just like the real thing. Score and full review at the finish, and <b>every answer updates your mastery and forecast.</b></p>";
       mount.appendChild(intro);
       const start = el("button", "btn primary full", "Start the exam →");
       start.onclick = function () {
         QUIZ.run(mount, qs, {
-          instant: false, timeLimit: secs, showTags: false, mode: "exam",
+          instant: false, timeLimit: secs, showTags: false, mode: "exam", examSubject: cfg.subjectId,
           doneLabel: "Done", onDone: () => go("#/test?s=" + cfg.subjectId),
         });
       };
