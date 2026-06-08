@@ -458,6 +458,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
 
 .feed-gain{text-align:center;font-size:.86rem;color:var(--text);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:12px;padding:9px 12px;margin:10px 0}
 .crowd-line{margin-top:7px;font-size:.78rem;color:var(--text-dim)}
+.exam-card{border-left:3px solid var(--sub,var(--accent))}
 
 /* inline lesson sheet (pulled up from a wrong answer, over the feed) */
 .sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;transition:opacity .2s}
@@ -576,6 +577,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       subjectSkill: {},// subjectId -> ability rating mirror (adaptive engine)
       glicko: {},     // subjectId -> {r, rd, t} Glicko-style ability + uncertainty
       examDates: {},  // subjectId -> 'yyyy-mm-dd'
+      exams: {},      // subjectId -> {done, doneAt, predicted, actual, gradedAt} (forecast accountability)
       log: [],        // study-data event log (local, for your own export)
       tele: {},       // anonymous telemetry state (anon id, last ping day)
       teleQueue: [],  // outbound anonymous events awaiting upload
@@ -596,7 +598,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss", "flagged", "glicko"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss", "flagged", "glicko", "exams"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -808,6 +810,37 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     STUDY.save();
   };
   STUDY.examDate = function (subjectId) { return store.examDates[subjectId] || null; };
+
+  /* ---------- exam DONE + actual grade (forecast accountability) ---------- */
+  // exams: subjectId -> { done, doneAt, predicted, actual, gradedAt }
+  STUDY.examRecord = function (subjectId) { return (store.exams && store.exams[subjectId]) || null; };
+  STUDY.markExamDone = function (subjectId, predicted) {
+    if (!store.exams) store.exams = {};
+    const e = store.exams[subjectId] || (store.exams[subjectId] = {});
+    e.done = true; e.doneAt = Date.now();
+    if (typeof predicted === "number" && e.predicted == null) e.predicted = Math.round(predicted);   // lock in the prediction at exam time
+    STUDY.save(); return e;
+  };
+  STUDY.setExamGrade = function (subjectId, pct) {
+    if (!store.exams) store.exams = {};
+    const e = store.exams[subjectId] || (store.exams[subjectId] = { done: true, doneAt: Date.now() });
+    e.actual = clampN(Math.round(+pct || 0), 0, 100); e.gradedAt = Date.now(); e.done = true;
+    STUDY.save(); return e;
+  };
+  STUDY.clearExam = function (subjectId) { if (store.exams) delete store.exams[subjectId]; STUDY.save(); };
+  // how the forecast has done vs reality: graded pairs + mean signed error (shrunk)
+  STUDY.examCalibration = function () {
+    const out = []; let sum = 0;
+    Object.keys(store.exams || {}).forEach(function (sid) {
+      const e = store.exams[sid];
+      if (e && typeof e.predicted === "number" && typeof e.actual === "number") { out.push({ subject: sid, predicted: e.predicted, actual: e.actual, err: e.actual - e.predicted }); sum += e.actual - e.predicted; }
+    });
+    const n = out.length;
+    const offset = n ? sum / (n + 2) : 0;            // shrunk: 1-2 grades barely move it
+    const mae = n ? out.reduce((a, b) => a + Math.abs(b.err), 0) / n : 0;
+    return { pairs: out, n: n, offset: clampN(offset, -12, 12), mae: Math.round(mae) };
+  };
+
   STUDY.daysToExam = function (subjectId) {
     const d = store.examDates[subjectId] || STUDY.FINALS_DEFAULT;
     const parts = d.split("-");
@@ -1787,7 +1820,15 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       const coverage = clamp(studied / Math.min(items.length, 8), 0, 1);
       sum += UNSEEN_PRIOR + (studiedAcc - UNSEEN_PRIOR) * coverage; n++;
     });
-    return n ? Math.round(sum / n * 100) : 0;
+    let pct = n ? sum / n * 100 : 0;
+    // self-correction: if real grades have come in, nudge ungraded forecasts by how
+    // far off the forecast has been (shrunk, so 1-2 grades barely move it).
+    const rec = STUDY.examRecord && STUDY.examRecord(subjectId);
+    if (!(rec && typeof rec.actual === "number") && STUDY.examCalibration) {
+      const cal = STUDY.examCalibration();
+      if (cal.n) pct = clamp(pct + cal.offset, 0, 100);
+    }
+    return Math.round(pct);
   };
   ADAPT.overallForecast = function () {
     let s = 0, w = 0;
@@ -1840,8 +1881,10 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       const gap = clamp((target - f) / target, 0, 1);
       const urg = 1 + 3 / (1 + Math.max(0, days));
       const imp = 0.6 + (s.weight || 1) * 0.12;
-      const priority = imp * urg * (0.12 + gap);
-      return { id: s.id, name: s.name, icon: s.icon, weight: s.weight, forecast: f, shaky: ADAPT.shakyCount(s.id), priority: priority, minutes: 0 };
+      const rec = STUDY.examRecord && STUDY.examRecord(s.id);
+      const done = !!(rec && rec.done);                  // exam taken → stop telling you to study it
+      const priority = done ? 0 : imp * urg * (0.12 + gap);
+      return { id: s.id, name: s.name, icon: s.icon, weight: s.weight, forecast: f, shaky: ADAPT.shakyCount(s.id), done: done, priority: priority, minutes: 0 };
     });
     const sum = rows.reduce((a, b) => a + b.priority, 0) || 1;
     let used = 0;
@@ -6298,6 +6341,38 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
   /* ====================================================
      SUBJECT
      ==================================================== */
+  // exam accountability: mark taken (locks the prediction), then enter the real grade
+  function examCard(s) {
+    const A = STUDY.ADAPT, rec = STUDY.examRecord(s.id);
+    const card = el("div", "panel exam-card"); card.style.setProperty("--sub", s.accent);
+    if (!rec || !rec.done) {
+      const row = el("div", "row");
+      row.appendChild(el("div", null, "<b>🔮 Exam forecast " + A.forecast(s.id) + "% <span class='fc-band'>±" + A.forecastBand(s.id) + "</span></b><div class='muted' style='font-size:.8rem'>Taken your " + esc(s.name) + " exam? Mark it to lock in this prediction.</div>"));
+      row.appendChild(el("div", "spacer"));
+      const b = el("button", "btn sm", "✓ Mark taken"); b.onclick = function () { STUDY.markExamDone(s.id, A.forecast(s.id)); renderSubject(s.id); };
+      row.appendChild(b); card.appendChild(row);
+    } else if (typeof rec.actual !== "number") {
+      card.appendChild(el("div", null, "<b>✅ " + esc(s.name) + " exam taken</b><div class='muted' style='font-size:.8rem'>It predicted <b>" + (rec.predicted != null ? rec.predicted : A.forecast(s.id)) + "%</b>. Enter your real grade when you get it to see how close it was.</div>"));
+      const row = el("div", "row"); row.style.marginTop = "8px";
+      const inp = document.createElement("input"); inp.type = "number"; inp.min = "0"; inp.max = "100"; inp.placeholder = "grade %";
+      inp.style.cssText = "width:84px;border-radius:8px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:7px;text-align:center;font-size:.9rem";
+      const save = el("button", "btn sm good", "Save grade"); save.onclick = function () { const v = parseInt(inp.value, 10); if (isNaN(v)) return QUIZ.toast("Enter your grade 0-100"); STUDY.setExamGrade(s.id, v); renderSubject(s.id); };
+      const un = el("button", "btn sm ghost", "Undo"); un.onclick = function () { STUDY.clearExam(s.id); renderSubject(s.id); };
+      row.appendChild(inp); row.appendChild(save); row.appendChild(un); card.appendChild(row);
+    } else {
+      const err = rec.actual - rec.predicted, ae = Math.abs(err);
+      const verdict = ae <= 3 ? "spot on ✓" : err > 0 ? ("forecast was " + err + " pts low") : ("forecast was " + ae + " pts high");
+      const color = ae <= 5 ? "var(--good)" : ae <= 12 ? "var(--text)" : "var(--bad)";
+      card.appendChild(el("div", null, "<b>🎯 " + esc(s.name) + " exam graded</b>"));
+      const row = el("div", null); row.style.cssText = "margin-top:6px;font-size:.92rem";
+      row.innerHTML = "Predicted <b>" + rec.predicted + "%</b> · Scored <b>" + rec.actual + "%</b> · <span style='color:" + color + "'>" + verdict + "</span>";
+      card.appendChild(row);
+      const un = el("button", "btn sm ghost", "Edit"); un.style.marginTop = "8px"; un.onclick = function () { STUDY.clearExam(s.id); renderSubject(s.id); };
+      card.appendChild(un);
+    }
+    return card;
+  }
+
   function renderSubject(id) {
     const s = STUDY.byId[id];
     if (!s) return go("#/home");
@@ -6318,6 +6393,8 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     chips.appendChild(statChip("📚", prog.topicsSeen + "/" + prog.topics, "topics started"));
     chips.appendChild(statChip("🔁", prog.due, "due now"));
     app.appendChild(chips);
+
+    app.appendChild(examCard(s));
 
     const actions = el("div", "actions");
     actions.appendChild(actionCard("wide foryou", "⚡", "For You · " + s.name, "One-click binge to mastery: an adaptive feed that covers every topic and drills your weak + forgotten items", () => go("#/feed/" + s.id)));
@@ -7025,12 +7102,21 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
       row.appendChild(el("span", "fc-ic", r.icon));
       row.appendChild(el("span", "fc-nm", esc(r.name)));
       const bw = el("div", "bar fc-bar"); bw.appendChild(el("i")).style.width = r.forecast + "%"; row.appendChild(bw);
-      row.appendChild(el("span", "fc-pct", r.forecast + "<span class='fc-band'>±" + A.forecastBand(r.id) + "</span>"));
-      row.appendChild(el("span", "fc-min", r.minutes + "m"));
+      const rec = STUDY.examRecord(r.id);
+      const graded = rec && typeof rec.actual === "number";
+      row.appendChild(el("span", "fc-pct", (graded ? rec.actual + "%" : r.forecast + "<span class='fc-band'>±" + A.forecastBand(r.id) + "</span>")));
+      row.appendChild(el("span", "fc-min", r.done ? "✓ done" : (r.minutes + "m")));
       box.appendChild(row);
     });
-    const alloc = plan.rows.filter(r => r.minutes > 0).map(r => r.minutes + "m " + r.name).join(" · ");
-    box.appendChild(el("div", "muted fc-plan", "📋 Best use of your next " + plan.minutes + " min: " + alloc));
+    const alloc = plan.rows.filter(r => r.minutes > 0 && !r.done).map(r => r.minutes + "m " + r.name).join(" · ");
+    if (alloc) box.appendChild(el("div", "muted fc-plan", "📋 Best use of your next " + plan.minutes + " min: " + alloc));
+    // forecast accuracy, once any real grades are in
+    const cal = STUDY.examCalibration();
+    if (cal.n) {
+      const acc = el("div", "fc-plan"); acc.style.marginTop = "8px";
+      acc.innerHTML = "📈 <b>Forecast accuracy:</b> " + cal.pairs.map(function (p) { const sn = (STUDY.byId[p.subject] || {}).name || p.subject; return esc(sn) + " predicted " + p.predicted + "→ scored " + p.actual; }).join(" · ") + " · avg miss ±" + cal.mae + (cal.n >= 2 ? " (now self-correcting other forecasts)" : "");
+      box.appendChild(acc);
+    }
     const totalShaky = plan.rows.reduce((a, b) => a + b.shaky, 0);
     if (totalShaky > 0) {
       const bar = el("div", "qbar");

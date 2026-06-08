@@ -89,6 +89,7 @@
       subjectSkill: {},// subjectId -> ability rating mirror (adaptive engine)
       glicko: {},     // subjectId -> {r, rd, t} Glicko-style ability + uncertainty
       examDates: {},  // subjectId -> 'yyyy-mm-dd'
+      exams: {},      // subjectId -> {done, doneAt, predicted, actual, gradedAt} (forecast accountability)
       log: [],        // study-data event log (local, for your own export)
       tele: {},       // anonymous telemetry state (anon id, last ping day)
       teleQueue: [],  // outbound anonymous events awaiting upload
@@ -109,7 +110,7 @@
         const parsed = JSON.parse(raw);
         store = Object.assign(DEFAULT(), parsed);
         // ensure nested objects exist
-        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss", "flagged", "glicko"].forEach(function (k) {
+        ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "examDates", "miss", "flagged", "glicko", "exams"].forEach(function (k) {
           if (!store[k]) store[k] = {};
         });
         if (!store.streak) store.streak = { count: 0, last: 0, best: 0 };
@@ -321,6 +322,37 @@
     STUDY.save();
   };
   STUDY.examDate = function (subjectId) { return store.examDates[subjectId] || null; };
+
+  /* ---------- exam DONE + actual grade (forecast accountability) ---------- */
+  // exams: subjectId -> { done, doneAt, predicted, actual, gradedAt }
+  STUDY.examRecord = function (subjectId) { return (store.exams && store.exams[subjectId]) || null; };
+  STUDY.markExamDone = function (subjectId, predicted) {
+    if (!store.exams) store.exams = {};
+    const e = store.exams[subjectId] || (store.exams[subjectId] = {});
+    e.done = true; e.doneAt = Date.now();
+    if (typeof predicted === "number" && e.predicted == null) e.predicted = Math.round(predicted);   // lock in the prediction at exam time
+    STUDY.save(); return e;
+  };
+  STUDY.setExamGrade = function (subjectId, pct) {
+    if (!store.exams) store.exams = {};
+    const e = store.exams[subjectId] || (store.exams[subjectId] = { done: true, doneAt: Date.now() });
+    e.actual = clampN(Math.round(+pct || 0), 0, 100); e.gradedAt = Date.now(); e.done = true;
+    STUDY.save(); return e;
+  };
+  STUDY.clearExam = function (subjectId) { if (store.exams) delete store.exams[subjectId]; STUDY.save(); };
+  // how the forecast has done vs reality: graded pairs + mean signed error (shrunk)
+  STUDY.examCalibration = function () {
+    const out = []; let sum = 0;
+    Object.keys(store.exams || {}).forEach(function (sid) {
+      const e = store.exams[sid];
+      if (e && typeof e.predicted === "number" && typeof e.actual === "number") { out.push({ subject: sid, predicted: e.predicted, actual: e.actual, err: e.actual - e.predicted }); sum += e.actual - e.predicted; }
+    });
+    const n = out.length;
+    const offset = n ? sum / (n + 2) : 0;            // shrunk: 1-2 grades barely move it
+    const mae = n ? out.reduce((a, b) => a + Math.abs(b.err), 0) / n : 0;
+    return { pairs: out, n: n, offset: clampN(offset, -12, 12), mae: Math.round(mae) };
+  };
+
   STUDY.daysToExam = function (subjectId) {
     const d = store.examDates[subjectId] || STUDY.FINALS_DEFAULT;
     const parts = d.split("-");

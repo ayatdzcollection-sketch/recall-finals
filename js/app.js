@@ -201,6 +201,38 @@
   /* ====================================================
      SUBJECT
      ==================================================== */
+  // exam accountability: mark taken (locks the prediction), then enter the real grade
+  function examCard(s) {
+    const A = STUDY.ADAPT, rec = STUDY.examRecord(s.id);
+    const card = el("div", "panel exam-card"); card.style.setProperty("--sub", s.accent);
+    if (!rec || !rec.done) {
+      const row = el("div", "row");
+      row.appendChild(el("div", null, "<b>🔮 Exam forecast " + A.forecast(s.id) + "% <span class='fc-band'>±" + A.forecastBand(s.id) + "</span></b><div class='muted' style='font-size:.8rem'>Taken your " + esc(s.name) + " exam? Mark it to lock in this prediction.</div>"));
+      row.appendChild(el("div", "spacer"));
+      const b = el("button", "btn sm", "✓ Mark taken"); b.onclick = function () { STUDY.markExamDone(s.id, A.forecast(s.id)); renderSubject(s.id); };
+      row.appendChild(b); card.appendChild(row);
+    } else if (typeof rec.actual !== "number") {
+      card.appendChild(el("div", null, "<b>✅ " + esc(s.name) + " exam taken</b><div class='muted' style='font-size:.8rem'>It predicted <b>" + (rec.predicted != null ? rec.predicted : A.forecast(s.id)) + "%</b>. Enter your real grade when you get it to see how close it was.</div>"));
+      const row = el("div", "row"); row.style.marginTop = "8px";
+      const inp = document.createElement("input"); inp.type = "number"; inp.min = "0"; inp.max = "100"; inp.placeholder = "grade %";
+      inp.style.cssText = "width:84px;border-radius:8px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:7px;text-align:center;font-size:.9rem";
+      const save = el("button", "btn sm good", "Save grade"); save.onclick = function () { const v = parseInt(inp.value, 10); if (isNaN(v)) return QUIZ.toast("Enter your grade 0-100"); STUDY.setExamGrade(s.id, v); renderSubject(s.id); };
+      const un = el("button", "btn sm ghost", "Undo"); un.onclick = function () { STUDY.clearExam(s.id); renderSubject(s.id); };
+      row.appendChild(inp); row.appendChild(save); row.appendChild(un); card.appendChild(row);
+    } else {
+      const err = rec.actual - rec.predicted, ae = Math.abs(err);
+      const verdict = ae <= 3 ? "spot on ✓" : err > 0 ? ("forecast was " + err + " pts low") : ("forecast was " + ae + " pts high");
+      const color = ae <= 5 ? "var(--good)" : ae <= 12 ? "var(--text)" : "var(--bad)";
+      card.appendChild(el("div", null, "<b>🎯 " + esc(s.name) + " exam graded</b>"));
+      const row = el("div", null); row.style.cssText = "margin-top:6px;font-size:.92rem";
+      row.innerHTML = "Predicted <b>" + rec.predicted + "%</b> · Scored <b>" + rec.actual + "%</b> · <span style='color:" + color + "'>" + verdict + "</span>";
+      card.appendChild(row);
+      const un = el("button", "btn sm ghost", "Edit"); un.style.marginTop = "8px"; un.onclick = function () { STUDY.clearExam(s.id); renderSubject(s.id); };
+      card.appendChild(un);
+    }
+    return card;
+  }
+
   function renderSubject(id) {
     const s = STUDY.byId[id];
     if (!s) return go("#/home");
@@ -221,6 +253,8 @@
     chips.appendChild(statChip("📚", prog.topicsSeen + "/" + prog.topics, "topics started"));
     chips.appendChild(statChip("🔁", prog.due, "due now"));
     app.appendChild(chips);
+
+    app.appendChild(examCard(s));
 
     const actions = el("div", "actions");
     actions.appendChild(actionCard("wide foryou", "⚡", "For You · " + s.name, "One-click binge to mastery: an adaptive feed that covers every topic and drills your weak + forgotten items", () => go("#/feed/" + s.id)));
@@ -928,12 +962,21 @@
       row.appendChild(el("span", "fc-ic", r.icon));
       row.appendChild(el("span", "fc-nm", esc(r.name)));
       const bw = el("div", "bar fc-bar"); bw.appendChild(el("i")).style.width = r.forecast + "%"; row.appendChild(bw);
-      row.appendChild(el("span", "fc-pct", r.forecast + "<span class='fc-band'>±" + A.forecastBand(r.id) + "</span>"));
-      row.appendChild(el("span", "fc-min", r.minutes + "m"));
+      const rec = STUDY.examRecord(r.id);
+      const graded = rec && typeof rec.actual === "number";
+      row.appendChild(el("span", "fc-pct", (graded ? rec.actual + "%" : r.forecast + "<span class='fc-band'>±" + A.forecastBand(r.id) + "</span>")));
+      row.appendChild(el("span", "fc-min", r.done ? "✓ done" : (r.minutes + "m")));
       box.appendChild(row);
     });
-    const alloc = plan.rows.filter(r => r.minutes > 0).map(r => r.minutes + "m " + r.name).join(" · ");
-    box.appendChild(el("div", "muted fc-plan", "📋 Best use of your next " + plan.minutes + " min: " + alloc));
+    const alloc = plan.rows.filter(r => r.minutes > 0 && !r.done).map(r => r.minutes + "m " + r.name).join(" · ");
+    if (alloc) box.appendChild(el("div", "muted fc-plan", "📋 Best use of your next " + plan.minutes + " min: " + alloc));
+    // forecast accuracy, once any real grades are in
+    const cal = STUDY.examCalibration();
+    if (cal.n) {
+      const acc = el("div", "fc-plan"); acc.style.marginTop = "8px";
+      acc.innerHTML = "📈 <b>Forecast accuracy:</b> " + cal.pairs.map(function (p) { const sn = (STUDY.byId[p.subject] || {}).name || p.subject; return esc(sn) + " predicted " + p.predicted + "→ scored " + p.actual; }).join(" · ") + " · avg miss ±" + cal.mae + (cal.n >= 2 ? " (now self-correcting other forecasts)" : "");
+      box.appendChild(acc);
+    }
     const totalShaky = plan.rows.reduce((a, b) => a + b.shaky, 0);
     if (totalShaky > 0) {
       const bar = el("div", "qbar");

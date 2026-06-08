@@ -327,7 +327,15 @@
       const coverage = clamp(studied / Math.min(items.length, 8), 0, 1);
       sum += UNSEEN_PRIOR + (studiedAcc - UNSEEN_PRIOR) * coverage; n++;
     });
-    return n ? Math.round(sum / n * 100) : 0;
+    let pct = n ? sum / n * 100 : 0;
+    // self-correction: if real grades have come in, nudge ungraded forecasts by how
+    // far off the forecast has been (shrunk, so 1-2 grades barely move it).
+    const rec = STUDY.examRecord && STUDY.examRecord(subjectId);
+    if (!(rec && typeof rec.actual === "number") && STUDY.examCalibration) {
+      const cal = STUDY.examCalibration();
+      if (cal.n) pct = clamp(pct + cal.offset, 0, 100);
+    }
+    return Math.round(pct);
   };
   ADAPT.overallForecast = function () {
     let s = 0, w = 0;
@@ -380,8 +388,10 @@
       const gap = clamp((target - f) / target, 0, 1);
       const urg = 1 + 3 / (1 + Math.max(0, days));
       const imp = 0.6 + (s.weight || 1) * 0.12;
-      const priority = imp * urg * (0.12 + gap);
-      return { id: s.id, name: s.name, icon: s.icon, weight: s.weight, forecast: f, shaky: ADAPT.shakyCount(s.id), priority: priority, minutes: 0 };
+      const rec = STUDY.examRecord && STUDY.examRecord(s.id);
+      const done = !!(rec && rec.done);                  // exam taken → stop telling you to study it
+      const priority = done ? 0 : imp * urg * (0.12 + gap);
+      return { id: s.id, name: s.name, icon: s.icon, weight: s.weight, forecast: f, shaky: ADAPT.shakyCount(s.id), done: done, priority: priority, minutes: 0 };
     });
     const sum = rows.reduce((a, b) => a + b.priority, 0) || 1;
     let used = 0;
