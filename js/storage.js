@@ -310,9 +310,19 @@
      theme/sync-meta) so it stays small and devices keep their own identity. */
   const SYNC_KEYS = ["v", "srs", "stats", "wrong", "seen", "done", "starred", "streak",
     "activity", "masteryHist", "subjectSkill", "glicko", "examDates", "exams", "miss", "flagged", "rtBase", "lastTest"];
+  // Deterministic (sorted-key) serialization so the SAME data always produces the
+  // SAME blob on every device. That lets sync compare blobs byte-for-byte and skip
+  // a push when the server already holds our state, instead of two devices forever
+  // re-pushing the same data in different key orders.
+  function stableStringify(o) {
+    if (o === null || typeof o !== "object") return JSON.stringify(o === undefined ? null : o);
+    if (Array.isArray(o)) return "[" + o.map(function (v) { return stableStringify(v); }).join(",") + "]";
+    const keys = Object.keys(o).filter(function (k) { return o[k] !== undefined; }).sort();
+    return "{" + keys.map(function (k) { return JSON.stringify(k) + ":" + stableStringify(o[k]); }).join(",") + "}";
+  }
   STUDY.syncBlob = function () {
     const copy = {}; SYNC_KEYS.forEach(function (k) { if (store[k] !== undefined) copy[k] = store[k]; });
-    return "RZ1:" + LZ.compressToBase64(JSON.stringify(copy));
+    return "RZ1:" + LZ.compressToBase64(stableStringify(copy));
   };
   function mNum(a, b) { return Math.max(a || 0, b || 0); }
   function mergeMaxMap(t, s) { if (!s) return; Object.keys(s).forEach(function (k) { if (!(k in t) || (s[k] || 0) > (t[k] || 0)) t[k] = s[k]; }); }

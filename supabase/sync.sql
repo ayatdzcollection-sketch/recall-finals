@@ -48,8 +48,20 @@ begin
 end;
 $$;
 
--- expose ONLY the two functions to the anon (publishable) key, not the table
+-- cheap "has it changed?" check for the fast fallback poll (returns just the rev)
+create or replace function public.sync_rev(p_code text)
+returns table(rev bigint)
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce((select s.rev from public.sync s where s.code = p_code), 0);
+$$;
+
+-- expose ONLY the functions to the anon (publishable) key, not the table
 revoke all on function public.sync_get(text) from public;
 revoke all on function public.sync_put(text, text, bigint) from public;
+revoke all on function public.sync_rev(text) from public;
 grant execute on function public.sync_get(text) to anon;
 grant execute on function public.sync_put(text, text, bigint) to anon;
+grant execute on function public.sync_rev(text) to anon;
