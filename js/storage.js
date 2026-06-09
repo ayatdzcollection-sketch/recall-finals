@@ -596,6 +596,12 @@
       .slice(0, limit || 5);
   };
 
+  // How many engaged items count as "fully covering" a topic. Capping the
+  // coverage denominator (instead of dividing by the raw item count) keeps a
+  // matured mastery score STABLE when new questions are later added to the bank,
+  // and keeps mastery coherent with concept-based readiness instead of cratering
+  // toward 0 just because a topic has hundreds of items. Mirrors forecast/readiness.
+  const MASTERY_COVER = 8;
   STUDY.topicProgress = function (topicId) {
     const entry = STUDY.topicIndex[topicId];
     if (!entry) return { mastery: 0, seen: false, due: 0, total: 0, studied: 0 };
@@ -607,10 +613,14 @@
       const st = store.srs[it.id];
       if (st) { studied++; sum += itemMastery(it.id); if (st.due <= now && st.box > 0) due++; }
     });
+    // depth = how well you know the items you've engaged; coverage = breadth,
+    // capped so adding more questions can't dilute an already-matured topic.
+    const depth = studied ? sum / studied : 0;
+    const coverage = total ? clampN(studied / Math.min(total, MASTERY_COVER), 0, 1) : 0;
     return {
       total: total,
       studied: studied,
-      mastery: total ? sum / total : 0,
+      mastery: depth * coverage,
       seen: !!store.seen[topicId],
       due: due,
       lastSeen: store.seen[topicId] || 0,
