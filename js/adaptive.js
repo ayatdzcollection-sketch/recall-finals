@@ -208,6 +208,26 @@
       return top[Math.floor(Math.random() * top.length)];
     }
 
+    // (0.5) surface BRAND-NEW questions so freshly added content isn't buried
+    // behind a big review backlog. The chance scales with how many new items
+    // remain and tapers to ~0 once you've worked through them, so normal spaced
+    // repetition resumes on its own. Respects scope, recents, flags & interleave.
+    if (!explore) {
+      const fresh = pool().filter(function (q) {
+        if (q.type === "match") return false;
+        if (ctx.only ? q.subjectId !== ctx.only : examDone(q.subjectId)) return false;
+        if (ctx.recent.indexOf(q.id) >= 0) return false;
+        if (STUDY.isFlagged && STUDY.isFlagged(q.id)) return false;
+        const s = store.srs[q.id];
+        return !(s && s.reps > 0);                         // never answered = fresh
+      });
+      if (fresh.length && Math.random() < clamp(fresh.length / (fresh.length + 14), 0, 0.4)) {
+        let pickFrom = fresh.filter(q => q.topicId !== ctx.lastTopic);   // interleave topics
+        if (!pickFrom.length) pickFrom = fresh;
+        return pickFrom[Math.floor(Math.random() * pickFrom.length)];
+      }
+    }
+
     // (1) choose a subject, unless the feed is scoped to one (ctx.only)
     let subj;
     if (ctx.only) {

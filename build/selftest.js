@@ -31,6 +31,7 @@ const files = [
   "data/ela.js", "data/biology.js", "data/french.js", "data/french-listen.js", "data/geometry.js", "data/history.js", "data/history-timeline.js",
   "data/extra.js", "data/hard.js", "data/diagrams.js", "data/pedigrees.js",
   "js/quizgen.js",
+  "data/ela-test-prep.js",
   "js/quiz.js", "js/test.js", "js/app.js",
 ];
 for (const f of files) {
