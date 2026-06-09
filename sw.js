@@ -1,7 +1,7 @@
 /* Recall service worker — makes the hosted site work fully offline after the
    first visit. Cache-first for app assets; network falls back to cache. Bump
    CACHE on each deploy to push updates. */
-const CACHE = "recall-v39";
+const CACHE = "recall-v40";
 const ASSETS = [
   "./", "index.html", "css/styles.css",
   "js/storage.js", "js/srs.js", "js/adaptive.js", "js/telemetry.js",

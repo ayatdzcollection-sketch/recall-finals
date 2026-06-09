@@ -139,7 +139,12 @@
     // subjects
     app.appendChild(sectionH("Subjects", "weighted by how much it matters on your finals"));
     const list = el("div", "subjects");
-    STUDY.subjects.forEach(function (s) { list.appendChild(subjectCard(s)); });
+    // exams you've finished (marked done or graded) sink to the bottom so your
+    // active classes stay on top; weighted order is preserved within each group.
+    const ordered = STUDY.subjects.map(function (s, i) { return { s: s, i: i, done: STUDY.ADAPT.examDone(s.id) }; })
+      .sort(function (a, b) { return (a.done - b.done) || (a.i - b.i); })
+      .map(function (x) { return x.s; });
+    ordered.forEach(function (s) { list.appendChild(subjectCard(s)); });
     app.appendChild(list);
 
     app.appendChild(footerNote());
@@ -170,20 +175,36 @@
     card.style.setProperty("--sub", s.accent);
     card.onclick = () => go("#/s/" + s.id);
     card.appendChild(el("div", "badge", s.icon));
+    const rec = STUDY.examRecord(s.id);
+    const done = !!(rec && rec.done);
+    const graded = done && typeof rec.actual === "number";
+    if (done) card.classList.add("done");
+
     const info = el("div", "info");
     const prog = STUDY.subjectProgress(s.id);
-    info.appendChild(el("h3", null, esc(s.name)));
-    info.appendChild(el("div", "meta", prog.topics + " topics · " + prog.items + " items · " + esc(EXAM_NOTE[s.id] || "")));
+    const h = el("h3", null, esc(s.name));
+    if (done) h.appendChild(el("span", "exam-tag", graded ? "✓ done · scored " + rec.actual + "%" : "✓ exam done"));
+    info.appendChild(h);
+    info.appendChild(el("div", "meta", prog.topics + " topics · " + prog.items + " items · " + esc(done ? "tap to review anytime" : (EXAM_NOTE[s.id] || ""))));
     card.appendChild(info);
 
     const right = el("div", "prog");
-    if (prog.due) right.appendChild(el("div", "due-pill", prog.due + " due"));
-    const ring = el("div", "ring");
-    const pct = STUDY.ADAPT.readiness(s.id);   // unified "ready" metric (builds on each topic's mastery)
-    ring.style.setProperty("--p", pct);
-    ring.style.setProperty("--sub", s.accent);
-    ring.appendChild(el("div", "inner", pct + "%"));
-    right.appendChild(ring);
+    if (done) {
+      // no longer studying for it: drop the "due" nag, show the final state
+      const ring = el("div", "ring done");
+      const pct = graded ? rec.actual : 100;
+      ring.style.setProperty("--p", pct);
+      ring.appendChild(el("div", "inner", graded ? rec.actual + "%" : "✓"));
+      right.appendChild(ring);
+    } else {
+      if (prog.due) right.appendChild(el("div", "due-pill", prog.due + " due"));
+      const ring = el("div", "ring");
+      const pct = STUDY.ADAPT.readiness(s.id);   // unified "ready" metric (builds on each topic's mastery)
+      ring.style.setProperty("--p", pct);
+      ring.style.setProperty("--sub", s.accent);
+      ring.appendChild(el("div", "inner", pct + "%"));
+      right.appendChild(ring);
+    }
     const dots = el("div", "weight-dots");
     for (let i = 0; i < 5; i++) { const d = el("i", i < s.weight ? "" : "off"); dots.appendChild(d); }
     right.appendChild(dots);

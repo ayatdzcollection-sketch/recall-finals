@@ -160,6 +160,16 @@ button{font-family:inherit}
 .due-pill{font-size:.72rem;font-weight:700;color:var(--warn);background:rgba(255,182,72,.12);
   border:1px solid rgba(255,182,72,.25);padding:2px 8px;border-radius:999px}
 
+/* exam finished (marked done or graded): de-emphasized but still clickable */
+.subject.done{opacity:.66;filter:saturate(.7)}
+.subject.done:hover{opacity:1;filter:none}
+.subject.done .badge{filter:grayscale(.35)}
+.exam-tag{font-size:.62rem;font-weight:800;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--good);background:var(--good-soft);border:1px solid color-mix(in srgb,var(--good) 30%, transparent);
+  padding:2px 7px;border-radius:999px;white-space:nowrap}
+.ring.done{background:conic-gradient(var(--good) calc(var(--p)*1%), var(--line) 0)}
+.ring.done .inner{color:var(--good)}
+
 /* ring progress */
 .ring{--p:0;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:none;
   background:conic-gradient(var(--sub,var(--accent)) calc(var(--p)*1%), var(--line) 0);
