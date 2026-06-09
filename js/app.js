@@ -407,6 +407,7 @@
       else if (b.defs) { const dl = el("div", "deflist"); b.defs.forEach(function (p) { const d = el("div", "def"); d.appendChild(el("div", "term", esc(p[0]))); d.appendChild(el("div", "d", mdInline(p[1]))); dl.appendChild(d); }); wrap.appendChild(dl); }
       else if (b.example) { const e = el("div", "example"); e.appendChild(el("span", "lbl", b.as || "Example")); e.insertAdjacentHTML("beforeend", mdInline(b.example)); wrap.appendChild(e); }
       else if (b.tip) { const tp = el("div", "tip"); tp.appendChild(el("span", "i", "💡")); tp.appendChild(el("div", null, mdInline(b.tip))); wrap.appendChild(tp); }
+      else if (b.fig) { wrap.appendChild(renderVisual({ type: "svg", cap: b.cap, svg: b.fig })); }
     });
     if (t.visual) wrap.appendChild(renderVisual(t.visual));
     mount.appendChild(wrap);

@@ -23,6 +23,7 @@
             "Each interior angle of a **regular** n-gon = **(n−2)·180 / n**; each exterior angle = **360 / n**.",
           ] },
           { example: "Hexagon (n=6): exterior = 360/6 = **60°**; interior = 180 − 60 = **120°**.", as: "Worked" },
+          { cap: "Why (n−2)·180: a polygon splits into (n−2) triangles", fig: "<svg viewBox='0 0 340 210' class='gfig'><polygon points='170,30 246,85 217,175 123,175 94,85' fill='rgba(108,92,231,.14)' stroke='#9fb3d1' stroke-width='2'/><line x1='170' y1='30' x2='217' y2='175' stroke='#f5a623' stroke-width='1.6' stroke-dasharray='4 3'/><line x1='170' y1='30' x2='123' y2='175' stroke='#f5a623' stroke-width='1.6' stroke-dasharray='4 3'/><text x='150' y='100' fill='#e6edf6' font-size='13' text-anchor='middle'>1</text><text x='170' y='130' fill='#e6edf6' font-size='13' text-anchor='middle'>2</text><text x='192' y='100' fill='#e6edf6' font-size='13' text-anchor='middle'>3</text><text x='170' y='202' fill='#cfe3ff' font-size='12.5' text-anchor='middle'>5 sides → 3 triangles → 3×180° = 540°</text></svg>" },
           { h: "Parallelogram properties" },
           { list: ["Opposite sides **congruent**", "Opposite angles **congruent**", "Consecutive angles **supplementary** (add to 180°)", "Diagonals **bisect** each other"] },
           { h: "Trapezoids & kites" },
@@ -69,6 +70,7 @@
         blurb: "Scale factor, proportional sides, and the k : k² : k³ rule.",
         lesson: [
           { p: "**Similar** figures have the same shape: corresponding angles are equal and corresponding sides are **proportional**. The ratio of corresponding sides is the **scale factor (k)**." },
+          { cap: "Same shape, scaled by k", fig: "<svg viewBox='0 0 340 200' class='gfig'><polygon points='30,150 110,150 110,90' fill='rgba(108,92,231,.18)' stroke='#9fb3d1' stroke-width='2'/><polygon points='150,170 310,170 310,50' fill='rgba(108,92,231,.10)' stroke='#9fb3d1' stroke-width='2'/><text x='70' y='165' fill='#e6edf6' font-size='12' text-anchor='middle'>3</text><text x='118' y='124' fill='#e6edf6' font-size='12'>4</text><text x='228' y='187' fill='#e6edf6' font-size='12' text-anchor='middle'>6</text><text x='314' y='115' fill='#e6edf6' font-size='12'>8</text><text x='170' y='28' fill='#cfe3ff' font-size='12.5' text-anchor='middle'>k = 2 → sides ×2 · area ×4 (k²) · volume ×8 (k³)</text></svg>" },
           { h: "The ratio rules" },
           { list: [
             "Ratio of **sides / perimeters** = **k**",
@@ -108,12 +110,14 @@
         lesson: [
           { p: "In a right triangle, **a² + b² = c²** (c is the hypotenuse). Leave answers in **simplest radical form** when asked." },
           { example: "Legs 12 and 6 → c = √(12² + 6²) = √180 = √(36·5) = **6√5**.", as: "Worked" },
+          { cap: "The hypotenuse (c) is across from the right angle", fig: "<svg viewBox='0 0 320 190' class='gfig'><polygon points='50,150 250,150 250,40' fill='rgba(108,92,231,.16)' stroke='#9fb3d1' stroke-width='2'/><rect x='234' y='134' width='16' height='16' fill='none' stroke='#9fb3d1' stroke-width='1.4'/><text x='150' y='169' fill='#e6edf6' font-size='13' text-anchor='middle'>a (leg)</text><text x='256' y='100' fill='#e6edf6' font-size='13'>b (leg)</text><text x='138' y='86' fill='#f5a623' font-size='13' transform='rotate(-29 138 86)'>c (hypotenuse)</text><text x='160' y='26' fill='#cfe3ff' font-size='13' text-anchor='middle'>a² + b² = c²</text></svg>" },
           { p: "To check if three lengths form a right triangle, test whether **a² + b² = c²**." },
           { h: "Special right triangles" },
           { list: [
             "**45-45-90:** legs are equal; **hypotenuse = leg · √2**.",
             "**30-60-90:** **hypotenuse = 2 · (short leg)**, and **long leg = short leg · √3**.",
           ] },
+          { cap: "The two special right triangles (memorize the side ratios)", fig: "<svg viewBox='0 0 340 180' class='gfig'><polygon points='30,140 130,140 130,40' fill='rgba(108,92,231,.16)' stroke='#9fb3d1' stroke-width='2'/><rect x='116' y='126' width='14' height='14' fill='none' stroke='#9fb3d1' stroke-width='1.3'/><text x='136' y='96' fill='#e6edf6' font-size='12'>x</text><text x='78' y='155' fill='#e6edf6' font-size='12' text-anchor='middle'>x</text><text x='62' y='82' fill='#f5a623' font-size='12' transform='rotate(-45 62 82)'>x√2</text><text x='44' y='136' fill='#9fb3d1' font-size='10'>45°</text><text x='80' y='28' fill='#cfe3ff' font-size='12' text-anchor='middle'>45–45–90</text><polygon points='200,140 312,140 200,70' fill='rgba(108,92,231,.16)' stroke='#9fb3d1' stroke-width='2'/><rect x='200' y='126' width='14' height='14' fill='none' stroke='#9fb3d1' stroke-width='1.3'/><text x='184' y='108' fill='#e6edf6' font-size='12'>x</text><text x='256' y='155' fill='#e6edf6' font-size='12' text-anchor='middle'>x√3</text><text x='258' y='96' fill='#f5a623' font-size='12' transform='rotate(-32 258 96)'>2x</text><text x='205' y='82' fill='#9fb3d1' font-size='10'>60°</text><text x='292' y='136' fill='#9fb3d1' font-size='10'>30°</text><text x='256' y='28' fill='#cfe3ff' font-size='12' text-anchor='middle'>30–60–90</text></svg>" },
           { tip: "Simplify radicals by pulling out perfect squares: √180 = √36·√5 = 6√5." },
         ],
         visual: {
@@ -149,6 +153,7 @@
             "**cos θ = Adjacent / Hypotenuse**",
             "**tan θ = Opposite / Adjacent**",
           ] },
+          { cap: "Opposite / Adjacent are named relative to the angle θ", fig: "<svg viewBox='0 0 360 190' class='gfig'><polygon points='40,150 280,150 280,40' fill='rgba(108,92,231,.15)' stroke='#9fb3d1' stroke-width='2'/><rect x='264' y='134' width='16' height='16' fill='none' stroke='#9fb3d1' stroke-width='1.4'/><path d='M78,150 A38,38 0 0 0 74,134' fill='none' stroke='#f5a623' stroke-width='2'/><text x='84' y='144' fill='#f5a623' font-size='15'>θ</text><text x='160' y='168' fill='#e6edf6' font-size='13' text-anchor='middle'>Adjacent</text><text x='288' y='100' fill='#e6edf6' font-size='13'>Opposite</text><text x='150' y='86' fill='#cfe3ff' font-size='13' transform='rotate(-25 150 86)' text-anchor='middle'>Hypotenuse</text></svg>" },
           { p: "To **find a side**, multiply (e.g. opposite = hyp · sin θ). To **find an angle**, use the **inverse** (sin⁻¹, cos⁻¹, tan⁻¹)." },
           { example: "Opposite leg 16, adjacent 30 → tan A = 16/30 = 8/15 ≈ **0.533**, so A = tan⁻¹(8/15) ≈ **28°**.", as: "Worked" },
           { p: "**Angle of elevation** (looking up) and **angle of depression** (looking down) are measured from the horizontal and used the same way." },
@@ -192,6 +197,7 @@
             ["Tangent", "A line touching the circle at exactly one point; it is **perpendicular to the radius** at the point of tangency."],
             ["Secant", "A line that intersects the circle at **two** points."],
           ] },
+          { cap: "Parts of a circle (a tangent meets the radius at 90°)", fig: "<svg viewBox='0 0 300 200' class='gfig'><circle cx='150' cy='100' r='70' fill='rgba(108,92,231,.10)' stroke='#9fb3d1' stroke-width='2'/><circle cx='150' cy='100' r='2.6' fill='#e6edf6'/><line x1='80' y1='100' x2='220' y2='100' stroke='#9fb3d1' stroke-width='1.5'/><line x1='150' y1='100' x2='150' y2='30' stroke='#f5a623' stroke-width='2'/><line x1='96' y1='145' x2='204' y2='145' stroke='#7fd1a6' stroke-width='2'/><line x1='220' y1='34' x2='220' y2='166' stroke='#f08aa6' stroke-width='2'/><rect x='206' y='86' width='14' height='14' fill='none' stroke='#9fb3d1' stroke-width='1'/><text x='157' y='66' fill='#f5a623' font-size='12'>r</text><text x='108' y='94' fill='#9fb3d1' font-size='11'>diameter</text><text x='150' y='160' fill='#7fd1a6' font-size='11' text-anchor='middle'>chord</text><text x='226' y='102' fill='#f08aa6' font-size='11'>tangent</text></svg>" },
           { h: "Angle & arc rules" },
           { list: [
             "**Central angle = its intercepted arc.**",
@@ -200,6 +206,7 @@
             "**From an external point** (two secants/tangents): angle = **½|difference of arcs|**.",
             "**Tangent–secant:** tangent² = (external part)·(whole secant).",
           ] },
+          { cap: "Same arc: the inscribed angle is HALF the central angle", fig: "<svg viewBox='0 0 300 210' class='gfig'><circle cx='150' cy='105' r='70' fill='rgba(108,92,231,.08)' stroke='#9fb3d1' stroke-width='2'/><path d='M126,171 A70,70 0 0 1 174,171' fill='none' stroke='#8a7bf0' stroke-width='4'/><line x1='150' y1='105' x2='126' y2='171' stroke='#f5a623' stroke-width='2'/><line x1='150' y1='105' x2='174' y2='171' stroke='#f5a623' stroke-width='2'/><line x1='150' y1='35' x2='126' y2='171' stroke='#7fd1a6' stroke-width='1.8'/><line x1='150' y1='35' x2='174' y2='171' stroke='#7fd1a6' stroke-width='1.8'/><circle cx='150' cy='105' r='2.6' fill='#e6edf6'/><text x='150' y='126' fill='#f5a623' font-size='11' text-anchor='middle'>central</text><text x='150' y='58' fill='#7fd1a6' font-size='11' text-anchor='middle'>inscribed</text><text x='150' y='201' fill='#cfe3ff' font-size='12' text-anchor='middle'>inscribed angle = ½ × central angle</text></svg>" },
           { h: "Equation of a circle" },
           { p: "Center **(h, k)**, radius **r**:  **(x − h)² + (y − k)² = r²**." },
           { example: "Center (3, −3) passing through (−3, 2): r² = (3−(−3))² + (−3−2)² = 36 + 25 = 61 → **(x−3)² + (y+3)² = 61**.", as: "Worked" },
@@ -242,6 +249,7 @@
             "**Rhombus / Kite:** A = ½ · d₁ · d₂  (half the product of the diagonals)",
             "**Regular polygon:** A = ½ · apothem · perimeter",
           ] },
+          { cap: "Height (h) is the PERPENDICULAR distance, not the slanted side", fig: "<svg viewBox='0 0 340 180' class='gfig'><polygon points='40,150 140,150 170,80 70,80' fill='rgba(108,92,231,.16)' stroke='#9fb3d1' stroke-width='2'/><line x1='90' y1='150' x2='90' y2='80' stroke='#f5a623' stroke-width='1.6' stroke-dasharray='4 3'/><rect x='90' y='136' width='14' height='14' fill='none' stroke='#9fb3d1' stroke-width='1'/><text x='90' y='167' fill='#e6edf6' font-size='12' text-anchor='middle'>b</text><text x='96' y='120' fill='#f5a623' font-size='12'>h</text><text x='105' y='30' fill='#cfe3ff' font-size='11.5' text-anchor='middle'>A = b·h</text><polygon points='200,150 320,150 290,80 230,80' fill='rgba(108,92,231,.16)' stroke='#9fb3d1' stroke-width='2'/><line x1='245' y1='150' x2='245' y2='80' stroke='#f5a623' stroke-width='1.6' stroke-dasharray='4 3'/><text x='260' y='75' fill='#e6edf6' font-size='11' text-anchor='middle'>b₁</text><text x='260' y='167' fill='#e6edf6' font-size='11' text-anchor='middle'>b₂</text><text x='251' y='120' fill='#f5a623' font-size='12'>h</text><text x='262' y='30' fill='#cfe3ff' font-size='11.5' text-anchor='middle'>A = ½(b₁+b₂)h</text></svg>" },
           { example: "Rhombus area 45, one diagonal 9 → 45 = ½·9·d₂ → d₂ = 10.", as: "Worked" },
           { example: "Regular hexagon, side 11, apothem 9.5 → A = ½·(6·11)·9.5 = ½·66·9.5 = 313.5.", as: "Worked" },
           { tip: "The **apothem** is the distance from the center to the middle of a side. Regular-polygon area = **½ · apothem · perimeter** (same as a bunch of triangles)." },
@@ -278,6 +286,7 @@
             "**Arc length:** (θ / 360) · 2π · r, a fraction of the circumference",
             "**Sector area:** (θ / 360) · π · r², a fraction of the area",
           ] },
+          { cap: "A sector is a θ/360 slice: arc = the curved edge, sector = the slice", fig: "<svg viewBox='0 0 300 200' class='gfig'><circle cx='150' cy='100' r='75' fill='none' stroke='#9fb3d1' stroke-width='2'/><path d='M150,100 L225,100 A75,75 0 0 0 150,25 Z' fill='rgba(108,92,231,.22)' stroke='#8a7bf0' stroke-width='1.5'/><path d='M225,100 A75,75 0 0 0 150,25' fill='none' stroke='#f5a623' stroke-width='4'/><line x1='150' y1='100' x2='150' y2='25' stroke='#9fb3d1' stroke-width='1.5'/><circle cx='150' cy='100' r='2.6' fill='#e6edf6'/><text x='173' y='90' fill='#cfe3ff' font-size='13'>θ</text><text x='206' y='52' fill='#f5a623' font-size='11'>arc</text><text x='133' y='72' fill='#9fb3d1' font-size='11'>r</text><text x='150' y='190' fill='#cfe3ff' font-size='11.5' text-anchor='middle'>arc = (θ/360)·2πr  ·  sector = (θ/360)·πr²</text></svg>" },
           { example: "Arc length, 80° central angle, r = 9 → (80/360)·2π·9 ≈ 12.57.", as: "Worked" },
           { example: "Sector area, 256°, r = 14 → (256/360)·π·14² ≈ 437.87.", as: "Worked" },
           { tip: "Arc length and sector area are both just **(θ/360)** of the whole, of the **circumference** for arc length, of the **area** for a sector." },
@@ -323,6 +332,7 @@
             "**Cone:** V = ⅓·πr²·h",
             "**Sphere:** V = (4/3)πr³",
           ] },
+          { cap: "Cone & pyramid are the '⅓' shapes: same base & height as the prism/cylinder", fig: "<svg viewBox='0 0 340 200' class='gfig'><path d='M40,50 a40,12 0 0 0 80,0 v90 a40,12 0 0 1 -80,0 Z' fill='rgba(108,92,231,.14)' stroke='#9fb3d1' stroke-width='2'/><ellipse cx='80' cy='50' rx='40' ry='12' fill='rgba(108,92,231,.24)' stroke='#9fb3d1' stroke-width='2'/><line x1='80' y1='50' x2='120' y2='50' stroke='#f5a623' stroke-width='1.4' stroke-dasharray='3 3'/><text x='97' y='46' fill='#f5a623' font-size='10'>r</text><line x1='130' y1='50' x2='130' y2='140' stroke='#f5a623' stroke-width='1.4' stroke-dasharray='3 3'/><text x='134' y='100' fill='#f5a623' font-size='11'>h</text><text x='80' y='182' fill='#9fb3d1' font-size='11' text-anchor='middle'>cylinder = πr²h</text><path d='M200,150 L240,45 L280,150' fill='rgba(108,92,231,.14)' stroke='#9fb3d1' stroke-width='2'/><ellipse cx='240' cy='150' rx='40' ry='12' fill='rgba(108,92,231,.20)' stroke='#9fb3d1' stroke-width='2'/><line x1='240' y1='150' x2='280' y2='150' stroke='#f5a623' stroke-width='1.4' stroke-dasharray='3 3'/><text x='257' y='146' fill='#f5a623' font-size='10'>r</text><text x='240' y='182' fill='#9fb3d1' font-size='11' text-anchor='middle'>cone = ⅓πr²h</text><text x='170' y='24' fill='#cfe3ff' font-size='12' text-anchor='middle'>same r &amp; h → cone holds ⅓ of the cylinder</text></svg>" },
           { example: "Square pyramid, base edge 48, height 10 → V = ⅓·48²·10 = ⅓·2304·10 = 7680 in³.", as: "Worked" },
           { p: "**Reverse problems** give the volume/SA and ask for a missing dimension, just solve the formula." },
           { example: "Cylinder V = 2304 in³, r = 12 → h = V/(πr²) = 2304/(144π) = 16/π ≈ 5.09 in.", as: "Worked" },

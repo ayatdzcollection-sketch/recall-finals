@@ -177,6 +177,11 @@ button{font-family:inherit}
 .fs-name{color:var(--text-dim);font-size:.86rem;flex:1 1 40%;min-width:0}
 .fs-form{font-family:var(--mono);font-size:.92rem;text-align:right;flex:1 1 55%;color:var(--text)}
 
+/* geometry figures (inline SVG diagrams in lessons) */
+.visual svg{display:block;width:100%;max-width:360px;height:auto;margin:4px auto 0}
+.gfig{background:#0e1530;border:1px solid var(--line);border-radius:12px;padding:10px 8px}
+.gfig text{font-family:system-ui,-apple-system,sans-serif}
+
 /* ring progress */
 .ring{--p:0;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:none;
   background:conic-gradient(var(--sub,var(--accent)) calc(var(--p)*1%), var(--line) 0);
