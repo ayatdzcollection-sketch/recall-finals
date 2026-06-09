@@ -1166,6 +1166,9 @@
     });
     card.appendChild(el("hr", "div"));
 
+    // cross-device sync (opt-in)
+    syncSection(card);
+
     // export / import, files
     card.appendChild(el("div", null, "<b>Move or back up your data</b><div class='muted' style='font-size:.85rem'>Everything lives only in this browser. \"Copy everything\" packs your <b>entire</b> data (compressed, ~5× smaller) into one code you can paste back here or on another device.</div>"));
     const er = el("div", "row wrap"); er.style.marginTop = "10px";
@@ -1226,6 +1229,77 @@
     app.appendChild(about);
   }
 
+  function syncTimeAgo(ts) {
+    if (!ts) return "never";
+    const s = Math.round((Date.now() - ts) / 1000);
+    if (s < 60) return "just now";
+    const m = Math.round(s / 60); if (m < 60) return m + " min ago";
+    const h = Math.round(m / 60); if (h < 24) return h + " hr ago";
+    return Math.round(h / 24) + " days ago";
+  }
+  function syncSection(card) {
+    if (!STUDY.SYNC) return;
+    const SY = STUDY.SYNC;
+    card.appendChild(el("div", null, "<b>🔄 Sync across devices <span class='exam-tag'>beta</span></b><div class='muted' style='font-size:.85rem'>Keep your progress in step on your phone and laptop. Turn it on here, then open the link (or type the code) on your other device. It syncs automatically over Wi-Fi and <b>merges</b> both devices, so nothing is lost.</div>"));
+    const box = el("div"); box.style.marginTop = "10px";
+    if (!SY.enabled()) {
+      const r = el("div", "row wrap");
+      const on = el("button", "btn sm primary", "🔄 Turn on sync");
+      on.onclick = function () { SY.enable(); QUIZ.toast("Sync on, copy the link onto your other device."); renderSettings(); };
+      const link = el("button", "btn sm", "🔗 I have a code");
+      r.appendChild(on); r.appendChild(link); box.appendChild(r);
+      const linkWrap = el("div"); linkWrap.style.cssText = "display:none;margin-top:10px;width:100%";
+      const ta = document.createElement("input"); ta.type = "text"; ta.placeholder = "Paste the sync code or link from your other device";
+      ta.style.cssText = "width:100%;border-radius:10px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:10px;font-size:.85rem";
+      const go2 = el("button", "btn sm good", "Link this device"); go2.style.marginTop = "8px";
+      go2.onclick = function () { if (SY.linkWith(ta.value)) { QUIZ.toast("Linked, merging your progress…"); renderSettings(); } else QUIZ.toast("That code didn't look right"); };
+      link.onclick = function () { linkWrap.style.display = linkWrap.style.display === "none" ? "block" : "none"; if (linkWrap.style.display === "block") ta.focus(); };
+      linkWrap.appendChild(ta); linkWrap.appendChild(go2); box.appendChild(linkWrap);
+    } else {
+      const status = SY.status();
+      const stxt = status === "ok" ? ("✓ Synced " + syncTimeAgo(SY.lastSync()))
+        : status === "syncing" ? "Syncing…"
+        : status === "offline" ? "Offline, will sync when you're back online"
+        : status === "error" ? "Couldn't reach sync (is it set up on the server yet?)"
+        : ("Synced " + syncTimeAgo(SY.lastSync()));
+      box.appendChild(el("div", "muted", "Status: " + esc(stxt)));
+      const codeBox = el("div");
+      codeBox.style.cssText = "font-family:var(--mono);font-size:.95rem;letter-spacing:.05em;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:10px;padding:9px 12px;margin-top:8px;display:inline-block";
+      codeBox.textContent = SY.formatCode(SY.code());
+      box.appendChild(codeBox);
+      const r2 = el("div", "row wrap"); r2.style.marginTop = "10px";
+      const cp = el("button", "btn sm", "🔗 Copy device link"); cp.onclick = () => copyText(SY.linkURL(), "Pairing link copied, open it on your other device.");
+      const cc = el("button", "btn sm", "📋 Copy code"); cc.onclick = () => copyText(SY.formatCode(SY.code()), "Sync code copied.");
+      const now = el("button", "btn sm", "🔄 Sync now"); now.onclick = function () { QUIZ.toast("Syncing…"); SY.syncNow("manual").then(function () { renderSettings(); }); };
+      const off = el("button", "btn sm", "Unlink"); off.style.borderColor = "var(--bad)"; off.style.color = "var(--bad)";
+      off.onclick = function () { if (confirm("Unlink this device? Your progress stays here, it just stops syncing.")) { SY.unlink(); renderSettings(); } };
+      r2.appendChild(cp); r2.appendChild(cc); r2.appendChild(now); r2.appendChild(off);
+      box.appendChild(r2);
+      box.appendChild(el("div", "muted", "<span style='font-size:.78rem'>Anyone with this code can read and merge this progress, so keep it to yourself. It only ever holds study progress, never personal info.</span>"));
+    }
+    card.appendChild(box);
+    card.appendChild(el("hr", "div"));
+  }
+  function renderLinkConfirm(code) {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Link device" }]));
+    app.appendChild(el("div", "hero", "<h1>🔗 Link this device?</h1>"));
+    const card = el("div", "card");
+    const clean = STUDY.SYNC ? STUDY.SYNC.cleanCode(code) : "";
+    if (!STUDY.SYNC || !clean || clean.length < 8) {
+      card.appendChild(el("div", null, "<b>That link doesn't look valid.</b><div class='muted' style='font-size:.85rem'>Ask your other device for a fresh sync link from Settings.</div>"));
+      const no = el("button", "btn", "Back home"); no.style.marginTop = "12px"; no.onclick = () => go("#/home"); card.appendChild(no);
+    } else {
+      card.appendChild(el("div", null, "<b>Sync this device with your other one?</b><div class='muted' style='font-size:.9rem;margin-top:4px'>This <b>merges</b> the two devices' progress (nothing gets deleted) and keeps them in step from now on.<br>Code: <span style='font-family:var(--mono)'>" + esc(STUDY.SYNC.formatCode(clean)) + "</span></div>"));
+      const r = el("div", "row wrap"); r.style.marginTop = "14px";
+      const yes = el("button", "btn primary", "🔄 Link & sync");
+      yes.onclick = function () { STUDY.SYNC.linkWith(clean); QUIZ.toast("Linked, merging your progress…"); go("#/settings"); };
+      const no = el("button", "btn", "Cancel"); no.onclick = () => go("#/home");
+      r.appendChild(yes); r.appendChild(no); card.appendChild(r);
+    }
+    app.appendChild(card);
+  }
+
   function downloadFile(content, name, type) {
     const blob = new Blob([content], { type: type || "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -1269,6 +1343,7 @@
     if (parts[0] === "import") return renderImport();
     if (parts[0] === "results") return renderTestResults();
     if (parts[0] === "search") return renderSearch(params);
+    if (parts[0] === "link") return renderLinkConfirm(parts[1]);
     if (parts[0] === "settings") return renderSettings();
     return renderHome();
   }
@@ -1278,6 +1353,7 @@
     STUDY.load();
     if (STUDY.TELE) try { STUDY.TELE.start(); } catch (e) {}
     if (STUDY.CROWD) try { STUDY.CROWD.start(); } catch (e) {}
+    if (STUDY.SYNC) try { STUDY.SYNC.init(); } catch (e) {}
     document.documentElement.setAttribute("data-theme", STUDY.theme());
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));

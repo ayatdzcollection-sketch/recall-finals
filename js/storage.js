@@ -98,6 +98,7 @@
       rtBase: {},     // questionType -> rolling baseline response time (self-calibrated fluency)
       lastTest: null, // last generated test manifest (for entering results later)
       settings: { theme: "dark" },
+      sync: null,     // {code, rev, last, status} opt-in cross-device sync (device-local meta)
     };
   };
 
@@ -127,6 +128,8 @@
   // tab close / refresh. localStorage is fast and the payload is tiny.
   STUDY.save = function () {
     try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    // nudge the (optional) cross-device sync layer that local data changed
+    try { if (STUDY.SYNC && STUDY.SYNC.onLocalChange) STUDY.SYNC.onLocalChange(); } catch (e) {}
   };
   STUDY.flush = STUDY.save;
 
@@ -298,6 +301,69 @@
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
     try { store = Object.assign(DEFAULT(), parsed); STUDY.save(); return true; }
     catch (e) { return false; }
+  };
+
+  /* ---------- cross-device sync: blob + non-destructive MERGE ----------
+     A merge (not a replace) so studying on two devices ADDS UP instead of one
+     clobbering the other. Rules: per-item newest-wins, cumulative counters max,
+     sets union. The synced blob excludes device-local bits (log/queue/anon-id/
+     theme/sync-meta) so it stays small and devices keep their own identity. */
+  const SYNC_KEYS = ["v", "srs", "stats", "wrong", "seen", "done", "starred", "streak",
+    "activity", "masteryHist", "subjectSkill", "glicko", "examDates", "exams", "miss", "flagged", "rtBase", "lastTest"];
+  STUDY.syncBlob = function () {
+    const copy = {}; SYNC_KEYS.forEach(function (k) { if (store[k] !== undefined) copy[k] = store[k]; });
+    return "RZ1:" + LZ.compressToBase64(JSON.stringify(copy));
+  };
+  function mNum(a, b) { return Math.max(a || 0, b || 0); }
+  function mergeMaxMap(t, s) { if (!s) return; Object.keys(s).forEach(function (k) { if (!(k in t) || (s[k] || 0) > (t[k] || 0)) t[k] = s[k]; }); }
+  function mergeMap(t, s, pick) { if (!s) return; Object.keys(s).forEach(function (k) { t[k] = pick(t[k], s[k]); }); }
+  // Merge a decoded remote store object INTO the local store. Returns true if applied.
+  STUDY.mergeInto = function (remote) {
+    if (!remote || typeof remote !== "object" || Array.isArray(remote)) return false;
+    const L = store;
+    ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "glicko", "examDates", "exams", "miss", "flagged", "rtBase"].forEach(function (k) { if (!L[k]) L[k] = {}; });
+    // srs: the entry studied most recently wins (newest 'last'); tie -> more progress
+    mergeMap(L.srs, remote.srs, function (a, b) {
+      if (!a) return b; if (!b) return a;
+      const la = a.last || 0, lb = b.last || 0;
+      if (lb > la) return b; if (la > lb) return a;
+      return ((b.reps || 0) + (b.box || 0)) > ((a.reps || 0) + (a.box || 0)) ? b : a;
+    });
+    // stats: cumulative counters -> max per field (avoids double-count and loss)
+    mergeMap(L.stats, remote.stats, function (a, b) { a = a || {}; b = b || {}; return { attempts: mNum(a.attempts, b.attempts), correct: mNum(a.correct, b.correct), seen: mNum(a.seen, b.seen), cards: mNum(a.cards, b.cards) }; });
+    if (remote.wrong) Object.keys(remote.wrong).forEach(function (k) { if (remote.wrong[k]) L.wrong[k] = true; });   // union
+    mergeMaxMap(L.seen, remote.seen);                 // latest visit
+    mergeMap(L.done, remote.done, function (a, b) { a = a || {}; b = b || {}; return { learn: !!(a.learn || b.learn), cards: !!(a.cards || b.cards), practice: !!(a.practice || b.practice), practiceBest: mNum(a.practiceBest, b.practiceBest) }; });
+    mergeMaxMap(L.starred, remote.starred);           // keep all bookmarks
+    if (remote.streak) { const r = remote.streak, l = L.streak || { count: 0, last: 0, best: 0 }; L.streak = { best: mNum(l.best, r.best), last: mNum(l.last, r.last), count: ((r.last || 0) > (l.last || 0) ? r.count : l.count) || 0 }; }
+    mergeMaxMap(L.activity, remote.activity);          // per-day count
+    mergeMaxMap(L.masteryHist, remote.masteryHist);    // per-day snapshot
+    mergeMap(L.glicko, remote.glicko, function (a, b) { if (!a) return b; if (!b) return a; return (b.t || 0) > (a.t || 0) ? b : a; });
+    Object.keys(L.glicko).forEach(function (sid) { if (L.glicko[sid] && typeof L.glicko[sid].r === "number") L.subjectSkill[sid] = L.glicko[sid].r; });
+    if (remote.examDates) Object.keys(remote.examDates).forEach(function (k) { if (!L.examDates[k]) L.examDates[k] = remote.examDates[k]; });
+    mergeMap(L.exams, remote.exams, function (a, b) {   // prefer graded > taken > none, tie by time
+      if (!a) return b; if (!b) return a;
+      const sc = function (e) { return (typeof e.actual === "number" ? 2 : 0) + (e.done ? 1 : 0); };
+      if (sc(b) > sc(a)) return b; if (sc(a) > sc(b)) return a;
+      return ((b.gradedAt || b.doneAt || 0) > (a.gradedAt || a.doneAt || 0)) ? b : a;
+    });
+    if (remote.miss) Object.keys(remote.miss).forEach(function (sid) {        // union recent mixups, capped
+      const seen = {}, out = []; (L.miss[sid] || []).concat(remote.miss[sid] || [])
+        .sort(function (x, y) { return (y.t || 0) - (x.t || 0); })
+        .forEach(function (m) { const k = m.it + "|" + m.c + "|" + (m.t || 0); if (!seen[k]) { seen[k] = 1; out.push(m); } });
+      L.miss[sid] = out.slice(0, 40);
+    });
+    mergeMap(L.flagged, remote.flagged, function (a, b) { if (!a) return b; if (!b) return a; return (b.t || 0) > (a.t || 0) ? b : a; });
+    if (remote.rtBase) Object.keys(remote.rtBase).forEach(function (k) { const a = L.rtBase[k], b = remote.rtBase[k]; L.rtBase[k] = (typeof a === "number" && typeof b === "number") ? Math.round((a + b) / 2) : (a != null ? a : b); });
+    if (remote.lastTest && (!L.lastTest || (remote.lastTest.at || 0) > (L.lastTest.at || 0))) L.lastTest = remote.lastTest;
+    STUDY.save();
+    return true;
+  };
+  // Merge a packed/encoded remote blob (RZ1/JSON) into local. Returns true if applied.
+  STUDY.applySyncBlob = function (blob) {
+    const obj = STUDY.unpackData(blob);
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return false;
+    return STUDY.mergeInto(obj);
   };
 
   /* ---------- settings ---------- */

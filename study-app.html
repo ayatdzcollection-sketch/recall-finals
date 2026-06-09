@@ -598,6 +598,7 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       rtBase: {},     // questionType -> rolling baseline response time (self-calibrated fluency)
       lastTest: null, // last generated test manifest (for entering results later)
       settings: { theme: "dark" },
+      sync: null,     // {code, rev, last, status} opt-in cross-device sync (device-local meta)
     };
   };
 
@@ -627,6 +628,8 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
   // tab close / refresh. localStorage is fast and the payload is tiny.
   STUDY.save = function () {
     try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    // nudge the (optional) cross-device sync layer that local data changed
+    try { if (STUDY.SYNC && STUDY.SYNC.onLocalChange) STUDY.SYNC.onLocalChange(); } catch (e) {}
   };
   STUDY.flush = STUDY.save;
 
@@ -798,6 +801,69 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
     try { store = Object.assign(DEFAULT(), parsed); STUDY.save(); return true; }
     catch (e) { return false; }
+  };
+
+  /* ---------- cross-device sync: blob + non-destructive MERGE ----------
+     A merge (not a replace) so studying on two devices ADDS UP instead of one
+     clobbering the other. Rules: per-item newest-wins, cumulative counters max,
+     sets union. The synced blob excludes device-local bits (log/queue/anon-id/
+     theme/sync-meta) so it stays small and devices keep their own identity. */
+  const SYNC_KEYS = ["v", "srs", "stats", "wrong", "seen", "done", "starred", "streak",
+    "activity", "masteryHist", "subjectSkill", "glicko", "examDates", "exams", "miss", "flagged", "rtBase", "lastTest"];
+  STUDY.syncBlob = function () {
+    const copy = {}; SYNC_KEYS.forEach(function (k) { if (store[k] !== undefined) copy[k] = store[k]; });
+    return "RZ1:" + LZ.compressToBase64(JSON.stringify(copy));
+  };
+  function mNum(a, b) { return Math.max(a || 0, b || 0); }
+  function mergeMaxMap(t, s) { if (!s) return; Object.keys(s).forEach(function (k) { if (!(k in t) || (s[k] || 0) > (t[k] || 0)) t[k] = s[k]; }); }
+  function mergeMap(t, s, pick) { if (!s) return; Object.keys(s).forEach(function (k) { t[k] = pick(t[k], s[k]); }); }
+  // Merge a decoded remote store object INTO the local store. Returns true if applied.
+  STUDY.mergeInto = function (remote) {
+    if (!remote || typeof remote !== "object" || Array.isArray(remote)) return false;
+    const L = store;
+    ["srs", "stats", "wrong", "seen", "done", "starred", "activity", "masteryHist", "subjectSkill", "glicko", "examDates", "exams", "miss", "flagged", "rtBase"].forEach(function (k) { if (!L[k]) L[k] = {}; });
+    // srs: the entry studied most recently wins (newest 'last'); tie -> more progress
+    mergeMap(L.srs, remote.srs, function (a, b) {
+      if (!a) return b; if (!b) return a;
+      const la = a.last || 0, lb = b.last || 0;
+      if (lb > la) return b; if (la > lb) return a;
+      return ((b.reps || 0) + (b.box || 0)) > ((a.reps || 0) + (a.box || 0)) ? b : a;
+    });
+    // stats: cumulative counters -> max per field (avoids double-count and loss)
+    mergeMap(L.stats, remote.stats, function (a, b) { a = a || {}; b = b || {}; return { attempts: mNum(a.attempts, b.attempts), correct: mNum(a.correct, b.correct), seen: mNum(a.seen, b.seen), cards: mNum(a.cards, b.cards) }; });
+    if (remote.wrong) Object.keys(remote.wrong).forEach(function (k) { if (remote.wrong[k]) L.wrong[k] = true; });   // union
+    mergeMaxMap(L.seen, remote.seen);                 // latest visit
+    mergeMap(L.done, remote.done, function (a, b) { a = a || {}; b = b || {}; return { learn: !!(a.learn || b.learn), cards: !!(a.cards || b.cards), practice: !!(a.practice || b.practice), practiceBest: mNum(a.practiceBest, b.practiceBest) }; });
+    mergeMaxMap(L.starred, remote.starred);           // keep all bookmarks
+    if (remote.streak) { const r = remote.streak, l = L.streak || { count: 0, last: 0, best: 0 }; L.streak = { best: mNum(l.best, r.best), last: mNum(l.last, r.last), count: ((r.last || 0) > (l.last || 0) ? r.count : l.count) || 0 }; }
+    mergeMaxMap(L.activity, remote.activity);          // per-day count
+    mergeMaxMap(L.masteryHist, remote.masteryHist);    // per-day snapshot
+    mergeMap(L.glicko, remote.glicko, function (a, b) { if (!a) return b; if (!b) return a; return (b.t || 0) > (a.t || 0) ? b : a; });
+    Object.keys(L.glicko).forEach(function (sid) { if (L.glicko[sid] && typeof L.glicko[sid].r === "number") L.subjectSkill[sid] = L.glicko[sid].r; });
+    if (remote.examDates) Object.keys(remote.examDates).forEach(function (k) { if (!L.examDates[k]) L.examDates[k] = remote.examDates[k]; });
+    mergeMap(L.exams, remote.exams, function (a, b) {   // prefer graded > taken > none, tie by time
+      if (!a) return b; if (!b) return a;
+      const sc = function (e) { return (typeof e.actual === "number" ? 2 : 0) + (e.done ? 1 : 0); };
+      if (sc(b) > sc(a)) return b; if (sc(a) > sc(b)) return a;
+      return ((b.gradedAt || b.doneAt || 0) > (a.gradedAt || a.doneAt || 0)) ? b : a;
+    });
+    if (remote.miss) Object.keys(remote.miss).forEach(function (sid) {        // union recent mixups, capped
+      const seen = {}, out = []; (L.miss[sid] || []).concat(remote.miss[sid] || [])
+        .sort(function (x, y) { return (y.t || 0) - (x.t || 0); })
+        .forEach(function (m) { const k = m.it + "|" + m.c + "|" + (m.t || 0); if (!seen[k]) { seen[k] = 1; out.push(m); } });
+      L.miss[sid] = out.slice(0, 40);
+    });
+    mergeMap(L.flagged, remote.flagged, function (a, b) { if (!a) return b; if (!b) return a; return (b.t || 0) > (a.t || 0) ? b : a; });
+    if (remote.rtBase) Object.keys(remote.rtBase).forEach(function (k) { const a = L.rtBase[k], b = remote.rtBase[k]; L.rtBase[k] = (typeof a === "number" && typeof b === "number") ? Math.round((a + b) / 2) : (a != null ? a : b); });
+    if (remote.lastTest && (!L.lastTest || (remote.lastTest.at || 0) > (L.lastTest.at || 0))) L.lastTest = remote.lastTest;
+    STUDY.save();
+    return true;
+  };
+  // Merge a packed/encoded remote blob (RZ1/JSON) into local. Returns true if applied.
+  STUDY.applySyncBlob = function (blob) {
+    const obj = STUDY.unpackData(blob);
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return false;
+    return STUDY.mergeInto(obj);
   };
 
   /* ---------- settings ---------- */
@@ -2093,6 +2159,137 @@ hr.div{border:none;border-top:1px solid var(--line);margin:18px 0}
       });
       return out.sort(function (a, b) { return a.rate - b.rate; });
     },
+  };
+})(window.STUDY);
+
+</script>
+  <script>
+/* js/sync.js — opt-in cross-device sync over the existing Supabase project.
+   Devices that share a high-entropy CODE read/write one row through two
+   SECURITY DEFINER functions (sync_get / sync_put), so the anon key can never
+   enumerate other rows. Sync is a MERGE (see STUDY.mergeInto), so phone + laptop
+   progress combines instead of one clobbering the other. Auto-runs on connect
+   (online), tab focus, boot, a light poll, and a debounce after each change.
+   Fully optional: inert until the user turns it on in Settings. */
+(function (STUDY) {
+  "use strict";
+  if (!STUDY) return;
+  var RPC = "https://gyfqhkhgosjpyvatffbi.supabase.co/rest/v1/rpc/";
+  var KEY = "sb_publishable_q-_2MgYpTJB-OeGGIy8EzA_8mvRB1nb";   // publishable (client-safe)
+  var HEADERS = { "Content-Type": "application/json", "apikey": KEY, "Authorization": "Bearer " + KEY, "Accept": "application/json" };
+
+  var SYNC = {};
+  STUDY.SYNC = SYNC;
+  var inSync = false, metaWrite = false, pushTimer = null, pollTimer = null, listeners = [];
+
+  function st() { return STUDY.store(); }
+  function online() { return typeof navigator === "undefined" || navigator.onLine !== false; }
+  SYNC.enabled = function () { var s = st().sync; return !!(s && s.code); };
+  SYNC.code = function () { var s = st().sync; return (s && s.code) || ""; };
+  SYNC.status = function () { var s = st().sync; return (s && s.status) || (SYNC.enabled() ? "idle" : "off"); };
+  SYNC.lastSync = function () { var s = st().sync; return (s && s.last) || 0; };
+
+  function writeMeta(patch) {
+    var s = st();
+    s.sync = Object.assign({ code: "", rev: 0, last: 0, status: "idle" }, s.sync || {}, patch);
+    metaWrite = true; STUDY.save(); metaWrite = false;
+  }
+  function notify() { listeners.forEach(function (fn) { try { fn(SYNC.status()); } catch (e) {} }); }
+  SYNC.onChange = function (fn) { if (typeof fn === "function") listeners.push(fn); };
+
+  // ---- code: 16 base32 chars (~80 bits) so it doubles as an unguessable secret
+  function genCode() {
+    var alpha = "0123456789abcdefghjkmnpqrstvwxyz", out = "", n = 16, buf = null;
+    try { buf = new Uint8Array(n); (self.crypto || window.crypto).getRandomValues(buf); } catch (e) { buf = null; }
+    for (var i = 0; i < n; i++) { var v = buf ? buf[i] : Math.floor(Math.random() * 256); out += alpha.charAt(v & 31); }
+    return out;
+  }
+  SYNC.formatCode = function (c) { c = (c || "").replace(/[^0-9a-z]/gi, "").toLowerCase(); return c.replace(/(.{4})(?=.)/g, "$1-"); };
+  SYNC.cleanCode = function (c) {
+    c = String(c || "").trim();
+    var m = c.match(/#\/?link\/([0-9a-z]+)/i); if (m) return m[1].toLowerCase();   // accept a pairing link
+    return c.replace(/[^0-9a-z]/gi, "").toLowerCase();
+  };
+  SYNC.linkURL = function () { var c = SYNC.code(); if (!c) return ""; return location.origin + location.pathname + "#/link/" + c; };
+
+  function rpc(fn, body) {
+    return fetch(RPC + fn, { method: "POST", headers: HEADERS, body: JSON.stringify(body) })
+      .then(function (r) { if (!r.ok) throw new Error("rpc " + fn + " " + r.status); return r.json(); });
+  }
+  SYNC.pull = function () {
+    var code = SYNC.code(); if (!code) return Promise.resolve(null);
+    return rpc("sync_get", { p_code: code }).then(function (rows) {
+      var row = Array.isArray(rows) ? rows[0] : rows;
+      return row && row.data ? { data: row.data, rev: row.rev || 0 } : null;
+    });
+  };
+
+  function hashStr(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h; }
+
+  // pull -> MERGE remote into local -> push merged (rev-guarded, retries on conflict).
+  // If nothing changed locally and the server is at the rev we already hold, it's
+  // a pull-only (no upload) so a 45s poll doesn't re-send the whole blob.
+  function doSync(code, attempt) {
+    return SYNC.pull().then(function (remote) {
+      var knownRev = 0;
+      if (remote && remote.data) { STUDY.applySyncBlob(remote.data); knownRev = remote.rev; }
+      var blob = STUDY.syncBlob();
+      var h = hashStr(blob);
+      var m = st().sync || {};
+      if (remote && knownRev === m.rev && h === m.hash) { writeMeta({ last: Date.now(), status: "ok" }); return true; }
+      return rpc("sync_put", { p_code: code, p_data: blob, p_rev: knownRev }).then(function (rows) {
+        var row = Array.isArray(rows) ? rows[0] : rows;
+        if (row && row.conflict && attempt < 3) return doSync(code, attempt + 1);   // someone pushed; re-merge
+        writeMeta({ rev: (row && row.rev) || (knownRev + 1), last: Date.now(), status: "ok", hash: h });
+        return true;
+      });
+    });
+  }
+  SYNC.syncNow = function (reason) {
+    var code = SYNC.code();
+    if (!code) return Promise.resolve(false);
+    if (!online()) { writeMeta({ status: "offline" }); notify(); return Promise.resolve(false); }
+    if (inSync) return Promise.resolve(false);
+    inSync = true; writeMeta({ status: "syncing" }); notify();
+    return doSync(code, 0).then(function (ok) { inSync = false; notify(); return ok; })
+      .catch(function () { inSync = false; writeMeta({ status: "error" }); notify(); return false; });
+  };
+
+  // debounced auto-push after any local change (skips meta-only writes & offline)
+  SYNC.onLocalChange = function () {
+    if (!SYNC.enabled() || inSync || metaWrite || !online()) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () { pushTimer = null; SYNC.syncNow("change"); }, 4000);
+  };
+
+  SYNC.enable = function () {                 // first device: create a sync identity
+    if (SYNC.enabled()) return SYNC.code();
+    writeMeta({ code: genCode(), rev: 0, status: "idle", enabledAt: Date.now() });
+    startPoll(); SYNC.syncNow("enable");
+    return SYNC.code();
+  };
+  SYNC.linkWith = function (input) {          // second device: join an existing identity
+    var c = SYNC.cleanCode(input);
+    if (!c || c.length < 8) return false;
+    writeMeta({ code: c, rev: 0, status: "idle" });
+    startPoll(); SYNC.syncNow("link");
+    return true;
+  };
+  SYNC.unlink = function () { var s = st(); s.sync = null; metaWrite = true; STUDY.save(); metaWrite = false; stopPoll(); notify(); };
+
+  function startPoll() {
+    stopPoll();
+    pollTimer = setInterval(function () {
+      if (SYNC.enabled() && online() && (typeof document === "undefined" || document.visibilityState === "visible")) SYNC.syncNow("poll");
+    }, 45000);
+  }
+  function stopPoll() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+  SYNC.init = function () {
+    if (typeof window === "undefined") return;
+    window.addEventListener("online", function () { SYNC.syncNow("online"); });
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") SYNC.syncNow("visible"); });
+    if (SYNC.enabled()) { startPoll(); SYNC.syncNow("boot"); }
   };
 })(window.STUDY);
 
@@ -7769,6 +7966,9 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     });
     card.appendChild(el("hr", "div"));
 
+    // cross-device sync (opt-in)
+    syncSection(card);
+
     // export / import, files
     card.appendChild(el("div", null, "<b>Move or back up your data</b><div class='muted' style='font-size:.85rem'>Everything lives only in this browser. \"Copy everything\" packs your <b>entire</b> data (compressed, ~5× smaller) into one code you can paste back here or on another device.</div>"));
     const er = el("div", "row wrap"); er.style.marginTop = "10px";
@@ -7829,6 +8029,77 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     app.appendChild(about);
   }
 
+  function syncTimeAgo(ts) {
+    if (!ts) return "never";
+    const s = Math.round((Date.now() - ts) / 1000);
+    if (s < 60) return "just now";
+    const m = Math.round(s / 60); if (m < 60) return m + " min ago";
+    const h = Math.round(m / 60); if (h < 24) return h + " hr ago";
+    return Math.round(h / 24) + " days ago";
+  }
+  function syncSection(card) {
+    if (!STUDY.SYNC) return;
+    const SY = STUDY.SYNC;
+    card.appendChild(el("div", null, "<b>🔄 Sync across devices <span class='exam-tag'>beta</span></b><div class='muted' style='font-size:.85rem'>Keep your progress in step on your phone and laptop. Turn it on here, then open the link (or type the code) on your other device. It syncs automatically over Wi-Fi and <b>merges</b> both devices, so nothing is lost.</div>"));
+    const box = el("div"); box.style.marginTop = "10px";
+    if (!SY.enabled()) {
+      const r = el("div", "row wrap");
+      const on = el("button", "btn sm primary", "🔄 Turn on sync");
+      on.onclick = function () { SY.enable(); QUIZ.toast("Sync on, copy the link onto your other device."); renderSettings(); };
+      const link = el("button", "btn sm", "🔗 I have a code");
+      r.appendChild(on); r.appendChild(link); box.appendChild(r);
+      const linkWrap = el("div"); linkWrap.style.cssText = "display:none;margin-top:10px;width:100%";
+      const ta = document.createElement("input"); ta.type = "text"; ta.placeholder = "Paste the sync code or link from your other device";
+      ta.style.cssText = "width:100%;border-radius:10px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--text);padding:10px;font-size:.85rem";
+      const go2 = el("button", "btn sm good", "Link this device"); go2.style.marginTop = "8px";
+      go2.onclick = function () { if (SY.linkWith(ta.value)) { QUIZ.toast("Linked, merging your progress…"); renderSettings(); } else QUIZ.toast("That code didn't look right"); };
+      link.onclick = function () { linkWrap.style.display = linkWrap.style.display === "none" ? "block" : "none"; if (linkWrap.style.display === "block") ta.focus(); };
+      linkWrap.appendChild(ta); linkWrap.appendChild(go2); box.appendChild(linkWrap);
+    } else {
+      const status = SY.status();
+      const stxt = status === "ok" ? ("✓ Synced " + syncTimeAgo(SY.lastSync()))
+        : status === "syncing" ? "Syncing…"
+        : status === "offline" ? "Offline, will sync when you're back online"
+        : status === "error" ? "Couldn't reach sync (is it set up on the server yet?)"
+        : ("Synced " + syncTimeAgo(SY.lastSync()));
+      box.appendChild(el("div", "muted", "Status: " + esc(stxt)));
+      const codeBox = el("div");
+      codeBox.style.cssText = "font-family:var(--mono);font-size:.95rem;letter-spacing:.05em;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:10px;padding:9px 12px;margin-top:8px;display:inline-block";
+      codeBox.textContent = SY.formatCode(SY.code());
+      box.appendChild(codeBox);
+      const r2 = el("div", "row wrap"); r2.style.marginTop = "10px";
+      const cp = el("button", "btn sm", "🔗 Copy device link"); cp.onclick = () => copyText(SY.linkURL(), "Pairing link copied, open it on your other device.");
+      const cc = el("button", "btn sm", "📋 Copy code"); cc.onclick = () => copyText(SY.formatCode(SY.code()), "Sync code copied.");
+      const now = el("button", "btn sm", "🔄 Sync now"); now.onclick = function () { QUIZ.toast("Syncing…"); SY.syncNow("manual").then(function () { renderSettings(); }); };
+      const off = el("button", "btn sm", "Unlink"); off.style.borderColor = "var(--bad)"; off.style.color = "var(--bad)";
+      off.onclick = function () { if (confirm("Unlink this device? Your progress stays here, it just stops syncing.")) { SY.unlink(); renderSettings(); } };
+      r2.appendChild(cp); r2.appendChild(cc); r2.appendChild(now); r2.appendChild(off);
+      box.appendChild(r2);
+      box.appendChild(el("div", "muted", "<span style='font-size:.78rem'>Anyone with this code can read and merge this progress, so keep it to yourself. It only ever holds study progress, never personal info.</span>"));
+    }
+    card.appendChild(box);
+    card.appendChild(el("hr", "div"));
+  }
+  function renderLinkConfirm(code) {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Link device" }]));
+    app.appendChild(el("div", "hero", "<h1>🔗 Link this device?</h1>"));
+    const card = el("div", "card");
+    const clean = STUDY.SYNC ? STUDY.SYNC.cleanCode(code) : "";
+    if (!STUDY.SYNC || !clean || clean.length < 8) {
+      card.appendChild(el("div", null, "<b>That link doesn't look valid.</b><div class='muted' style='font-size:.85rem'>Ask your other device for a fresh sync link from Settings.</div>"));
+      const no = el("button", "btn", "Back home"); no.style.marginTop = "12px"; no.onclick = () => go("#/home"); card.appendChild(no);
+    } else {
+      card.appendChild(el("div", null, "<b>Sync this device with your other one?</b><div class='muted' style='font-size:.9rem;margin-top:4px'>This <b>merges</b> the two devices' progress (nothing gets deleted) and keeps them in step from now on.<br>Code: <span style='font-family:var(--mono)'>" + esc(STUDY.SYNC.formatCode(clean)) + "</span></div>"));
+      const r = el("div", "row wrap"); r.style.marginTop = "14px";
+      const yes = el("button", "btn primary", "🔄 Link & sync");
+      yes.onclick = function () { STUDY.SYNC.linkWith(clean); QUIZ.toast("Linked, merging your progress…"); go("#/settings"); };
+      const no = el("button", "btn", "Cancel"); no.onclick = () => go("#/home");
+      r.appendChild(yes); r.appendChild(no); card.appendChild(r);
+    }
+    app.appendChild(card);
+  }
+
   function downloadFile(content, name, type) {
     const blob = new Blob([content], { type: type || "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -7872,6 +8143,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     if (parts[0] === "import") return renderImport();
     if (parts[0] === "results") return renderTestResults();
     if (parts[0] === "search") return renderSearch(params);
+    if (parts[0] === "link") return renderLinkConfirm(parts[1]);
     if (parts[0] === "settings") return renderSettings();
     return renderHome();
   }
@@ -7881,6 +8153,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     STUDY.load();
     if (STUDY.TELE) try { STUDY.TELE.start(); } catch (e) {}
     if (STUDY.CROWD) try { STUDY.CROWD.start(); } catch (e) {}
+    if (STUDY.SYNC) try { STUDY.SYNC.init(); } catch (e) {}
     document.documentElement.setAttribute("data-theme", STUDY.theme());
     // order subjects by weight (desc) then registration
     STUDY.subjects.sort((a, b) => (b.weight - a.weight));
