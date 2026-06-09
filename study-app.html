@@ -7178,6 +7178,7 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     actions.appendChild(actionCard("", "📝", "Exam Mode", "Timed & auto-graded", () => go("#/exam?s=" + s.id)));
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
     if (s.id === "geometry") actions.appendChild(actionCard("", "📐", "Formula sheet", "Every geometry formula, one page", () => go("#/formulas")));
+    if (s.id === "geometry") actions.appendChild(actionCard("", "📄", "Review packet", "Printable: formulas + worksheet + answers", printGeoReview));
     if (s.id === "french") actions.appendChild(actionCard("", "🔊", "Listening", "Hear & recall (oral prep)", () => startListening()));
     if (s.id === "biology" && (STUDY.DIAGRAMS || []).length) actions.appendChild(actionCard("", "🗺️", "Label It", "Recall diagram parts", () => go("#/label")));
     if (s.id === "history" && (STUDY.TIMELINE || []).length) actions.appendChild(actionCard("", "🕰️", "Timeline", "Events in order + a challenge", () => go("#/timeline")));
@@ -8268,6 +8269,87 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     });
     const back = el("button", "btn", "← Back to Geometry"); back.style.marginTop = "4px"; back.onclick = () => go("#/s/geometry");
     app.appendChild(back);
+    const pr = el("button", "btn primary full", "📄 Printable review packet"); pr.style.marginTop = "8px"; pr.onclick = printGeoReview;
+    app.appendChild(pr);
+  }
+
+  // the hardest / most-missed geometry concepts (callout box in the packet)
+  const GEO_HARD = [
+    ["Special right triangles", "45-45-90 → hypotenuse = leg × √2. 30-60-90 → short leg x, long leg x√3, hypotenuse 2x. Don't swap √2 and √3."],
+    ["Arc length vs sector area", "Both use (θ/360). Arc length × 2π r (a length); sector area × π r² (an area)."],
+    ["Surface area vs volume", "Volume is units³ (space inside); surface area is units² (the outside). Cone & pyramid volumes have the ⅓."],
+    ["Trig: side vs angle", "To find a SIDE use sin/cos/tan of the angle. To find an ANGLE use the inverse: tan⁻¹, sin⁻¹, cos⁻¹ of the ratio."],
+    ["Polygon angles", "Interior sum = (n − 2) × 180. One interior angle (regular) = that ÷ n. Exterior angles ALWAYS sum to 360."],
+    ["Similar figures", "Scale factor k → sides × k, area × k², volume × k³."],
+  ];
+  const REVIEW_CSS =
+    "*{box-sizing:border-box}body{font-family:Georgia,'Times New Roman',serif;color:#111;margin:0;background:#eef0f4}" +
+    ".bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:#15163a;color:#fff}" +
+    ".bar b{font-family:system-ui,sans-serif;font-size:14px;margin-right:auto}" +
+    ".bar button{font:600 14px system-ui;padding:10px 15px;border-radius:9px;border:0;cursor:pointer;background:#fff;color:#15163a}.bar button.p{background:#6c5ce7;color:#fff}" +
+    ".sheet{max-width:760px;margin:16px auto;background:#fff;padding:30px 38px;box-shadow:0 3px 18px rgba(0,0,0,.14)}" +
+    "h1{font-size:22px;margin:0 0 2px}.sub{color:#444;font-size:13px;font-family:system-ui,sans-serif;margin-bottom:8px}" +
+    "h2{font-size:15px;font-family:system-ui,sans-serif;border-bottom:1.5px solid #111;padding-bottom:3px;margin:20px 0 9px}" +
+    ".fsgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}.fsg{break-inside:avoid;margin-bottom:7px}" +
+    ".fsgh{font:700 12.5px system-ui;color:#6c5ce7;margin-bottom:2px}" +
+    ".fsr{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;border-bottom:1px solid #eee;padding:2px 0}.fsr b{font-family:'Courier New',monospace}" +
+    ".hard{font-size:12.7px;margin:5px 0;padding:6px 9px;background:#fff7ed;border-left:3px solid #f59e0b;break-inside:avoid}" +
+    ".pq{margin:0 0 9px;break-inside:avoid}.pq .stem{font-weight:bold;font-size:13.5px;margin-bottom:2px}.pwork{height:.8in;border-bottom:1px dotted #c4c4c4}" +
+    ".akey-page{display:none;border-top:3px double #111;margin-top:24px;padding-top:10px}" +
+    ".akey div{font-size:11.7px;margin:3px 0;break-inside:avoid;padding-bottom:3px;border-bottom:1px solid #f0f0f0}" +
+    "@media print{body{background:#fff}.bar{display:none}.sheet{box-shadow:none;margin:0;max-width:none;padding:0}.akey-page{display:block;break-before:page}@page{margin:.55in}}" +
+    "@media(max-width:560px){.sheet{padding:18px 15px;margin:0}.fsgrid{grid-template-columns:1fr}}";
+
+  function printGeoReview() {
+    const geo = STUDY.byId.geometry; if (!geo) return;
+    const titleOf = {}; (geo.topics || []).forEach(function (t) { titleOf[t.id] = t.title; });
+    let items = [];
+    try { if (STUDY.QUIZGEN && STUDY.QUIZGEN.geometryItems) items = STUDY.QUIZGEN.geometryItems(Math.random, 2); } catch (e) { items = []; }
+    const order = ["geo-area", "geo-circlemeasure", "geo-solids", "geo-righttri", "geo-trig", "geo-quads", "geo-similarity"];
+    const byTopic = {}; items.forEach(function (it) { (byTopic[it.topic] = byTopic[it.topic] || []).push(it); });
+    let n = 0, work = "", key = "";
+    order.forEach(function (tid) {
+      const list = byTopic[tid]; if (!list || !list.length) return;
+      work += "<h2>" + esc(titleOf[tid] || tid) + "</h2>";
+      list.forEach(function (it) {
+        n++;
+        work += "<div class='pq'><div class='stem'>" + n + ". " + esc(it.q) + "</div><div class='pwork'></div></div>";
+        const ans = (it.choices && it.choices[it.answer] != null) ? it.choices[it.answer] : "";
+        key += "<div><b>" + n + ".</b> " + esc(ans) + (it.explain ? " &nbsp;— " + esc(it.explain) : "") + "</div>";
+      });
+    });
+    let fs = "<div class='fsgrid'>";
+    GEO_FORMULAS.forEach(function (g) {
+      fs += "<div class='fsg'><div class='fsgh'>" + esc(g.h) + "</div>";
+      g.rows.forEach(function (r) { fs += "<div class='fsr'><span>" + esc(r[0]) + "</span><b>" + esc(r[1]) + "</b></div>"; });
+      fs += "</div>";
+    });
+    fs += "</div>";
+    let hard = ""; GEO_HARD.forEach(function (h) { hard += "<div class='hard'><b>" + esc(h[0]) + ":</b> " + esc(h[1]) + "</div>"; });
+    const stamp = new Date().toLocaleDateString();
+    const html = "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>" +
+      "<title>Geometry Review Packet</title><style>" + REVIEW_CSS + "</style></head><body>" +
+      "<div class='bar'><b>Geometry review packet</b>" +
+      "<button class='p' onclick='window.print()'>🖨️ Print / Save as PDF</button>" +
+      "<button id='kbtn' onclick='tk()'>Show answer key</button></div>" +
+      "<div class='sheet'>" +
+      "<h1>📐 Geometry Final — Review Packet</h1>" +
+      "<div class='sub'>Generated " + esc(stamp) + ". Skim the formulas, read the hardest-concepts box, then work the problems. Worked answers are on the last page (print on their own).</div>" +
+      "<h2>Formulas</h2>" + fs +
+      "<h2>⚠️ Hardest concepts — where points get lost</h2>" + hard +
+      "<h2>Worksheet · " + n + " problems</h2>" + work +
+      "<div class='akey-page' id='akey'><h2>Answer key (worked)</h2>" + key + "</div>" +
+      "</div>" +
+      "<script>function tk(){var k=document.getElementById('akey'),b=document.getElementById('kbtn');var on=k.style.display==='block';k.style.display=on?'none':'block';b.textContent=on?'Show answer key':'Hide answer key';if(!on)k.scrollIntoView({behavior:'smooth'});}<\/script>" +
+      "</body></html>";
+    let w = null; try { w = window.open("", "_blank"); } catch (e) { w = null; }
+    if (w && w.document) { w.document.open(); w.document.write(html); w.document.close(); w.focus && w.focus(); return; }
+    try {
+      const blob = new Blob([html], { type: "text/html" }); const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; a.download = "geometry-review.html";
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+      if (STUDY.QUIZ && STUDY.QUIZ.toast) STUDY.QUIZ.toast("Saved the review packet. Open it, then Print / Save PDF");
+    } catch (e) {}
   }
 
   function downloadFile(content, name, type) {
