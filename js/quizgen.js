@@ -149,6 +149,11 @@
     { inf: "aller", stem: "ir" }, { inf: "avoir", stem: "aur" }, { inf: "être", stem: "ser" },
     { inf: "faire", stem: "fer" }, { inf: "pouvoir", stem: "pourr" }, { inf: "devoir", stem: "devr" },
     { inf: "voir", stem: "verr" }, { inf: "venir", stem: "viendr" }, { inf: "vouloir", stem: "voudr" },
+    { inf: "savoir", stem: "saur" }, { inf: "envoyer", stem: "enverr" }, { inf: "recevoir", stem: "recevr" },
+    { inf: "tenir", stem: "tiendr" }, { inf: "courir", stem: "courr" },
+    { inf: "visiter", stem: "visiter" }, { inf: "habiter", stem: "habiter" }, { inf: "voyager", stem: "voyager" },
+    { inf: "préparer", stem: "préparer" }, { inf: "étudier", stem: "étudier" }, { inf: "rester", stem: "rester" },
+    { inf: "partir", stem: "partir" }, { inf: "sortir", stem: "sortir" }, { inf: "dormir", stem: "dormir" },
   ];
   const FR_SUBJ = ["je", "tu", "il", "nous", "vous", "ils"];
   const FR_END = { cond: ["ais", "ais", "ait", "ions", "iez", "aient"], fut: ["ai", "as", "a", "ons", "ez", "ont"] };
@@ -175,16 +180,37 @@
     }
     return out;
   }
-  function genFrench(rng, count) {
+  // accent-stripped alt answer so "etudierais" is accepted alongside "étudierais"
+  function frDeburr(s) { return s.normalize ? s.normalize("NFD").replace(/[̀-ͯ]/g, "") : s; }
+  // fill-in (PRODUCE the form) drills — stronger recall than multiple choice
+  function frenchFill(rng, count) {
+    const out = [], seen = {}; let guard = 0;
+    while (out.length < count && guard++ < count * 12) {
+      const v = rp(rng, FR_VERBS), si = ri(rng, 0, 5), tense = rng() < 0.5 ? "cond" : "fut";
+      const key = "f" + v.inf + si + tense; if (seen[key]) continue; seen[key] = 1;
+      const form = v.stem + FR_END[tense][si];
+      const subj = FR_SUBJ[si];
+      const lead = subj === "je" ? (VOWEL.test(form) ? "J'" : "Je") : (subj.charAt(0).toUpperCase() + subj.slice(1));
+      const label = tense === "cond" ? "conditionnel" : "futur";
+      const answers = [form]; const d = frDeburr(form); if (d !== form) answers.push(d);
+      out.push({ topic: tense === "cond" ? "fr-conditionnel" : "fr-futur", type: "fill",
+        q: "Au " + label + " : " + lead + " ____ (" + v.inf + ")", answers: answers,
+        explain: "Stem « " + v.stem + " » + " + label + " ending « -" + FR_END[tense][si] + " » → " + form + "." });
+    }
+    return out;
+  }
+  function genFrench(rng, mcCount, fillCount) {
     const byTopic = {};
-    frenchItems(rng, count).forEach(it => { const tp = it.topic; delete it.topic; (byTopic[tp] = byTopic[tp] || []).push(it); });
+    const push = it => { const tp = it.topic; delete it.topic; (byTopic[tp] = byTopic[tp] || []).push(it); };
+    frenchItems(rng, mcCount).forEach(push);
+    if (fillCount) frenchFill(rng, fillCount).forEach(push);
     Object.keys(byTopic).forEach(function (tid) { const e = STUDY.topicIndex[tid]; if (e) STUDY.addQuestions(e.topic, byTopic[tid]); });
   }
 
   /* ---------------- run at load (Math.random) ---------------- */
   try { genFromCards(); } catch (e) { if (window.console) console.warn("card-gen", e); }
   try { genGeometry(Math.random, 4); } catch (e) { if (window.console) console.warn("geo-gen", e); }
-  try { genFrench(Math.random, 18); } catch (e) { if (window.console) console.warn("fr-gen", e); }
+  try { genFrench(Math.random, 48, 40); } catch (e) { if (window.console) console.warn("fr-gen", e); }
 
   // exposed for seeded test/exam generation (test.js)
   STUDY.QUIZGEN = { genFromCards: genFromCards, geometryItems: geometryItems, frenchItems: frenchItems };

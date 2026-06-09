@@ -5004,6 +5004,11 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     { inf: "aller", stem: "ir" }, { inf: "avoir", stem: "aur" }, { inf: "être", stem: "ser" },
     { inf: "faire", stem: "fer" }, { inf: "pouvoir", stem: "pourr" }, { inf: "devoir", stem: "devr" },
     { inf: "voir", stem: "verr" }, { inf: "venir", stem: "viendr" }, { inf: "vouloir", stem: "voudr" },
+    { inf: "savoir", stem: "saur" }, { inf: "envoyer", stem: "enverr" }, { inf: "recevoir", stem: "recevr" },
+    { inf: "tenir", stem: "tiendr" }, { inf: "courir", stem: "courr" },
+    { inf: "visiter", stem: "visiter" }, { inf: "habiter", stem: "habiter" }, { inf: "voyager", stem: "voyager" },
+    { inf: "préparer", stem: "préparer" }, { inf: "étudier", stem: "étudier" }, { inf: "rester", stem: "rester" },
+    { inf: "partir", stem: "partir" }, { inf: "sortir", stem: "sortir" }, { inf: "dormir", stem: "dormir" },
   ];
   const FR_SUBJ = ["je", "tu", "il", "nous", "vous", "ils"];
   const FR_END = { cond: ["ais", "ais", "ait", "ions", "iez", "aient"], fut: ["ai", "as", "a", "ons", "ez", "ont"] };
@@ -5030,23 +5035,44 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     }
     return out;
   }
-  function genFrench(rng, count) {
+  // accent-stripped alt answer so "etudierais" is accepted alongside "étudierais"
+  function frDeburr(s) { return s.normalize ? s.normalize("NFD").replace(/[̀-ͯ]/g, "") : s; }
+  // fill-in (PRODUCE the form) drills — stronger recall than multiple choice
+  function frenchFill(rng, count) {
+    const out = [], seen = {}; let guard = 0;
+    while (out.length < count && guard++ < count * 12) {
+      const v = rp(rng, FR_VERBS), si = ri(rng, 0, 5), tense = rng() < 0.5 ? "cond" : "fut";
+      const key = "f" + v.inf + si + tense; if (seen[key]) continue; seen[key] = 1;
+      const form = v.stem + FR_END[tense][si];
+      const subj = FR_SUBJ[si];
+      const lead = subj === "je" ? (VOWEL.test(form) ? "J'" : "Je") : (subj.charAt(0).toUpperCase() + subj.slice(1));
+      const label = tense === "cond" ? "conditionnel" : "futur";
+      const answers = [form]; const d = frDeburr(form); if (d !== form) answers.push(d);
+      out.push({ topic: tense === "cond" ? "fr-conditionnel" : "fr-futur", type: "fill",
+        q: "Au " + label + " : " + lead + " ____ (" + v.inf + ")", answers: answers,
+        explain: "Stem « " + v.stem + " » + " + label + " ending « -" + FR_END[tense][si] + " » → " + form + "." });
+    }
+    return out;
+  }
+  function genFrench(rng, mcCount, fillCount) {
     const byTopic = {};
-    frenchItems(rng, count).forEach(it => { const tp = it.topic; delete it.topic; (byTopic[tp] = byTopic[tp] || []).push(it); });
+    const push = it => { const tp = it.topic; delete it.topic; (byTopic[tp] = byTopic[tp] || []).push(it); };
+    frenchItems(rng, mcCount).forEach(push);
+    if (fillCount) frenchFill(rng, fillCount).forEach(push);
     Object.keys(byTopic).forEach(function (tid) { const e = STUDY.topicIndex[tid]; if (e) STUDY.addQuestions(e.topic, byTopic[tid]); });
   }
 
   /* ---------------- run at load (Math.random) ---------------- */
   try { genFromCards(); } catch (e) { if (window.console) console.warn("card-gen", e); }
   try { genGeometry(Math.random, 4); } catch (e) { if (window.console) console.warn("geo-gen", e); }
-  try { genFrench(Math.random, 18); } catch (e) { if (window.console) console.warn("fr-gen", e); }
+  try { genFrench(Math.random, 48, 40); } catch (e) { if (window.console) console.warn("fr-gen", e); }
 
   // exposed for seeded test/exam generation (test.js)
   STUDY.QUIZGEN = { genFromCards: genFromCards, geometryItems: geometryItems, frenchItems: frenchItems };
 })(window.STUDY);
 
 </script>
-  <!-- Test-mirror ELA questions (loaded AFTER quizgen so ids only ever append) -->
+  <!-- Authored extras (loaded AFTER quizgen so ids only ever append) -->
   <script>
 /* data/ela-test-prep.js — fresh ELA questions that MIRROR the two Blooket sets
    and the study guide (same format + difficulty, new examples). Purpose: give
@@ -5150,6 +5176,100 @@ window.ELA_POOL = [{"type":"mc","q":"What is a close reading?","choices":["When 
     ["Which sentence uses commas CORRECTLY?", ["We bought apples oranges, and pears.", "When the bell rang, the students left.", "He ran, quickly to the door.", "She likes, tea and coffee."], 1, "Use a comma after an introductory clause.", 2],
     ["Best fix for the run-on 'I was tired I went to bed'?", ["I was tired, I went to bed.", "I was tired, so I went to bed.", "I was tired I, went to bed.", "I was tired; I, went to bed."], 1, "Join with a comma + conjunction (or a period/semicolon).", 2],
     ["Which is a COMPLETE sentence?", ["Running down the street.", "The tall man in the hat.", "Birds fly.", "Although she tried."], 2, "A complete sentence needs a subject and a verb and a full thought.", 1],
+  ]);
+})(window.STUDY);
+
+</script>
+  <script>
+/* data/french-extra.js — extra French 3 practice for the final (Oral June 9,
+   Written June 9-10): conjugation usage, si-clauses, futur-vs-conditionnel,
+   irregular stems, plus more Belgique + environnement vocab.
+
+   Loaded AFTER js/quizgen.js so authored ids only ever append (never shifts the
+   generated conjugation-drill ids). Normal authored questions -> they show in
+   the For You feed and Practice, mixed with the generated drills. */
+(function (STUDY) {
+  "use strict";
+  if (!STUDY || typeof STUDY.addAuthored !== "function") return;
+
+  function mc(topicId, rows) {
+    STUDY.addAuthored(topicId, rows.map(function (r) {
+      return { type: "mc", q: r[0], choices: r[1], answer: r[2], explain: r[3] || "", lvl: r[4] || 1, concept: "frextra" };
+    }));
+  }
+  function fill(topicId, rows) {
+    STUDY.addAuthored(topicId, rows.map(function (r) {
+      return { type: "fill", q: r[0], answers: r[1], explain: r[2] || "", lvl: r[3] || 1, concept: "frextra" };
+    }));
+  }
+
+  /* ===== Le Conditionnel: usage, si-clauses, stems, production ===== */
+  mc("fr-conditionnel", [
+    ["Le conditionnel expresses:", ["a finished past action", "'would' — politeness, hypotheticals, suggestions", "'will' — a sure future plan", "a command"], 1, "Le conditionnel = 'would'."],
+    ["After « Si » + imparfait, the OTHER clause uses the:", ["futur", "conditionnel", "présent", "passé composé"], 1, "Si j'avais le temps, je voyagerais. (si + imparfait → conditionnel)"],
+    ["« Je voudrais un café » is more polite than « Je veux un café » because it uses the:", ["futur", "conditionnel", "imparfait", "présent"], 1, "voudrais = conditionnel of vouloir → softer/polite."],
+    ["Which sentence says 'you SHOULD call her' (a suggestion)?", ["Tu appelles.", "Tu appelleras.", "Tu devrais l'appeler.", "Tu as appelé."], 2, "devrais (conditionnel of devoir) = should."],
+    ["The future/conditional stem of « vouloir » is:", ["voudr-", "voulr-", "vouler-", "voudrai-"], 0, "vouloir → voudr- (je voudrais)."],
+    ["The future/conditional stem of « venir » is:", ["venir-", "viendr-", "viendrai-", "vendr-"], 1, "venir → viendr- (je viendrais). (vendre → vendr-, don't mix them up.)"],
+    ["The future/conditional stem of « voir » is:", ["voir-", "verr-", "voyr-", "vu-"], 1, "voir → verr- (je verrais)."],
+  ]);
+  fill("fr-conditionnel", [
+    ["Si j'avais de l'argent, je ____ en Belgique. (voyager)", ["voyagerais"], "si + imparfait → conditionnel: voyager + -ais."],
+    ["Si tu étudiais plus, tu ____ l'examen. (réussir)", ["réussirais", "reussirais"], "réussir + -ais → réussirais."],
+    ["Politesse : ____ -vous m'aider, s'il vous plaît ? (pouvoir, vous)", ["pourriez"], "pourr- + -iez → pourriez."],
+    ["Au conditionnel : On ____ aller à la mer ? (pouvoir)", ["pourrait"], "pourr- + -ait → pourrait."],
+    ["Suggestion : Vous ____ visiter Bruxelles. (devoir)", ["devriez"], "devr- + -iez → devriez (you should)."],
+  ]);
+
+  /* ===== Le Futur: usage, si + présent, futur-vs-conditionnel ===== */
+  mc("fr-futur", [
+    ["After « Si » + présent, the OTHER clause uses the:", ["conditionnel", "futur", "imparfait", "passé composé"], 1, "Si j'ai le temps, j'irai. (si + présent → futur)"],
+    ["« Je parlerai » vs « Je parlerais » — which one is the FUTUR ('I will speak')?", ["Je parlerais (-ais)", "Je parlerai (-ai)", "both", "neither"], 1, "Futur ends in -ai; conditionnel ends in -ais."],
+    ["« Nous irons en France cet été » means:", ["We would go to France", "We will go to France", "We went to France", "We are going to France right now"], 1, "irons = futur of aller (will go)."],
+    ["« Il serait content de te voir » means:", ["He will be happy", "He would be happy", "He was happy", "He is happy"], 1, "serait = conditionnel (would be)."],
+    ["The futur simple endings are:", ["-ais, -ais, -ait, -ions, -iez, -aient", "-ai, -as, -a, -ons, -ez, -ont", "-e, -es, -e, -ons, -ez, -ent", "-rai, -ras, -ra"], 1, "Futur endings come from avoir: -ai, -as, -a, -ons, -ez, -ont."],
+    ["The futur and the conditionnel of a verb always share the same:", ["endings", "stem", "subject", "meaning"], 1, "Same stem; only the endings differ."],
+  ]);
+  fill("fr-futur", [
+    ["Si j'ai le temps, j' ____ au cinéma demain. (aller)", ["irai"], "si + présent → futur: ir- + -ai → irai."],
+    ["Au futur : Demain, nous ____ nos amis. (voir)", ["verrons"], "verr- + -ons → verrons."],
+    ["Au futur : Tu ____ tes devoirs ce soir ? (faire)", ["feras"], "fer- + -as → feras."],
+    ["Au futur : Ils ____ en retard. (être)", ["seront"], "ser- + -ont → seront."],
+  ]);
+
+  /* ===== La Belgique ===== */
+  mc("fr-belgique", [
+    ["En Wallonie (au sud), on parle:", ["le néerlandais", "le français", "l'allemand", "l'anglais"], 1, "Wallonie = French-speaking."],
+    ["Le néerlandais, parlé en Flandre, est aussi appelé:", ["German", "Dutch / Flemish", "English", "Italian"], 1, "néerlandais = Dutch (Flemish)."],
+    ["Bruxelles, la capitale, est officiellement:", ["française seulement", "néerlandaise seulement", "bilingue (français + néerlandais)", "allemande"], 2, "Brussels is officially bilingual."],
+    ["Quels pays touchent la Belgique à l'est ?", ["la France et l'Espagne", "l'Allemagne et le Luxembourg", "les Pays-Bas et l'Italie", "la Suisse"], 1, "À l'est: Germany & Luxembourg."],
+  ]);
+  fill("fr-belgique", [
+    ["La capitale de la Belgique est ____.", ["Bruxelles"], "Bruxelles (Brussels)."],
+    ["Au nord de la Belgique, on trouve les Pays-Bas et la mer du ____.", ["Nord", "nord"], "la mer du Nord (North Sea)."],
+  ]);
+
+  /* ===== L'Environnement ===== */
+  mc("fr-environnement", [
+    ["« la pollution » means:", ["recycling", "pollution", "drought", "heat wave"], 1],
+    ["« le changement climatique » means:", ["the weather today", "climate change", "global cooling", "a heat wave"], 1],
+    ["« protéger l'environnement » means:", ["to pollute the environment", "to protect the environment", "to study the environment", "to ignore the environment"], 1],
+    ["« un incendie » is:", ["a flood", "a fire / wildfire", "a drought", "a storm"], 1],
+  ]);
+  fill("fr-environnement", [
+    ["Heat wave en français : « la ____ ».", ["canicule"], "la canicule = heat wave."],
+    ["Drought en français : « la ____ ».", ["sécheresse", "secheresse"], "la sécheresse = drought."],
+    ["To recycle en français : « ____ ».", ["recycler"], "recycler / le recyclage."],
+  ]);
+
+  /* ===== L'Écriture (the host-family email) ===== */
+  mc("fr-ecriture", [
+    ["« J'aimerais visiter Bruxelles » uses which tense?", ["futur", "conditionnel", "passé composé", "présent"], 1, "aimerais = conditionnel (would like)."],
+    ["How do you write 'I would NOT want to get up early'?", ["Je veux me lever tôt.", "Je ne voudrais pas me lever tôt.", "Je me lèverai tôt.", "Je me suis levé tôt."], 1, "Je ne voudrais pas… = I wouldn't want to…"],
+    ["A polite closing for the host-family email is:", ["Salut !", "Bien à vous,", "Au revoir !", "Merci beaucoup."], 1, "Bien à vous = best regards."],
+  ]);
+  fill("fr-ecriture", [
+    ["To start a request, 'I would like' : « J' ____ visiter… » (aimer)", ["aimerais"], "aimer + -ais → aimerais (I would like)."],
   ]);
 })(window.STUDY);
 
