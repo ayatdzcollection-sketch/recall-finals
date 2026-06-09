@@ -170,6 +170,13 @@ button{font-family:inherit}
 .ring.done{background:conic-gradient(var(--good) calc(var(--p)*1%), var(--line) 0)}
 .ring.done .inner{color:var(--good)}
 
+/* geometry formula sheet */
+.fs-h{font-weight:800;font-size:.98rem;color:var(--sub,var(--accent));margin-bottom:6px;letter-spacing:-.01em}
+.fs-row{display:flex;justify-content:space-between;gap:14px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+.fs-row:first-of-type{border-top:none}
+.fs-name{color:var(--text-dim);font-size:.86rem;flex:1 1 40%;min-width:0}
+.fs-form{font-family:var(--mono);font-size:.92rem;text-align:right;flex:1 1 55%;color:var(--text)}
+
 /* ring progress */
 .ring{--p:0;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:none;
   background:conic-gradient(var(--sub,var(--accent)) calc(var(--p)*1%), var(--line) 0);

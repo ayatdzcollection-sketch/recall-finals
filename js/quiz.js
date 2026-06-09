@@ -69,10 +69,33 @@
     return prev[n];
   }
   function tokens(s) { return norm(s).split(" ").filter(w => w.length > 2); }
+  // ---- numeric answers (math) get NUMERIC comparison, not text typo-matching,
+  // so "78.5 cm²" is accepted for "78.5" but "12" is NOT accepted for "120".
+  function firstNum(s) { if (s == null) return null; const m = String(s).replace(/,/g, "").match(/[-+]?\d*\.?\d+/); return m ? parseFloat(m[0]) : null; }
+  function isNumericAnswer(s) {
+    if (s == null) return false;
+    const t = String(s).trim().replace(/,/g, "");
+    const m = t.match(/^[-+]?\d*\.?\d+/); if (!m) return false;
+    const rest = t.slice(m[0].length).replace(/[\s²³°^]/g, "").replace(/\b(squared|cubed|sq|cm|mm|m|km|in|ft|yd|units?|u|pi|π|deg|degrees?|rad)\b/gi, "").replace(/π/g, "");
+    return rest === "";                                   // a number plus only units/symbols
+  }
+  function numericClose(input, accepted) {
+    const u = firstNum(input), a = firstNum(accepted);
+    if (u === null || a === null) return false;
+    const ds = String(accepted).match(/\.(\d+)/), dec = ds ? ds[1].length : 0;
+    if (dec === 0) return Math.round(u) === Math.round(a);          // integer answer: exact to the unit
+    const f = Math.pow(10, dec);
+    if (Math.round(u * f) === Math.round(a * f)) return true;        // matches at the answer's precision
+    return Math.abs(u - a) / Math.max(Math.abs(a), 1) <= 0.005;      // slack for π (3.14 vs 3.14159) & rounding
+  }
   function fuzzyMatch(input, accepted) {
+    const list = accepted || [];
+    // numeric path first: any numeric accepted answer is judged by value
+    for (let i = 0; i < list.length; i++) { if (isNumericAnswer(list[i]) && numericClose(input, list[i])) return true; }
     const v = norm(input); if (!v) return false;
-    return (accepted || []).map(norm).some(function (a) {
-      if (!a) return false;
+    return list.map(function (x) { return { raw: x, n: norm(x) }; }).some(function (o) {
+      const a = o.n; if (!a) return false;
+      if (isNumericAnswer(o.raw)) return false;                      // numbers handled above; never text-fuzzy them
       if (a === v) return true;
       if (a.length > 4 && (v.includes(a) || a.includes(v))) return true;
       const tol = a.length <= 4 ? 1 : a.length <= 8 ? 2 : 3;          // typo tolerance

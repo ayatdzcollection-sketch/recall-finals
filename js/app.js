@@ -283,6 +283,7 @@
     actions.appendChild(actionCard("", "🔀", "Mixed Practice", "Random questions", () => startMixed(s.id, 15)));
     actions.appendChild(actionCard("", "📝", "Exam Mode", "Timed & auto-graded", () => go("#/exam?s=" + s.id)));
     actions.appendChild(actionCard("", "🖨️", "Practice Test", "Print or share a mock", () => go("#/test?s=" + s.id)));
+    if (s.id === "geometry") actions.appendChild(actionCard("", "📐", "Formula sheet", "Every geometry formula, one page", () => go("#/formulas")));
     if (s.id === "french") actions.appendChild(actionCard("", "🔊", "Listening", "Hear & recall (oral prep)", () => startListening()));
     if (s.id === "biology" && (STUDY.DIAGRAMS || []).length) actions.appendChild(actionCard("", "🗺️", "Label It", "Recall diagram parts", () => go("#/label")));
     if (s.id === "history" && (STUDY.TIMELINE || []).length) actions.appendChild(actionCard("", "🕰️", "Timeline", "Events in order + a challenge", () => go("#/timeline")));
@@ -1300,6 +1301,81 @@
     app.appendChild(card);
   }
 
+  // Geometry formula sheet (quick reference for the final)
+  const GEO_FORMULAS = [
+    { h: "Area", rows: [
+      ["Rectangle", "A = l × w"],
+      ["Triangle", "A = ½ × b × h"],
+      ["Parallelogram", "A = b × h"],
+      ["Trapezoid", "A = ½(b₁ + b₂) × h"],
+      ["Rhombus / Kite", "A = ½ × d₁ × d₂"],
+      ["Regular polygon", "A = ½ × a × P  (apothem × perimeter)"],
+      ["Circle", "A = π r²"],
+    ] },
+    { h: "Circles", rows: [
+      ["Circumference", "C = 2π r = π d"],
+      ["Arc length", "(θ / 360) × 2π r"],
+      ["Sector area", "(θ / 360) × π r²"],
+      ["Inscribed angle", "½ × the central angle on the same arc"],
+    ] },
+    { h: "Volume", rows: [
+      ["Prism", "V = B × h  (B = base area)"],
+      ["Cylinder", "V = π r² h"],
+      ["Cone", "V = ⅓ π r² h"],
+      ["Pyramid", "V = ⅓ × B × h"],
+      ["Sphere", "V = ⁴⁄₃ π r³"],
+      ["Cube", "V = s³"],
+    ] },
+    { h: "Surface area", rows: [
+      ["Rectangular prism", "SA = 2(lw + lh + wh)"],
+      ["Cylinder", "SA = 2π r² + 2π r h"],
+      ["Sphere", "SA = 4π r²"],
+      ["Cube", "SA = 6 s²"],
+    ] },
+    { h: "Right triangles", rows: [
+      ["Pythagorean", "a² + b² = c²  (c = hypotenuse)"],
+      ["45–45–90", "legs x, x → hypotenuse x√2"],
+      ["30–60–90", "short x, long x√3, hyp 2x"],
+    ] },
+    { h: "Trig · SOH-CAH-TOA", rows: [
+      ["sin θ", "opposite / hypotenuse"],
+      ["cos θ", "adjacent / hypotenuse"],
+      ["tan θ", "opposite / adjacent"],
+      ["Find an angle", "θ = tan⁻¹(opp/adj)  (or sin⁻¹, cos⁻¹)"],
+    ] },
+    { h: "Angles & polygons", rows: [
+      ["Triangle angles", "sum = 180°"],
+      ["Polygon interior sum", "(n − 2) × 180°"],
+      ["One interior angle (regular)", "(n − 2) × 180° / n"],
+      ["Exterior angles", "sum = 360°"],
+      ["One exterior angle (regular)", "360° / n"],
+    ] },
+    { h: "Similarity", rows: [
+      ["Similar figures", "corresponding sides are proportional"],
+      ["Scale factor k", "perimeter × k · area × k² · volume × k³"],
+      ["Solve a proportion", "a/b = c/d → a·d = b·c (cross-multiply)"],
+    ] },
+  ];
+  function renderFormulas() {
+    clear(); app.appendChild(topbar());
+    app.appendChild(crumb([{ label: "Home", hash: "#/home" }, { label: "Geometry", hash: "#/s/geometry" }, { label: "Formula sheet" }]));
+    app.appendChild(el("div", "hero", "<h1>📐 Geometry formula sheet</h1><p class='muted'>Every formula for the final in one place. Most volume problems are just B × h (or a third of it); most circle problems are π r² or 2π r.</p>"));
+    const accent = (STUDY.byId.geometry && STUDY.byId.geometry.accent) || "var(--accent)";
+    GEO_FORMULAS.forEach(function (grp) {
+      const card = el("div", "card"); card.style.marginBottom = "12px"; card.style.setProperty("--sub", accent);
+      card.appendChild(el("div", "fs-h", esc(grp.h)));
+      grp.rows.forEach(function (r) {
+        const row = el("div", "fs-row");
+        row.appendChild(el("div", "fs-name", esc(r[0])));
+        row.appendChild(el("div", "fs-form", esc(r[1])));
+        card.appendChild(row);
+      });
+      app.appendChild(card);
+    });
+    const back = el("button", "btn", "← Back to Geometry"); back.style.marginTop = "4px"; back.onclick = () => go("#/s/geometry");
+    app.appendChild(back);
+  }
+
   function downloadFile(content, name, type) {
     const blob = new Blob([content], { type: type || "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -1344,6 +1420,7 @@
     if (parts[0] === "results") return renderTestResults();
     if (parts[0] === "search") return renderSearch(params);
     if (parts[0] === "link") return renderLinkConfirm(parts[1]);
+    if (parts[0] === "formulas") return renderFormulas();
     if (parts[0] === "settings") return renderSettings();
     return renderHome();
   }
